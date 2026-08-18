@@ -1,0 +1,14 @@
+{
+  "name": "Doel Taller",
+  "short_name": "Doel Taller",
+  "description": "Herramienta de diagnóstico de taller Doel IT Solutions — mandos, impresoras 3D, impresoras. Offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07284b",
+  "theme_color": "#07284b",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

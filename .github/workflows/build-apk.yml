@@ -1,0 +1,45 @@
+name: Build APK
+
+# Se ejecuta manualmente (botón "Run workflow") o al hacer push a main.
+# Requisito: la carpeta twa-project/ ya debe existir en el repo
+# (se genera una única vez con "bubblewrap init" desde Codespaces, ver README-APK.md)
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'twa-project/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Construir APK firmado
+        working-directory: twa-project
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.BUBBLEWRAP_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.BUBBLEWRAP_KEY_PASSWORD }}
+        run: bubblewrap build --skipPwaValidation
+
+      - name: Subir APK como artefacto descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: doel-taller-apk
+          path: twa-project/app-release-signed.apk
