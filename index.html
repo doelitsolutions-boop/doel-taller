@@ -187,6 +187,13 @@
   /* svg diagram */
   .pad-svg{ width:100%; height:auto; display:block; }
   .pad-body{ fill:var(--panel-alt); stroke:var(--border); stroke-width:2; }
+  .pad-shadow{ fill:rgba(0,0,0,.35); stroke:none; }
+  .cluster-ring{ fill:none; stroke:var(--border); stroke-width:1.5; opacity:.5; }
+  .btn-label{
+    fill:rgba(231,237,241,.5); font-family:var(--mono); font-size:12px; font-weight:700;
+    text-anchor:middle; pointer-events:none; transition:fill .06s ease;
+  }
+  .btn.face.pressed + .btn-label, .btn.face.tested + .btn-label{ fill:#062a10; }
   .btn{ fill:#1e2730; stroke:var(--border); stroke-width:1.2; transition:fill .06s ease, filter .06s ease; }
   .btn.face{ fill:#20292f; }
   .btn.pressed{ fill:var(--green); filter:drop-shadow(0 0 6px var(--green-glow)); }
@@ -489,40 +496,51 @@
 
       <div class="card-body">
         <div class="diagram-col">
-          <svg viewBox="0 0 400 220" class="pad-svg">
-            <path class="pad-body" d="M 55 55 C 25 55 10 85 12 120 L 18 165 C 20 195 45 210 70 200 L 105 165 L 295 165 L 330 200 C 355 210 380 195 382 165 L 388 120 C 390 85 375 55 345 55 C 345 30 300 15 200 15 C 100 15 55 30 55 55 Z"></path>
+          <svg viewBox="0 0 400 380" class="pad-svg">
+            <path class="pad-shadow" d="M 70,36 Q 70,16 90,16 L 310,16 Q 330,16 330,36 L 330,286 Q 330,346 280,356 L 260,346 Q 200,328 140,346 L 120,356 Q 70,346 70,286 Z"></path>
+            <path class="pad-body" d="M 70,30 Q 70,10 90,10 L 310,10 Q 330,10 330,30 L 330,280 Q 330,340 280,350 L 260,340 Q 200,322 140,340 L 120,350 Q 70,340 70,280 Z"></path>
 
-            <rect class="btn shoulder" id="${p}-btn-4" x="40" y="20" width="70" height="16" rx="6"></rect>
-            <rect class="btn shoulder" id="${p}-btn-5" x="290" y="20" width="70" height="16" rx="6"></rect>
+            <rect class="btn shoulder" id="${p}-btn-4" x="100" y="25" width="70" height="24" rx="12"></rect>
+            <rect class="btn shoulder" id="${p}-btn-5" x="230" y="25" width="70" height="24" rx="12"></rect>
 
-            <rect class="trig-track" x="40" y="4" width="70" height="10" rx="5"></rect>
-            <rect class="trig-fill" id="${p}-trig-l" x="40" y="4" width="0" height="10" rx="5"></rect>
-            <rect class="trig-track" x="290" y="4" width="70" height="10" rx="5"></rect>
-            <rect class="trig-fill" id="${p}-trig-r" x="290" y="4" width="0" height="10" rx="5"></rect>
+            <rect class="trig-track" x="100" y="53" width="70" height="9" rx="4.5"></rect>
+            <rect class="trig-fill" id="${p}-trig-l" x="100" y="53" width="0" height="9" rx="4.5"></rect>
+            <rect class="trig-track" x="230" y="53" width="70" height="9" rx="4.5"></rect>
+            <rect class="trig-fill" id="${p}-trig-r" x="230" y="53" width="0" height="9" rx="4.5"></rect>
 
-            <circle class="btn small" id="${p}-btn-8" cx="160" cy="45" r="8"></circle>
-            <circle class="btn small" id="${p}-btn-9" cx="240" cy="45" r="8"></circle>
-            <circle class="btn small" id="${p}-btn-16" cx="200" cy="58" r="10"></circle>
+            <circle class="btn small" id="${p}-btn-16" cx="200" cy="40" r="9"></circle>
+            <circle class="btn small" id="${p}-btn-8" cx="170" cy="95" r="8"></circle>
+            <circle class="btn small" id="${p}-btn-9" cx="230" cy="95" r="8"></circle>
 
-            <circle class="stick-well" cx="110" cy="95" r="26"></circle>
-            <circle class="deadzone-ring" id="${p}-dz-l" cx="110" cy="95" r="4"></circle>
-            <circle class="btn stickclick" id="${p}-btn-10" cx="110" cy="95" r="26"></circle>
-            <circle class="stick-dot" id="${p}-stick-l" cx="110" cy="95" r="9"></circle>
+            <!-- anillos decorativos -->
+            <circle class="cluster-ring" cx="135" cy="185" r="54"></circle>
+            <circle class="cluster-ring" cx="265" cy="185" r="54"></circle>
 
-            <circle class="stick-well" cx="290" cy="150" r="26"></circle>
-            <circle class="deadzone-ring" id="${p}-dz-r" cx="290" cy="150" r="4"></circle>
-            <circle class="btn stickclick" id="${p}-btn-11" cx="290" cy="150" r="26"></circle>
-            <circle class="stick-dot" id="${p}-stick-r" cx="290" cy="150" r="9"></circle>
+            <!-- D-Pad: flechas reales -->
+            <path class="btn dpad" id="${p}-btn-12" d="M135,148 L127,168 L143,168 Z"></path>
+            <path class="btn dpad" id="${p}-btn-13" d="M135,222 L127,202 L143,202 Z"></path>
+            <path class="btn dpad" id="${p}-btn-14" d="M98,185 L118,177 L118,193 Z"></path>
+            <path class="btn dpad" id="${p}-btn-15" d="M172,185 L152,177 L152,193 Z"></path>
 
-            <rect class="btn dpad" id="${p}-btn-12" x="100" y="128" width="20" height="18" rx="3"></rect>
-            <rect class="btn dpad" id="${p}-btn-13" x="100" y="172" width="20" height="18" rx="3"></rect>
-            <rect class="btn dpad" id="${p}-btn-14" x="78" y="150" width="18" height="20" rx="3"></rect>
-            <rect class="btn dpad" id="${p}-btn-15" x="124" y="150" width="18" height="20" rx="3"></rect>
+            <!-- ABXY etiquetados -->
+            <circle class="btn face" id="${p}-btn-3" cx="265" cy="149" r="14"></circle>
+            <text class="btn-label" x="265" y="149" dy=".35em">Y</text>
+            <circle class="btn face" id="${p}-btn-2" cx="229" cy="185" r="14"></circle>
+            <text class="btn-label" x="229" y="185" dy=".35em">X</text>
+            <circle class="btn face" id="${p}-btn-1" cx="301" cy="185" r="14"></circle>
+            <text class="btn-label" x="301" y="185" dy=".35em">B</text>
+            <circle class="btn face" id="${p}-btn-0" cx="265" cy="221" r="14"></circle>
+            <text class="btn-label" x="265" y="221" dy=".35em">A</text>
 
-            <circle class="btn face" id="${p}-btn-3" cx="290" cy="72" r="11"></circle>
-            <circle class="btn face" id="${p}-btn-2" cx="268" cy="95" r="11"></circle>
-            <circle class="btn face" id="${p}-btn-1" cx="312" cy="95" r="11"></circle>
-            <circle class="btn face" id="${p}-btn-0" cx="290" cy="118" r="11"></circle>
+            <circle class="stick-well" cx="135" cy="295" r="44"></circle>
+            <circle class="deadzone-ring" id="${p}-dz-l" cx="135" cy="295" r="7"></circle>
+            <circle class="btn stickclick" id="${p}-btn-10" cx="135" cy="295" r="44"></circle>
+            <circle class="stick-dot" id="${p}-stick-l" cx="135" cy="295" r="12"></circle>
+
+            <circle class="stick-well" cx="265" cy="295" r="44"></circle>
+            <circle class="deadzone-ring" id="${p}-dz-r" cx="265" cy="295" r="7"></circle>
+            <circle class="btn stickclick" id="${p}-btn-11" cx="265" cy="295" r="44"></circle>
+            <circle class="stick-dot" id="${p}-stick-r" cx="265" cy="295" r="12"></circle>
           </svg>
 
           <canvas class="scope" id="${p}-scope" width="600" height="110"></canvas>
@@ -1238,9 +1256,9 @@
 
     const ax = gp.axes;
     const lx = ax[0] || 0, ly = ax[1] || 0, rx = ax[2] || 0, ry = ax[3] || 0;
-    const R = 14;
-    setStick(p + '-stick-l', 110, 95, lx, ly, R);
-    setStick(p + '-stick-r', 290, 150, rx, ry, R);
+    const R = 26;
+    setStick(p + '-stick-l', 135, 295, lx, ly, R);
+    setStick(p + '-stick-r', 265, 295, rx, ry, R);
 
     const dz = getDeadzone();
     const dzL = document.getElementById(p + '-dz-l');
