@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.doelitsolutions.taller",
+      "package_name": "io.github.doelitsolutions_boop.twa",
       "sha256_cert_fingerprints": [
-        "REEMPLAZA_ESTO_CON_LA_HUELLA_SHA256_QUE_TE_DA_BUBBLEWRAP_INIT"
+        "BB:A3:FB:E8:A1:60:7F:50:E0:15:84:0B:EA:6B:45:9F:72:B6:48:0D:07:BE:9A:2B:9D:0D:34:27:AF:FC:BF:98"
       ]
     }
   }
