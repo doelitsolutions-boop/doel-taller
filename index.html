@@ -247,6 +247,48 @@
     .card{ animation:none; }
     .btn-action{ transition:none; }
   }
+
+  /* --- bloques de tests avanzados (portados de Doel TPV Taller/SAT) --- */
+  .diag-tests{
+    margin-top:18px; padding-top:16px; border-top:1px solid var(--border-soft);
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .test-block{
+    background:rgba(255,255,255,.03); border:1px solid var(--border-soft);
+    border-radius:10px; padding:12px 14px;
+  }
+  .test-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .test-title{ font-size:12.5px; font-weight:700; color:var(--green); letter-spacing:.02em; }
+  .test-hint{ font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5; }
+  .test-warn{ font-size:11.5px; color:var(--amber); margin-top:8px; line-height:1.5;
+    background:rgba(255,177,92,.08); padding:8px 10px; border-radius:8px; }
+
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .chip-info{
+    font-size:11px; padding:3px 10px; border-radius:20px;
+    background:rgba(95,234,8,.08); border:1px solid rgba(95,234,8,.3); color:var(--green);
+  }
+  .chip-info.bt{ background:rgba(155,110,220,.1); border-color:rgba(155,110,220,.35); color:#c9a6f5; }
+  .chip-info.usb{ background:rgba(79,184,232,.1); border-color:rgba(79,184,232,.35); color:var(--cyan); }
+
+  .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:10px; margin-top:8px; }
+  .stats-grid label{ display:block; font-size:10.5px; color:var(--muted); text-transform:none; letter-spacing:0; }
+  .stat-val{ font-size:17px; font-weight:700; margin-top:2px; }
+
+  .result-row{ display:flex; gap:20px; flex-wrap:wrap; margin-top:10px; font-size:12px; }
+  .result-row b{ font-size:14px; }
+
+  .circ-row{ display:flex; gap:28px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+  .circ-col{ text-align:center; }
+  .circ-canvas{ background:rgba(255,255,255,.02); border-radius:50%; display:block; margin:0 auto; }
+  .circ-col .btn-action{ margin-top:8px; padding:6px 12px; font-size:10.5px; }
+
+  .mic-meter{ height:12px; background:#0c1c2e; border-radius:6px; overflow:hidden; margin-top:8px; }
+  .mic-meter > div{ height:100%; width:0%; background:var(--green); transition:width 60ms linear; }
+
+  .btn.tested{ fill:rgba(95,234,8,.16); stroke:rgba(95,234,8,.4); }
+  td.val.pressed.tested{ color:var(--green); opacity:.75; }
+  td.val.pressed.tested::after{ content:' ✓'; }
 </style>
 </head>
 <body>
@@ -364,6 +406,34 @@
   function axisName(i){
     return ['LX','LY','RX','RY'][i] || ('Eje ' + i);
   }
+
+  // --- Detección de fabricante / tipo de conexión (portado de Doel TPV Taller/SAT) ---
+  const VENDORS = { '054c':'Sony', '045e':'Microsoft', '057e':'Nintendo', '046d':'Logitech',
+    '0079':'DragonRise', '2dc8':'8BitDo', '28de':'Valve', '0f0d':'HORI', '1532':'Razer' };
+
+  function parseMando(pad){
+    const id = pad.id || '';
+    const mv = id.match(/Vendor:?\s*([0-9a-f]{4})/i);
+    const mp = id.match(/Product:?\s*([0-9a-f]{4})/i);
+    const vendor = mv ? mv[1].toLowerCase() : null;
+    const nombre = id.replace(/\s*\((STANDARD GAMEPAD|Vendor|Product).*$/i, '').trim() || id;
+    return {
+      nombre: nombre || 'Mando genérico',
+      fabricante: vendor ? (VENDORS[vendor] || ('Vendor ' + vendor)) : null,
+      vendorId: vendor, productId: mp ? mp[1].toLowerCase() : null,
+      estandar: /standard/i.test(pad.mapping || '') || /STANDARD GAMEPAD/i.test(id),
+      conexion: /bluetooth|\bbt\b|wireless/i.test(id) ? 'Bluetooth' : /usb|wired|cable/i.test(id) ? 'USB' : null
+    };
+  }
+
+  // El texto del id no siempre delata el canal, pero el PICO de Hz sí: por cable el mando
+  // reporta a 110+ Hz, por Bluetooth se suele quedar en ~60-95 Hz.
+  function inferirConexion(mInfo, hzPico){
+    if(mInfo.conexion) return mInfo.conexion;
+    if(hzPico >= 110) return 'USB (cable)';
+    if(hzPico > 0 && hzPico <= 95) return 'Bluetooth (inalámbrico)';
+    return null;
+  }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({
       '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
@@ -467,6 +537,7 @@
         </div>
 
         <div class="data-col">
+          <div class="chip-row" id="${p}-info-chips"></div>
           <div class="vib-row">
             <button class="btn-action" id="${p}-vibrate">Probar vibración</button>
             <span class="vib-status" id="${p}-vib-status"></span>
@@ -483,6 +554,80 @@
             <button class="btn-action ghost" id="${p}-export-txt">Descargar informe (.txt)</button>
             <button class="btn-action ghost" id="${p}-export-json">Exportar datos (.json)</button>
           </div>
+        </div>
+      </div>
+
+      <div class="diag-tests">
+        <div class="test-block">
+          <div class="test-title">📊 Estadísticas en vivo</div>
+          <div class="stats-grid">
+            <div><label>Tasa de actualización</label><div class="stat-val" id="${p}-hz">— Hz</div></div>
+            <div><label>Pico</label><div class="stat-val" id="${p}-hzpico">— Hz</div></div>
+            <div><label>Latencia est.</label><div class="stat-val" id="${p}-latencia">~— ms</div></div>
+          </div>
+          <div class="test-hint">Un mando sano reporta a 60+ Hz con latencia &lt;8 ms. Hz bajos o latencia alta = interferencia Bluetooth, batería baja o mando defectuoso.</div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-row">
+            <div class="test-title">📶 Test de Bluetooth (estabilidad del enlace)</div>
+            <button class="btn-action ghost" id="${p}-bt-test">▶ Probar enlace (5s)</button>
+          </div>
+          <div class="test-hint">Mide 5 segundos la estabilidad del enlace inalámbrico. Mucho jitter o paquetes perdidos = interferencias, distancia o batería baja. Solo tiene sentido con mandos por Bluetooth.</div>
+          <div class="result-row" id="${p}-bt-results"></div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-row">
+            <div class="test-title">🎯 Calibración de deriva</div>
+            <button class="btn-action ghost" id="${p}-calib">Calibrar (no tocar, 1.5s)</button>
+          </div>
+          <div class="test-hint">Deja los sticks totalmente en reposo y pulsa calibrar — mide el offset exacto de cada uno, más preciso que la detección pasiva.</div>
+          <div class="result-row" id="${p}-calib-results"></div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-row">
+            <div class="test-title">🔬 Monitor de drift prolongado</div>
+            <button class="btn-action ghost" id="${p}-monitor">▶ Monitorizar 20s</button>
+          </div>
+          <div class="test-hint">Deja el mando quieto 20 segundos. Caza la deriva que aparece a ratos y que una medición puntual no detecta.</div>
+          <div class="result-row" id="${p}-monitor-results"></div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-title" style="text-align:center">🎯 Circularidad — gira cada stick a tope y despacio, una vuelta completa</div>
+          <div class="circ-row">
+            <div class="circ-col">
+              <div class="test-hint">Izquierdo</div>
+              <canvas class="circ-canvas" id="${p}-circ-l" width="130" height="130"></canvas>
+              <button class="btn-action ghost" id="${p}-circ-l-btn">▶ Medir</button>
+            </div>
+            <div class="circ-col">
+              <div class="test-hint">Derecho</div>
+              <canvas class="circ-canvas" id="${p}-circ-r" width="130" height="130"></canvas>
+              <button class="btn-action ghost" id="${p}-circ-r-btn">▶ Medir</button>
+            </div>
+          </div>
+          <div class="test-hint" style="text-align:center; margin-top:10px;">Error &lt; 12% = mecanismo sano · 12–25% = holgura · &gt; 25% = stick gastado (no alcanza el círculo)</div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-row">
+            <div class="test-title">🔋 Batería y carga del mando</div>
+            <button class="btn-action ghost" id="${p}-battery">Leer batería</button>
+          </div>
+          <div class="test-hint">Solo DualSense/DualShock por Bluetooth vía WebHID en Chrome/Edge. Xbox no expone la batería al navegador.</div>
+          <div id="${p}-battery-result" class="result-row"></div>
+        </div>
+
+        <div class="test-block">
+          <div class="test-row">
+            <div class="test-title">🎤 Micrófono del mando</div>
+            <button class="btn-action ghost" id="${p}-mic">▶ Probar micro</button>
+          </div>
+          <div class="test-hint">Habla o sopla al micro del mando (DualSense). La barra debe moverse.</div>
+          <div class="mic-meter" id="${p}-mic-meter" style="display:none;"><div id="${p}-mic-bar"></div></div>
         </div>
       </div>
     </section>`;
@@ -508,31 +653,42 @@
     });
   }
 
-  function setupVibration(p, index){
+  function setupVibration(p, index, state){
     const btn = document.getElementById(p + '-vibrate');
     const status = document.getElementById(p + '-vib-status');
-    const gp0 = navigator.getGamepads()[index];
-    if(!gp0 || !gp0.vibrationActuator){
-      btn.disabled = true;
-      status.textContent = 'No soportado en este mando/navegador';
-      return;
-    }
+
+    const tieneActuador = () => {
+      const gp = navigator.getGamepads()[index];
+      return !!(gp && (gp.vibrationActuator || (gp.hapticActuators && gp.hapticActuators[0])));
+    };
+
     btn.addEventListener('click', async () => {
       const gp = navigator.getGamepads()[index];
-      if(!gp || !gp.vibrationActuator) return;
+      if(!gp) return;
+      const a = gp.vibrationActuator || (gp.hapticActuators && gp.hapticActuators[0]);
+      if(!a){
+        const cx = state ? inferirConexion(state.mandoInfo, state.hzPico) : null;
+        const esBt = cx && /bluetooth|inalámbrico/i.test(cx);
+        status.innerHTML = esBt
+          ? '⚠ Por Bluetooth los DualSense no exponen la vibración al navegador. Prueba por CABLE USB.'
+          : '⚠ El navegador no expone el motor. En Windows: Sonido → salida = tus altavoces, NO el mando. Cierra Steam y reconecta.';
+        return;
+      }
       status.textContent = 'Vibrando…';
       try{
-        await gp.vibrationActuator.playEffect('dual-rumble', {
-          startDelay: 0, duration: 500, weakMagnitude: 1.0, strongMagnitude: 1.0
-        });
+        if(typeof a.playEffect === 'function'){
+          await a.playEffect('dual-rumble', { startDelay: 0, duration: 500, weakMagnitude: 1.0, strongMagnitude: 1.0 });
+        } else if(typeof a.pulse === 'function'){
+          await a.pulse(1.0, 500);
+        }
         status.textContent = 'OK';
       }catch(err){
         status.textContent = 'Error: ' + err.message;
       }
-      setTimeout(() => {
-        if(status.textContent !== 'No soportado en este mando/navegador') status.textContent = '';
-      }, 1200);
+      setTimeout(() => { if(!/⚠/.test(status.innerHTML)) status.textContent = ''; }, 1200);
     });
+
+    if(!tieneActuador()) status.textContent = 'Sin motor detectado — pulsa igualmente para comprobar';
   }
 
   function downloadBlob(filename, content, mime){
@@ -557,6 +713,8 @@
 
   function buildReport(gp, state){
     const wo = getWorkOrderInfo();
+    const m = state.mandoInfo || parseMando(gp);
+    const cx = inferirConexion(m, state.hzPico);
     const lines = [];
     lines.push('DOEL IT SOLUTIONS — INFORME DE DIAGNÓSTICO DE MANDO');
     lines.push('Calle el Natero, 17 · La Cruz Santa, Los Realejos, S/C de Tenerife');
@@ -567,7 +725,9 @@
     if(wo.parte) lines.push('Nº de parte/aviso: ' + wo.parte);
     lines.push('Conectado desde: ' + new Date(state.connectedAt).toLocaleString());
     lines.push('Mando #' + gp.index + ': ' + gp.id);
-    lines.push('Mapeo: ' + (gp.mapping || 'ninguno'));
+    lines.push('Fabricante: ' + (m.fabricante || 'desconocido') + (m.productId ? ' (' + m.vendorId + ':' + m.productId + ')' : ''));
+    lines.push('Conexión: ' + (cx || 'sin determinar') + ' · Mapeo: ' + (gp.mapping || 'ninguno') + (m.estandar ? ' (estándar)' : ' (NO estándar)'));
+    lines.push('Tasa de actualización: ' + state.hz + ' Hz (pico ' + state.hzPico + ' Hz) · Latencia est. ~' + state.latencia + ' ms');
     lines.push('');
     lines.push('EJES (mín / máx observados en esta sesión):');
     gp.axes.forEach((_, i) => {
@@ -580,9 +740,37 @@
       lines.push('  ' + buttonName(i) + ': ' + (state.pressCounts[i] || 0));
     });
     lines.push('');
-    lines.push('AVISOS DE DIAGNÓSTICO:');
+    lines.push('AVISOS DE DIAGNÓSTICO (detección pasiva):');
     lines.push('  Drift stick izquierdo: ' + (state.driftLWarned ? 'SÍ, detectado' : 'No detectado'));
     lines.push('  Drift stick derecho: ' + (state.driftRWarned ? 'SÍ, detectado' : 'No detectado'));
+    const driftCalL = Math.hypot(state.calib.offset.lx, state.calib.offset.ly);
+    const driftCalR = Math.hypot(state.calib.offset.rx, state.calib.offset.ry);
+    if(driftCalL || driftCalR){
+      lines.push('');
+      lines.push('CALIBRACIÓN DE DERIVA (test activo):');
+      lines.push('  Offset stick izquierdo: ' + (driftCalL*100).toFixed(1) + '%');
+      lines.push('  Offset stick derecho: ' + (driftCalR*100).toFixed(1) + '%');
+    }
+    if(state.monitor.seg >= 20){
+      lines.push('');
+      lines.push('MONITOR DE DRIFT PROLONGADO (20s):');
+      lines.push('  Deriva máx. izquierdo: ' + (state.monitor.maxIzq*100).toFixed(1) + '% · derecho: ' + (state.monitor.maxDer*100).toFixed(1) + '% · picos anómalos: ' + state.monitor.picos);
+    }
+    if(state.circ.izq.error != null || state.circ.der.error != null){
+      lines.push('');
+      lines.push('CIRCULARIDAD (desgaste mecánico):');
+      if(state.circ.izq.error != null) lines.push('  Stick izquierdo — error medio: ' + state.circ.izq.error + '%');
+      if(state.circ.der.error != null) lines.push('  Stick derecho — error medio: ' + state.circ.der.error + '%');
+    }
+    if(state.bt.resultado && state.bt.resultado.ok){
+      lines.push('');
+      lines.push('TEST DE BLUETOOTH:');
+      lines.push('  Intervalo medio: ' + state.bt.resultado.media + ' ms · Jitter: ' + state.bt.resultado.jitter + ' ms · Paquetes perdidos: ' + state.bt.resultado.perdidos);
+    }
+    if(state.battery){
+      lines.push('');
+      lines.push('BATERÍA: ' + state.battery.nivel + '% ' + (state.battery.cargando ? '(cargando)' : '(descargando)'));
+    }
     lines.push('');
     lines.push('REGISTRO DE EVENTOS (más reciente primero):');
     logEntries.forEach(l => lines.push('  ' + l));
@@ -591,6 +779,7 @@
 
   function buildJsonExport(gp, state){
     const wo = getWorkOrderInfo();
+    const m = state.mandoInfo || parseMando(gp);
     return {
       empresa: 'Doel IT Solutions',
       generatedAt: new Date().toISOString(),
@@ -600,6 +789,12 @@
       index: gp.index,
       id: gp.id,
       mapping: gp.mapping || null,
+      fabricante: m.fabricante || null,
+      vendorId: m.vendorId || null,
+      productId: m.productId || null,
+      layoutEstandar: m.estandar,
+      conexion: inferirConexion(m, state.hzPico),
+      estadisticas: { hz: state.hz, hzPico: state.hzPico, latenciaMs: state.latencia },
       axes: gp.axes.map((v, i) => ({
         name: axisName(i), current: v,
         min: isFinite(state.axisMin[i]) ? state.axisMin[i] : null,
@@ -610,6 +805,17 @@
         pressCount: state.pressCounts[i] || 0
       })),
       driftWarnings: { left: state.driftLWarned, right: state.driftRWarned },
+      calibracion: {
+        offsetIzq: state.calib.offset.lx || state.calib.offset.ly ? { lx: state.calib.offset.lx, ly: state.calib.offset.ly } : null,
+        offsetDer: state.calib.offset.rx || state.calib.offset.ry ? { rx: state.calib.offset.rx, ry: state.calib.offset.ry } : null
+      },
+      monitorDrift: state.monitor.seg >= 20 ? { maxIzq: state.monitor.maxIzq, maxDer: state.monitor.maxDer, picos: state.monitor.picos } : null,
+      circularidad: {
+        izq: state.circ.izq.error != null ? state.circ.izq.error : null,
+        der: state.circ.der.error != null ? state.circ.der.error : null
+      },
+      bluetooth: (state.bt.resultado && state.bt.resultado.ok) ? state.bt.resultado : null,
+      bateria: state.battery || null,
       eventLog: logEntries.slice()
     };
   }
@@ -625,6 +831,205 @@
     });
   }
 
+  function renderInfoChips(p, state, gp){
+    const el = document.getElementById(p + '-info-chips');
+    if(!el) return;
+    const m = state.mandoInfo;
+    const cx = inferirConexion(m, state.hzPico);
+    let html = '';
+    if(m.fabricante) html += '<span class="chip-info">🏭 ' + m.fabricante + '</span>';
+    if(m.productId) html += '<span class="chip-info">Modelo: ' + m.vendorId + ':' + m.productId + '</span>';
+    html += '<span class="chip-info">' + (m.estandar ? '✓ Layout estándar' : '⚠ Layout no estándar') + '</span>';
+    if(cx){
+      const usb = /USB|cable/i.test(cx);
+      html += '<span class="chip-info ' + (usb ? 'usb' : 'bt') + '">' + (usb ? '🔌' : '📶') + ' ' + cx + '</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderBtResults(p, state){
+    const out = document.getElementById(p + '-bt-results');
+    if(!out) return;
+    const bt = state.bt;
+    if(bt.midiendo){ out.innerHTML = '<span style="color:var(--muted)">Midiendo… 5s, mueve un stick durante la prueba.</span>'; return; }
+    const r = bt.resultado;
+    if(!r){ out.innerHTML = ''; return; }
+    if(!r.ok){ out.innerHTML = '<span style="color:#ff7a7a">No se recogieron muestras suficientes (mueve un stick durante la prueba).</span>'; return; }
+    const colJitter = r.jitter < 5 ? 'var(--green)' : r.jitter < 15 ? 'var(--amber)' : '#ff7a7a';
+    const colPerd = r.perdidos === 0 ? 'var(--green)' : r.perdidos < 3 ? 'var(--amber)' : '#ff7a7a';
+    out.innerHTML =
+      '<div>Intervalo medio<br><b>' + r.media + ' ms</b></div>' +
+      '<div>Jitter<br><b style="color:' + colJitter + '">' + r.jitter + ' ms</b></div>' +
+      '<div>Paquetes perdidos<br><b style="color:' + colPerd + '">' + r.perdidos + '</b></div>' +
+      '<div style="align-self:center;color:' + (r.jitter < 5 && r.perdidos === 0 ? 'var(--green)' : 'var(--amber)') + '">' +
+      (r.jitter < 5 && r.perdidos === 0 ? '✓ Enlace estable' : 'Enlace con inestabilidad') + '</div>';
+  }
+
+  function renderCalibResults(p, state){
+    const out = document.getElementById(p + '-calib-results');
+    if(!out) return;
+    const c = state.calib;
+    if(c.calibrando){
+      out.innerHTML = '<span style="color:var(--muted)">Calibrando… ' + Math.round(Math.min(1, c.muestras.length/90) * 100) + '%</span>';
+      return;
+    }
+    const driftL = Math.hypot(c.offset.lx, c.offset.ly);
+    const driftR = Math.hypot(c.offset.rx, c.offset.ry);
+    if(driftL === 0 && driftR === 0 && c.muestras.length === 0){ out.innerHTML = ''; return; }
+    const nivel = (d) => d >= 0.15 ? ['MAL','#ff7a7a'] : d >= 0.06 ? ['Aviso','var(--amber)'] : ['OK','var(--green)'];
+    const [nL, cL] = nivel(driftL), [nR, cR] = nivel(driftR);
+    out.innerHTML =
+      '<div>Offset izq.<br><b style="color:' + cL + '">' + (driftL*100).toFixed(1) + '% · ' + nL + '</b></div>' +
+      '<div>Offset der.<br><b style="color:' + cR + '">' + (driftR*100).toFixed(1) + '% · ' + nR + '</b></div>';
+  }
+
+  function renderMonitorResults(p, state){
+    const out = document.getElementById(p + '-monitor-results');
+    if(!out) return;
+    const m = state.monitor;
+    if(!m.activo && m.maxIzq === 0 && m.maxDer === 0 && m.seg === 0){ out.innerHTML = ''; return; }
+    const col = (v) => v < 0.06 ? 'var(--green)' : v < 0.15 ? 'var(--amber)' : '#ff7a7a';
+    let html =
+      '<div>Deriva máx. izq.<br><b style="color:' + col(m.maxIzq) + '">' + (m.maxIzq*100).toFixed(1) + '%</b></div>' +
+      '<div>Deriva máx. der.<br><b style="color:' + col(m.maxDer) + '">' + (m.maxDer*100).toFixed(1) + '%</b></div>' +
+      '<div>Picos anómalos<br><b style="color:' + (m.picos === 0 ? 'var(--green)' : '#ff7a7a') + '">' + m.picos + '</b></div>';
+    if(m.activo) html += '<div style="align-self:center;color:var(--muted)">Midiendo… ' + m.seg + 's / 20s</div>';
+    else if(m.seg >= 20) html += '<div style="align-self:center;color:' + (m.picos === 0 && m.maxIzq < 0.06 && m.maxDer < 0.06 ? 'var(--green)' : 'var(--amber)') + '">' +
+      (m.picos === 0 && m.maxIzq < 0.06 && m.maxDer < 0.06 ? '✓ Sin drift intermitente' : '⚠ Aparece deriva a ratos') + '</div>';
+    out.innerHTML = html;
+  }
+
+  async function startMic(state, p){
+    const meter = document.getElementById(p + '-mic-meter');
+    const bar = document.getElementById(p + '-mic-bar');
+    const btn = document.getElementById(p + '-mic');
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      state.mic.stream = stream;
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      state.mic.ctx = ctx;
+      const src = ctx.createMediaStreamSource(stream);
+      const an = ctx.createAnalyser(); an.fftSize = 512;
+      src.connect(an);
+      const buf = new Uint8Array(an.frequencyBinCount);
+      state.mic.activo = true;
+      if(meter) meter.style.display = '';
+      if(btn) btn.textContent = '⏹ Parar';
+      const tick = () => {
+        an.getByteTimeDomainData(buf);
+        let max = 0; for(const v of buf) max = Math.max(max, Math.abs(v - 128));
+        if(bar) bar.style.width = Math.round((max/128) * 100) + '%';
+        state.mic.rafId = requestAnimationFrame(tick);
+      };
+      tick();
+    }catch(err){
+      if(btn) btn.textContent = '▶ Probar micro';
+      if(meter) meter.style.display = 'none';
+    }
+  }
+
+  function stopMic(state, p){
+    if(state.mic.rafId) cancelAnimationFrame(state.mic.rafId);
+    if(state.mic.stream) state.mic.stream.getTracks().forEach(t => t.stop());
+    if(state.mic.ctx){ try{ state.mic.ctx.close(); }catch(e){} }
+    state.mic.activo = false; state.mic.stream = null; state.mic.ctx = null; state.mic.rafId = null;
+    if(p){
+      const meter = document.getElementById(p + '-mic-meter');
+      const btn = document.getElementById(p + '-mic');
+      if(meter) meter.style.display = 'none';
+      if(btn) btn.textContent = '▶ Probar micro';
+    }
+  }
+
+  function setupAdvancedTests(p, index, state){
+    document.getElementById(p + '-calib').addEventListener('click', () => {
+      state.calib.muestras = [];
+      state.calib.calibrando = true;
+    });
+
+    document.getElementById(p + '-monitor').addEventListener('click', () => {
+      const m = state.monitor;
+      const btn = document.getElementById(p + '-monitor');
+      if(m.activo){ m.activo = false; btn.textContent = '▶ Monitorizar 20s'; }
+      else{ m.activo = true; m.seg = 0; m.maxIzq = 0; m.maxDer = 0; m.picos = 0; m.t0 = performance.now(); btn.textContent = '⏹ Parar'; }
+    });
+
+    [['izq','l'],['der','r']].forEach(([side, tag]) => {
+      const btn = document.getElementById(p + '-circ-' + tag + '-btn');
+      const canvas = document.getElementById(p + '-circ-' + tag);
+      btn.addEventListener('click', () => {
+        const c = state.circ[side];
+        if(c.midiendo){
+          c.midiendo = false;
+          if(c.nPtos < 20){ c.error = null; c.sectores = null; }
+          else{
+            const secs = c.acum.slice();
+            const conDato = secs.filter(r => r > 0.3);
+            const rMedio = conDato.length ? conDato.reduce((a,b) => a+b, 0) / conDato.length : 1;
+            const desv = conDato.reduce((a,r) => a + Math.abs(r - rMedio), 0) / (conDato.length || 1);
+            c.error = Math.round((desv / (rMedio || 1)) * 1000) / 10;
+            c.sectores = secs;
+          }
+          drawCircularidad(canvas, c.sectores, c.error);
+          btn.textContent = c.sectores ? '↻ Repetir' : '▶ Medir';
+        }else{
+          c.acum = new Array(CIRC_SECTORES).fill(0); c.nPtos = 0; c.error = null; c.sectores = null;
+          c.midiendo = true;
+          btn.textContent = '⏹ Terminar';
+          drawCircularidad(canvas, null, null);
+        }
+      });
+    });
+
+    document.getElementById(p + '-bt-test').addEventListener('click', () => {
+      const bt = state.bt;
+      bt.gaps = []; bt.ultimo = 0; bt.ultimoTs = 0; bt.resultado = null; bt.midiendo = true;
+      renderBtResults(p, state);
+      setTimeout(() => {
+        bt.midiendo = false;
+        const arr = bt.gaps;
+        if(arr.length < 10){ bt.resultado = { ok: false }; renderBtResults(p, state); return; }
+        const media = arr.reduce((a,b) => a+b, 0) / arr.length;
+        const varianza = arr.reduce((a,g) => a + Math.pow(g - media, 2), 0) / arr.length;
+        const jitter = Math.round(Math.sqrt(varianza) * 10) / 10;
+        const perdidos = arr.filter(g => g > media * 3).length;
+        bt.resultado = { ok: true, jitter, media: Math.round(media * 10) / 10, perdidos, muestras: arr.length };
+        renderBtResults(p, state);
+      }, 5000);
+    });
+
+    document.getElementById(p + '-battery').addEventListener('click', async () => {
+      const out = document.getElementById(p + '-battery-result');
+      if(!navigator.hid){ out.innerHTML = '<span style="color:var(--muted)">WebHID no disponible en este navegador.</span>'; return; }
+      out.innerHTML = '<span style="color:var(--muted)">Leyendo…</span>';
+      try{
+        const dispositivos = await navigator.hid.requestDevice({ filters: [{ vendorId: 0x054c }] });
+        const dev = dispositivos[0];
+        if(!dev){ out.innerHTML = '<span style="color:var(--muted)">No se seleccionó ningún dispositivo.</span>'; return; }
+        if(!dev.opened) await dev.open();
+        dev.addEventListener('inputreport', (e) => {
+          const d = new Uint8Array(e.data.buffer);
+          let nivel = null, cargando = false;
+          for(const pos of [30, 53, 32]){
+            if(d[pos] != null){ const n = d[pos] & 0x0f; if(n <= 10){ nivel = Math.round((n/10) * 100); cargando = ((d[pos] >> 4) & 0x08) > 0; break; } }
+          }
+          if(nivel != null){
+            state.battery = { nivel, cargando };
+            const col = nivel > 30 ? 'var(--green)' : nivel > 15 ? 'var(--amber)' : '#ff7a7a';
+            out.innerHTML = '<div><span style="font-size:22px;font-weight:800;color:' + col + '">' + nivel + '%</span>' +
+              '<span style="font-size:12px;color:var(--muted);margin-left:8px;">' + (cargando ? '⚡ cargando' : 'descargando') + '</span></div>';
+          }
+        });
+      }catch(err){
+        out.innerHTML = '<span style="color:var(--muted)">Este mando no reporta batería al navegador (o no hay WebHID). Los DualSense/DualShock la dan por Bluetooth en Chrome/Edge. Xbox no la expone.</span>';
+      }
+    });
+
+    document.getElementById(p + '-mic').addEventListener('click', () => {
+      if(state.mic.activo) stopMic(state, p); else startMic(state, p);
+    });
+  }
+
   function addCard(gp){
     if(cards.has(gp.index)) return;
     const p = 'gp' + gp.index;
@@ -632,6 +1037,7 @@
     holder.innerHTML = cardTemplate(gp).trim();
     document.getElementById('cards').appendChild(holder.firstElementChild);
 
+    const mandoInfo = parseMando(gp);
     const state = {
       prevButtons: gp.buttons.map(b => b.pressed),
       scope: {
@@ -645,11 +1051,27 @@
       pressCounts: gp.buttons.map(() => 0),
       connectedAt: Date.now(),
       eventsThisSecond: 0, rateWindowStart: performance.now(), lastRate: 0,
-      prevAxesVals: null, prevButtonVals: null
+      prevAxesVals: null, prevButtonVals: null,
+      // --- portado de Doel TPV Taller/SAT ---
+      mandoInfo: mandoInfo,
+      hz: 0, hzPico: 0, latencia: 0,
+      hzUltimoTs: gp.timestamp || 0, hzCambios: 0, hzT0: performance.now(),
+      hzGaps: [], hzGapsLast: 0,
+      calib: { calibrando: false, offset: {lx:0, ly:0, rx:0, ry:0}, muestras: [] },
+      monitor: { activo: false, seg: 0, maxIzq: 0, maxDer: 0, picos: 0, t0: 0 },
+      circ: {
+        izq: { midiendo: false, error: null, sectores: null, acum: new Array(CIRC_SECTORES).fill(0), nPtos: 0, lastDraw: 0 },
+        der: { midiendo: false, error: null, sectores: null, acum: new Array(CIRC_SECTORES).fill(0), nPtos: 0, lastDraw: 0 }
+      },
+      bt: { midiendo: false, resultado: null, gaps: [], ultimo: 0, ultimoTs: 0 },
+      battery: null,
+      mic: { activo: false, stream: null, ctx: null, rafId: null }
     };
     populateTables(p, gp, state);
-    setupVibration(p, gp.index);
+    setupVibration(p, gp.index, state);
     setupExports(p, gp, state);
+    setupAdvancedTests(p, gp.index, state);
+    renderInfoChips(p, state, gp);
     cards.set(gp.index, state);
 
     document.getElementById('empty-state').style.display = 'none';
@@ -660,6 +1082,7 @@
   function removeCard(index){
     const state = cards.get(index);
     if(!state) return;
+    if(state.mic && state.mic.activo) stopMic(state);
     const el = document.getElementById('gp' + index);
     if(el) el.remove();
     cards.delete(index);
@@ -702,6 +1125,55 @@
     } else {
       state.driftRStart = null;
       state.driftRWarned = false;
+    }
+  }
+
+  // Gráfica radial de circularidad del stick (portado de Doel TPV Taller/SAT, en canvas
+  // en vez de SVG). Un pétalo por sector angular; el color se calcula respecto a la mediana
+  // de los sectores con dato: azul si el stick se queda corto, rojo si se pasa.
+  const CIRC_SECTORES = 24;
+  function drawCircularidad(canvas, sectores, error){
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cx = size/2, cy = size/2, R = size/2 - 8;
+    ctx.clearRect(0, 0, size, size);
+    const n = sectores ? sectores.length : CIRC_SECTORES;
+    const conDato = (sectores || []).filter(r => r > 0.3).slice().sort((a,b) => a-b);
+    const ref = conDato.length ? conDato[Math.floor(conDato.length/2)] : 1;
+    for(let i = 0; i < n; i++){
+      const r = sectores ? sectores[i] : 0;
+      const a0 = (i/n) * Math.PI*2 - Math.PI/2;
+      const a1 = ((i+1)/n) * Math.PI*2 - Math.PI/2;
+      const rr = Math.min(1.15, r) * R;
+      let col;
+      if(r < 0.3){ col = 'rgba(70,90,160,.22)'; }
+      else{
+        const desv = ref > 0 ? (r-ref)/ref : 0;
+        const t = Math.max(-1, Math.min(1, desv*4));
+        const rojo = Math.round(120 + Math.max(0,t)*120);
+        const azul = Math.round(200 - Math.max(0,t)*120 + Math.max(0,-t)*40);
+        const verde = Math.round(110 - Math.abs(t)*30);
+        col = 'rgba(' + rojo + ',' + verde + ',' + azul + ',.75)';
+      }
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, Math.max(1,rr), a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 0.5; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#0c1c2e'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1; ctx.stroke();
+    if(error != null){
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = '700 10px sans-serif';
+      ctx.fillText('Error medio', cx, cy + R*0.42);
+      ctx.font = '800 15px sans-serif';
+      ctx.fillText(error + '%', cx, cy + R*0.42 + 16);
     }
   }
 
@@ -750,6 +1222,7 @@
       const el = document.getElementById(p + '-btn-' + i);
       if(!el || !b) return;
       el.classList.toggle('pressed', b.pressed);
+      el.classList.toggle('tested', !b.pressed && (state.pressCounts[i] || 0) > 0);
     });
 
     const lt = gp.buttons[6] ? gp.buttons[6].value : 0;
@@ -777,6 +1250,80 @@
 
     detectDrift(state, gp.index, Math.hypot(lx,ly), Math.hypot(rx,ry));
 
+    // --- portado de Doel TPV Taller/SAT: Hz/latencia, calibración, monitor, circularidad, BT ---
+    if(gp.timestamp !== state.hzUltimoTs){
+      const ahora = performance.now();
+      if(state.hzUltimoTs){ const gap = ahora - (state.hzGapsLast || ahora); state.hzGaps.push(gap); if(state.hzGaps.length > 60) state.hzGaps.shift(); }
+      state.hzGapsLast = ahora;
+      state.hzUltimoTs = gp.timestamp;
+      state.hzCambios++;
+    }
+    const dtHz = (performance.now() - state.hzT0) / 1000;
+    if(dtHz >= 0.5){
+      state.hz = Math.round(state.hzCambios / dtHz);
+      state.hzPico = Math.max(state.hzPico, state.hz);
+      const arrGaps = state.hzGaps.filter(g => typeof g === 'number');
+      const mediaGap = arrGaps.length ? arrGaps.reduce((a,b) => a+b, 0) / arrGaps.length : 0;
+      state.latencia = Math.round(mediaGap * 10) / 10;
+      state.hzCambios = 0; state.hzT0 = performance.now();
+      const hzEl = document.getElementById(p + '-hz'), hzPicoEl = document.getElementById(p + '-hzpico'), latEl = document.getElementById(p + '-latencia');
+      if(hzEl) hzEl.textContent = state.hz + ' Hz';
+      if(hzPicoEl) hzPicoEl.textContent = state.hzPico + ' Hz';
+      if(latEl) latEl.textContent = '~' + state.latencia + ' ms';
+      renderInfoChips(p, state, gp);
+    }
+
+    if(state.calib.calibrando){
+      state.calib.muestras.push({lx, ly, rx, ry});
+      if(state.calib.muestras.length >= 90){
+        const n = state.calib.muestras.length;
+        const suma = state.calib.muestras.reduce((a,m) => ({lx:a.lx+m.lx, ly:a.ly+m.ly, rx:a.rx+m.rx, ry:a.ry+m.ry}), {lx:0,ly:0,rx:0,ry:0});
+        state.calib.offset = { lx: suma.lx/n, ly: suma.ly/n, rx: suma.rx/n, ry: suma.ry/n };
+        state.calib.calibrando = false;
+      }
+      renderCalibResults(p, state);
+    }
+
+    if(state.monitor.activo){
+      const dIzq = Math.hypot(lx, ly), dDer = Math.hypot(rx, ry);
+      state.monitor.maxIzq = Math.max(state.monitor.maxIzq, dIzq);
+      state.monitor.maxDer = Math.max(state.monitor.maxDer, dDer);
+      if(dIzq > 0.10 || dDer > 0.10) state.monitor.picos++;
+      state.monitor.seg = Math.floor((performance.now() - state.monitor.t0) / 1000);
+      if(state.monitor.seg >= 20){
+        state.monitor.activo = false;
+        const btnM = document.getElementById(p + '-monitor');
+        if(btnM) btnM.textContent = '▶ Monitorizar 20s';
+      }
+      renderMonitorResults(p, state);
+    }
+
+    [['izq', 0, 1, 'l'], ['der', 2, 3, 'r']].forEach(([side, ejeX, ejeY, tag]) => {
+      const c = state.circ[side];
+      if(!c.midiendo) return;
+      const x = ax[ejeX] || 0, y = ax[ejeY] || 0;
+      const r = Math.hypot(x, y);
+      if(r > 0.3){
+        let ang = Math.atan2(y, x); if(ang < 0) ang += Math.PI * 2;
+        const idx = Math.min(CIRC_SECTORES - 1, Math.floor((ang / (Math.PI*2)) * CIRC_SECTORES));
+        if(r > c.acum[idx]) c.acum[idx] = r;
+        c.nPtos++;
+      }
+      const now = performance.now();
+      if(now - c.lastDraw > 120){
+        drawCircularidad(document.getElementById(p + '-circ-' + tag), c.acum, null);
+        c.lastDraw = now;
+      }
+    });
+
+    if(state.bt.midiendo){
+      if(gp.timestamp !== state.bt.ultimoTs){
+        const ahora = performance.now();
+        if(state.bt.ultimo) state.bt.gaps.push(ahora - state.bt.ultimo);
+        state.bt.ultimo = ahora; state.bt.ultimoTs = gp.timestamp;
+      }
+    }
+
     // min/máx por eje + tabla de ejes
     state.axesEls.forEach((row, i) => {
       const v = ax[i] ?? 0;
@@ -793,6 +1340,7 @@
       if(!b) return;
       rowEls.pressed.textContent = b.pressed ? 'SÍ' : '—';
       rowEls.pressed.classList.toggle('on', b.pressed);
+      rowEls.pressed.classList.toggle('tested', !b.pressed && (state.pressCounts[i] || 0) > 0);
       rowEls.value.textContent = (b.value ?? 0).toFixed(2);
       rowEls.count.textContent = state.pressCounts[i] || 0;
     });
