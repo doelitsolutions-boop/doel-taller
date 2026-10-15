@@ -1,0 +1,358 @@
+diff --git a/electron/comandero.cjs b/electron/comandero.cjs
+index 3138736..ddbe045 100644
+--- a/electron/comandero.cjs
++++ b/electron/comandero.cjs
+@@ -258,6 +258,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+     // ficha del último cliente en la caché y se la enseña al siguiente que abra la PWA.
+     const json = (code, obj) => { res.writeHead(code, seg.cabeceras('json')); res.end(JSON.stringify(obj)); };
+     const ip = seg.ipDe(req);
++    // v0.1.73 · SEC-18 · como el puesto en red: solo IP privadas (un puerto abierto en el router no entra)
++    if (!require('./puesto-red.cjs').esLocal(ip)) return json(403, { ok: false, error: 'El comandero solo funciona dentro del taller' });
+     try {
+       if (req.method === 'GET' && req.url === '/manifest.webmanifest') {
+         /* App instalable: «Añadir a pantalla de inicio» → pantalla completa sin barras.
+diff --git a/electron/db/taller-ordenes.cjs b/electron/db/taller-ordenes.cjs
+index 94a7b13..6c09885 100644
+--- a/electron/db/taller-ordenes.cjs
++++ b/electron/db/taller-ordenes.cjs
+@@ -603,7 +603,7 @@ function checklistAprender(tipo, item) {
+ 
+ 
+ function portalClaveGenerar(clienteId) {
+-  const clave = String(Math.floor(10000000 + Math.random() * 90000000)); // 8 dígitos, sin ceros a la izquierda
++  const clave = String(crypto.randomInt(10000000, 100000000)); // 8 dígitos, sin ceros a la izquierda · v0.1.73 · SEC-25 · aleatorio criptográfico, no Math.random
+   const hash = crypto.createHash('sha256').update('doel-portal|' + clave).digest('hex');
+   // v4.0.36 · el claro se guarda CIFRADO (AES de la casa, como las contraseñas de equipos):
+   // si el cliente la pierde, el taller la VE — con rastro en el historial, no a hurtadillas
+diff --git a/electron/licencia.cjs b/electron/licencia.cjs
+index bfca72e..e4371f8 100644
+--- a/electron/licencia.cjs
++++ b/electron/licencia.cjs
+@@ -20,7 +20,7 @@ function validar(codigo) {
+     const [datos, firma] = String(codigo || '').trim().split('.');
+     if (!datos || !firma) return null;
+     const esperada = crypto.createHmac('sha256', SECRETO).update(datos).digest('hex').slice(0, 24);
+-    if (firma !== esperada) return null;
++    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null; // v0.1.73 · SEC-26 · comparación en tiempo constante
+     const payload = JSON.parse(Buffer.from(datos, 'base64url').toString('utf8'));
+     if (payload.e !== equipoId()) return null; // ligada a ESTE equipo
+     return { cliente: payload.c };
+diff --git a/electron/main.cjs b/electron/main.cjs
+index eccebb0..4025d1d 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -30,6 +30,22 @@ let win;
+ 
+ let permitirSalir = false;
+ 
++/* v0.1.73 · SEC-20 · ninguna ventana con preload navega fuera de la app ni abre hijas con el puente.
++   Sin setWindowOpenHandler, window.open / target=_blank creaban una ventana con las MISMAS
++   webPreferences (preload incluido): la web remota recibía window.doel entero. Ahora los enlaces
++   https se abren en el navegador del sistema y el resto se niega. */
++function endurecerVentana(w) {
++  const wc = w.webContents;
++  wc.setWindowOpenHandler(({ url }) => {
++    if (/^https:\/\//.test(url)) { try { shell.openExternal(url); } catch (e) { /* sin navegador: nada */ } }
++    return { action: 'deny' };
++  });
++  wc.on('will-navigate', (e, url) => {
++    if (!/^file:/.test(url) && !(process.env.VITE_DEV && /^http:\/\/localhost:5173/.test(url))) e.preventDefault();
++  });
++  wc.on('will-attach-webview', (e) => e.preventDefault());
++}
++
+ function createWindow() {
+   const cfg = db.configAll();
+   win = new BrowserWindow({
+@@ -45,9 +61,11 @@ function createWindow() {
+       preload: path.join(__dirname, 'preload.cjs'),
+       contextIsolation: true,
+       nodeIntegration: false,
++      devTools: !!process.env.VITE_DEV, // v0.1.73 · SEC-21 · en producción Ctrl+Shift+I no abre nada
+       plugins: true // v5.0.82 · visor PDF de Chromium (biblioteca de diagramas)
+     }
+   });
++  endurecerVentana(win); // v0.1.73 · SEC-20
+   // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que
+   // aprobarla explícitamente o getGamepads() devuelve siempre vacío (el mando va en la web
+   // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID).
+@@ -115,8 +133,9 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+     width: 1100, height: 760, minWidth: 900, minHeight: 600,
+     backgroundColor: '#082947', autoHideMenuBar: true,
+     icon: path.join(__dirname, '..', 'build', 'icon.ico'),
+-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, plugins: true },
++    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, devTools: !!process.env.VITE_DEV, plugins: true },
+   });
++  endurecerVentana(v); // v0.1.73 · SEC-20
+   ventanasHerramienta.set(ficha, { herramienta: id, usuario: usuario || null, win: v });
+   v.on('closed', () => ventanasHerramienta.delete(ficha));
+   const query = { herramienta: id, v: ficha };
+@@ -136,6 +155,10 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+ async function pulsoCajon(deviceName, ajuste = null) {
+   const dev = (deviceName || '').trim();
+   if (!dev) return { ok: false, error: 'No hay impresora del cajón configurada (Ajustes → Impresoras)' };
++  /* v0.1.73 · SEC-22 · el respaldo «copy /b» pasa por cmd.exe, que vuelve a interpretar comillas y «&»:
++     un nombre de impresora con esos caracteres ejecutaba lo que llevara detrás. Solo letras, cifras y
++     los signos que Windows admite en un nombre de impresora. */
++  if (!/^[\p{L}\p{N} _.#()\-]{1,64}$/u.test(dev)) return { ok: false, error: 'Nombre de impresora no válido: ' + dev.slice(0, 40) };
+   /* v0.0.82 · pin y duración del pulso configurables: el cajón puede estar cableado al
+      pin 5 y hay solenoides que necesitan más de 50 ms para saltar. */
+   const aj = ajuste || cajon.desdeConfig(db.configAll());
+@@ -1020,6 +1043,10 @@ app.whenReady().then(() => {
+     // el recordatorio de cita, el aviso de hueco a la lista de espera y compartir
+     // el enlace de reservas. Lista blanca estrecha a propósito: nada más entra.
+     const cfg = db.configAll();
++    /* v0.1.73 · SEC-23 · esquema antes que lista: file://, \\\\servidor\\x.exe o ms-*: nunca llegan a ShellExecute,
++       aunque alguien los haya guardado como web de un proveedor o como url_contacto. */
++    let proto = null; try { proto = new URL(String(url || '')).protocol; } catch (e) { /* no es una URL */ }
++    if (!['https:', 'http:', 'mailto:'].includes(proto)) throw new Error('URL no permitida');
+     const permitidas = ['https://doelitcard.netlify.app', 'https://doel-tpv-restaurante.netlify.app',
+       'https://wa.me/', 'https://api.whatsapp.com/', 'https://web.whatsapp.com/',
+       'mailto:', // v0.1.4 · el presupuesto (y el aviso de listo) por correo: abre el cliente de correo del PC, nada más
+diff --git a/electron/main/impresion.cjs b/electron/main/impresion.cjs
+index ec5b8bb..3907be9 100644
+--- a/electron/main/impresion.cjs
++++ b/electron/main/impresion.cjs
+@@ -13,7 +13,9 @@ ipcMain.handle('print:pdf', async (_e, html, nombreSugerido) => {
+       filters: [{ name: 'PDF', extensions: ['pdf'] }]
+     });
+     if (canceled || !filePath) return { ok: true, data: null };
+-    const pw = new BrowserWindow({ show: false, width: 400, height: 600 });
++    const pw = new BrowserWindow({ show: false, width: 400, height: 600, webPreferences: { sandbox: true, contextIsolation: true } });
++    pw.webContents.setWindowOpenHandler(() => ({ action: 'deny' })); // v0.1.73 · SEC-24
++    pw.webContents.on('will-navigate', (e) => e.preventDefault());
+     await pw.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+     const buf = await pw.webContents.printToPDF({ printBackground: true, pageSize: 'A4' });
+     pw.close();
+@@ -39,7 +41,11 @@ handle('print:printers', async () => {
+ // de hostelería 'barra' y 'cocina' ya no existen: caen a 'ticket' por si queda alguna llamada.
+ // Compartido: impresión silenciosa de HTML a una impresora concreta (o diálogo si vacía)
+ const imprimirHtml = async (html, device) => {
+-    const pw = new BrowserWindow({ show: false, width: 420, height: 640 });
++    /* v0.1.73 · SEC-24 · el HTML que se imprime puede venir del puesto en red o del comandero: sin
++       preload (ya era así), en sandbox y sin poder abrir ventanas ni navegar a otro sitio. */
++    const pw = new BrowserWindow({ show: false, width: 420, height: 640, webPreferences: { sandbox: true, contextIsolation: true } });
++    pw.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
++    pw.webContents.on('will-navigate', (e) => e.preventDefault());
+     await pw.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+     return await new Promise((resolve) => {
+       const opts = { printBackground: true, margins: { marginType: 'none' } };
+diff --git a/electron/permisos-canal.cjs b/electron/permisos-canal.cjs
+index 82a0415..6081da2 100644
+--- a/electron/permisos-canal.cjs
++++ b/electron/permisos-canal.cjs
+@@ -36,6 +36,9 @@ const EXACTOS = {
+   'stock:alta': 'stock', 'stock:inventario': 'stock', 'stock:distribuidor-guardar': 'stock', 'stock:distribuidor-borrar': 'stock', 'stock:prod-distribuidor': 'stock',
+   /* 💶 Caja y tickets */
+   'caja:abrir': 'cierre', 'caja:cerrar': 'cierre', 'caja:cajon': 'cajon', 'caja:cajonAbrir': 'cajon',
++  /* v0.1.73 · SEC-19 · otras puertas del cajón y del mostrador que no figuraban */
++  'caja:cajonProbar': 'cajon', 'sat:cajon-raw': 'cajon', 'taller:tpv-impresora-test': 'cajon',
++  'salud:mantenimiento': 'ajustes', 'docs:borrar': 'ajustes', 'fichaje:export': 'ajustes',
+   'tickets:anular': 'anular', 'tickets:rectificar-parcial': 'anular',
+   /* 🛒 Compras */
+   'compras:subir': 'compras', 'compras:aplicar': 'compras', 'compras:borrar': 'compras',
+@@ -50,7 +53,7 @@ const EXACTOS = {
+ /* Prefijos: lo que no está arriba. Solo los grupos que son una pantalla con permiso propio. */
+ const PREFIJOS = [
+   ['informes:', 'informes'], ['central:', 'informes'], ['fiscal:', 'informes'],
+-  ['dev:', 'ajustes'], ['sistema:', 'ajustes'], ['backup:', 'ajustes'], ['perfiles:', 'ajustes'], ['puesto:', 'ajustes'], ['lan:', 'ajustes'],
++  ['dev:', 'ajustes'], ['sistema:', 'ajustes'], ['sat:', 'ajustes'], // v0.1.73 · SEC-19 · Kit SAT lanza instaladores y pnputil elevado ['backup:', 'ajustes'], ['perfiles:', 'ajustes'], ['puesto:', 'ajustes'], ['lan:', 'ajustes'],
+ ];
+ 
+ /* Lecturas del catálogo que necesita el mostrador y el taller: nunca exigen permiso, aunque el
+diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
+index e497d4f..307d149 100644
+--- a/electron/puesto-red.cjs
++++ b/electron/puesto-red.cjs
+@@ -38,6 +38,23 @@ const VIDA_MS = 12 * 3600000; // 12 h: una jornada larga, y a volver a entrar
+ // v0.0.85 · SEC-03 · el PIN que abre este puesto es el mismo de cuatro cifras del
+ // comandero, así que merece el mismo freno: cinco fallos por IP y a esperar.
+ const freno = seg.crearFreno();
++/* v0.1.73 · SEC-10 · canales que validan un PIN además de auth:login: pasan por el mismo freno.
++   Sin esto, fichaje:login por /rpc permitía probar los 10 000 PIN de todos los usuarios. */
++const CANALES_PIN = new Set(['fichaje:login', 'fichaje:admin', 'app:salir', 'caja:cajonAbrir']);
++/* v0.1.73 · SEC-11 · el usuario que firma el rastro (log de la orden, caja, anulaciones) es el de
++   la sesión del puesto, no el que mande el cliente: posición del argumento por canal. */
++const POS_USUARIO = { 'taller:pass-ver': 1, 'taller:orden-estado': 2, 'taller:linea-set': 2,
++  'caja:movimiento': 3, 'tickets:anular': 1, 'fid:canjear': 2 };
++/* v0.1.73 · SEC-12 · claves de config que no salen por la red a quien no tenga «ajustes» */
++const SECRETAS = /(_token|_clave|_key|_hash|_pin|_hmac|_sello)$/;
++/* v0.1.73 · SEC-13 · el Host de la petición debe ser el mostrador (DNS rebinding) */
++function hostPermitido(host) {
++  const h = String(host || '').toLowerCase().replace(/^\[|\]$/g, '');
++  const nombre = h.replace(/:\d+$/, '');
++  if (!nombre) return false;
++  if (nombre === 'localhost' || nombre === '127.0.0.1' || nombre === '::1') return true;
++  return ipsLocales().includes(nombre);
++}
+ 
+ /* Canales prohibidos en remoto: abren diálogos del sistema en el PC del mostrador.
+    El aviso dice DÓNDE hacerlo, que es lo que el usuario necesita saber. */
+@@ -180,18 +197,20 @@ function certificado(dirDatos) {
+   const meta = path.join(dir, 'meta.json');
+   try {
+     const m = JSON.parse(fs.readFileSync(meta, 'utf8'));
+-    if (m && m.formato === 2 && Array.isArray(m.ips) && ips.every((ip) => m.ips.includes(ip)) && m.caduca > Date.now() + 30 * 86400000) { // formato 2 = nombre ASCII (v0.1.34); los anteriores se regeneran
++    if (m && m.formato === 3 && Array.isArray(m.ips) && ips.every((ip) => m.ips.includes(ip)) && m.caduca > Date.now() + 30 * 86400000) { // formato 2 = nombre ASCII (v0.1.34); los anteriores se regeneran
+       return { cert: fs.readFileSync(path.join(dir, 'cert.pem'), 'utf8'), key: fs.readFileSync(path.join(dir, 'key.pem'), 'utf8'), fingerprint: m.fingerprint, ips: m.ips, ruta: dir, nuevo: false };
+     }
+   } catch (e) { /* no hay o no cuadra: se genera */ }
+-  const dias = 3650;
++  const dias = 825; // v0.1.73 · SEC-14 · tope que aceptan Chrome y Apple para certificados de servidor
+   /* v0.1.34 · SOLO ASCII en el nombre: node-forge lo codifica como PrintableString, y con el
+      «·» (UTF-8 C2 B7) Chrome tiraba el certificado entero: ERR_SSL_SERVER_CERT_BAD_FORMAT. */
+   const p = selfsigned.generate([{ name: 'commonName', value: 'Doel Taller - puesto en red' }, { name: 'organizationName', value: 'Doel IT Solutions' }], {
+     days: dias, keySize: 2048, algorithm: 'sha256',
+     extensions: [
+-      { name: 'basicConstraints', cA: true },
+-      { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
++      /* v0.1.73 · SEC-14 · certificado de HOJA: hasta la 0.1.72 era una CA con keyCertSign instalada en
++         el almacén raíz del otro PC, y con su key.pem se podían firmar certificados de cualquier dominio. */
++      { name: 'basicConstraints', cA: false },
++      { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+       { name: 'extKeyUsage', serverAuth: true },
+       { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }, ...ips.map((ip) => ({ type: 7, ip }))] },
+     ],
+@@ -199,7 +218,7 @@ function certificado(dirDatos) {
+   fs.mkdirSync(dir, { recursive: true });
+   fs.writeFileSync(path.join(dir, 'cert.pem'), p.cert);
+   fs.writeFileSync(path.join(dir, 'key.pem'), p.private, { mode: 0o600 });
+-  fs.writeFileSync(meta, JSON.stringify({ formato: 2, ips, fingerprint: p.fingerprint, creado: Date.now(), caduca: Date.now() + dias * 86400000 }));
++  fs.writeFileSync(meta, JSON.stringify({ formato: 3, ips, fingerprint: p.fingerprint, creado: Date.now(), caduca: Date.now() + dias * 86400000 }));
+   return { cert: p.cert, key: p.private, fingerprint: p.fingerprint, ips, ruta: dir, nuevo: true };
+ }
+ 
+@@ -352,9 +371,16 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+       }
+ 
+       if (req.method === 'POST' && ruta === '/rpc') {
+-        // v0.0.85 · SEC-05 · tope de 256 KB, cortado según llega
++        // v0.1.73 · SEC-13 · solo con el Host del mostrador (una web ajena con DNS rebinding no entra)
++        if (!hostPermitido(req.headers.host)) return json(421, { ok: false, error: 'Entra por la IP del mostrador (Ajustes › Puesto en red)' });
++        // v0.1.73 · SEC-15 · la sesión se mira ANTES de leer el cuerpo: sin sesión caben 256 KB (el login);
++        // con sesión, 16 MB (fotos). Antes cualquiera de la Wi-Fi podía mandar 16 MB por conexión sin PIN.
++        limpiarSesiones();
++        const token = req.headers['x-token'];
++        const sesion = token ? sesiones.get(token) : null;
++        // v0.0.85 · SEC-05 · tope de cuerpo, cortado según llega
+         let peticion;
+-        try { peticion = seg.parsearCuerpo(await seg.leerCuerpo(req, seg.CUERPO_MAX_RPC)); } // v0.1.44 · 16 MB: fotos desde el puesto
++        try { peticion = seg.parsearCuerpo(await seg.leerCuerpo(req, sesion ? seg.CUERPO_MAX_RPC : seg.CUERPO_MAX)); } // v0.1.44 · 16 MB: fotos desde el puesto
+         catch (e) { return json(413, { ok: false, error: e.message }); }
+         const { canal, args } = peticion;
+         if (!canal || typeof canal !== 'string') return json(400, { ok: false, error: 'Llamada sin canal' });
+@@ -368,10 +394,6 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+         const fn = HANDLERS.get(canal);
+         if (!fn) return json(200, { ok: false, error: 'El mostrador no conoce «' + canal + '»' });
+ 
+-        limpiarSesiones();
+-        const token = req.headers['x-token'];
+-        const sesion = token ? sesiones.get(token) : null;
+-
+         if (canal === 'auth:login') {          // única puerta abierta: valida el PIN ella misma
+           const limpio = ip.replace('::ffff:', '');
+           const parado = freno.bloqueo(limpio);
+@@ -395,14 +417,31 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+           try { logEvento && logEvento('puesto-red', 'Denegado ' + canal + ' a ' + sesion.nombre + ' (sin permiso «' + permisos.permisoDeCanal(canal) + '»)', sesion.usuarioId); } catch (e) { /* nada */ }
+           return json(403, { ok: false, error: 'Tu perfil no tiene permiso «' + permisos.permisoDeCanal(canal) + '» para esto' });
+         }
+-        return json(200, await fn(...(args || [])));
++        /* v0.1.73 · SEC-10 · un PIN que se valida por aquí pasa por el mismo freno que auth:login */
++        if (CANALES_PIN.has(canal)) {
++          const limpio = ip.replace('::ffff:', '');
++          const parado = freno.bloqueo(limpio);
++          if (parado) return json(429, { ok: false, error: 'Demasiados intentos desde este PC. Espera ' + parado.segundos + ' s y vuelve a probar.' });
++          const r = await fn(...(args || []));
++          if (!r || !r.ok || !r.data) freno.fallo(limpio); else freno.acierto(limpio);
++          return json(200, r);
++        }
++        /* v0.1.73 · SEC-11 · el rastro lo firma quien tiene la sesión, no quien diga el cliente */
++        const argsFinal = Array.isArray(args) ? args.slice() : [];
++        if (Object.prototype.hasOwnProperty.call(POS_USUARIO, canal)) argsFinal[POS_USUARIO[canal]] = sesion.usuarioId;
++        const r = await fn(...argsFinal);
++        /* v0.1.73 · SEC-12 · tokens de la nube, claves y hashes solo para quien puede verlos en Ajustes */
++        if (canal === 'config:all' && r && r.ok && r.data && !permisos.autorizado(sesion, 'config:set')) {
++          for (const k of Object.keys(r.data)) if (SECRETAS.test(k)) delete r.data[k];
++        }
++        return json(200, r);
+       }
+ 
+       /* La aplicación de verdad, servida desde dist/. En index.html se cuela el
+          puente ANTES del bundle: cuando React arranca, window.doel ya existe. */
+       let f = ruta === '/' ? '/index.html' : ruta;
+       const destino = path.normalize(path.join(raiz, f));
+-      if (!destino.startsWith(raiz)) return json(403, { ok: false, error: 'Ruta no permitida' });
++      if (destino !== raiz && !destino.startsWith(raiz + path.sep)) return json(403, { ok: false, error: 'Ruta no permitida' }); // v0.1.73 · SEC-16 · «dist-otra/» no vale
+       if (!fs.existsSync(destino) || fs.statSync(destino).isDirectory()) {
+         if (!fs.existsSync(path.join(raiz, 'index.html'))) {
+           res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+@@ -424,7 +463,9 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+         'content-type': (tipos[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8' });
+       return res.end(fs.readFileSync(path.join(raiz, f)));
+     } catch (e) {
+-      return json(500, { ok: false, error: e.message });
++      // v0.1.73 · SEC-17 · el detalle (rutas, tablas) va al registro; a la red solo «Error interno»
++      try { logEvento && logEvento('puesto-red', 'Error interno en ' + req.url.split('?')[0] + ': ' + e.message, null); } catch (x) { /* nada */ }
++      return json(500, { ok: false, error: 'Error interno del mostrador' });
+     }
+   };
+ 
+diff --git a/reserva-online/netlify.toml b/reserva-online/netlify.toml
+index f94c485..02fba79 100644
+--- a/reserva-online/netlify.toml
++++ b/reserva-online/netlify.toml
+@@ -3,3 +3,15 @@
+ 
+ [functions]
+   node_bundler = "esbuild"
++
++# v0.1.73 · SEC-28 · cabeceras de seguridad en todo el sitio. CSP queda para una entrega aparte:
++# las páginas llevan onclick= y estilos en línea, y movil.html habla con speed.cloudflare.com;
++# hay que probarla página a página antes de activarla.
++[[headers]]
++  for = "/*"
++  [headers.values]
++    X-Frame-Options = "DENY"
++    X-Content-Type-Options = "nosniff"
++    Referrer-Policy = "no-referrer"
++    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
++    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+diff --git a/reserva-online/public/index.html b/reserva-online/public/index.html
+index 3de7b92..b7c5086 100644
+--- a/reserva-online/public/index.html
++++ b/reserva-online/public/index.html
+@@ -164,7 +164,11 @@ async function cargar() {
+   } catch (e) { $('cargando').textContent = '✗ ' + e.message; }
+ }
+ 
+-const token = new URLSearchParams(location.search).get('token');
++/* v0.1.73 · SEC-27 · el token viene de la URL: solo hex de 20 (como los genera la función) y escapado al pintarlo.
++   Antes, con /api/estado en 404, se metía crudo en innerHTML: XSS reflejado desde un enlace. */
++const esc = (t) => String(t == null ? '' : t).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
++const tokenBruto = new URLSearchParams(location.search).get('token');
++const token = /^[0-9a-f]{8,64}$/i.test(tokenBruto || '') ? tokenBruto : null;
+ async function verEstado() {
+   $('cargando').classList.add('oculto');
+   $('anular').classList.remove('oculto');
+@@ -189,7 +193,7 @@ async function verEstado() {
+     // está desplegada con una versión antigua, sin la ruta /api/estado).
+     cab = `<div style="color:#e0a852;font-weight:700;margin-bottom:4px">No he podido comprobar el estado de tu cita</div>
+       <div style="color:var(--muted);font-size:13px">Tu reserva está hecha; si tienes dudas, llama al salón.<br>
+-      Código: <span class="tok">${token}</span><br><small style="color:#5d7e99">(${err.message})</small></div><br>`;
++      Código: <span class="tok">${esc(token)}</span><br><small style="color:#5d7e99">(${esc(err.message)})</small></div><br>`;
+   }
+   $('anular').innerHTML = `<div class="aviso">${cab}<br>¿No puedes venir?<br><br>
+     <button class="btn" style="background:#FF7A7A;color:#3d0a0a" id="si">Anular la cita</button></div>`;
+diff --git a/tools/test-seguridad-lan.cjs b/tools/test-seguridad-lan.cjs
+index a3d62db..093f510 100644
+--- a/tools/test-seguridad-lan.cjs
++++ b/tools/test-seguridad-lan.cjs
+@@ -234,7 +234,7 @@ const rio = (trozos) => ({ async *[Symbol.asyncIterator]() { for (const x of tro
+   /* ── 9 · lo que NO se ha tocado, y que también importa ── */
+   console.log('\n9 · Lo que ya estaba bien y sigue estándolo');
+   t('9a. el puesto en red sigue siendo solo de la red local', /if \(!esLocal\(ip\)\)/.test(pst));
+-  t('9b. y sigue sin servir ficheros fuera de dist/', /if \(!destino\.startsWith\(raiz\)\)/.test(pst));
++  t('9b. y sigue sin servir ficheros fuera de dist/ (v0.1.73 · con separador: «dist-otra/» tampoco)', /!destino\.startsWith\(raiz \+ path\.sep\)/.test(pst));
+   t('9c. los canales que abren ventanas siguen prohibidos en remoto', /if \(prohibido\(canal\)\)/.test(pst));
+   t('9d. la zona del gerente sigue pidiendo nivel de encargado', /sesion\.nivel > 2/.test(cmd));
+ 
