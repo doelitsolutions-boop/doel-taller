@@ -1,6 +1,6 @@
 # Auditoría — Doel Taller 0.1.72
 
-Fecha: 15/10/2026 · Estado general: **CRÍTICO** (nada rompe la operativa diaria; dos hallazgos permiten a cualquiera con el instalador o con un PIN de técnico hacerse con el control del taller) · Alcance: tarball `doel-taller-v0.1.72` (Electron + React + SQLite + servidores LAN + `reserva-online/` en Netlify) y la PWA estática de este repositorio (`index.html`, `sw.js`, `manifest.json`, `.well-known/`).
+Fecha: 15/10/2026 · Estado general: **CRÍTICO** · **Reparada el 17/10/2026 (0.1.73): 20 de 24 hallazgos cerrados o mitigados en código, ver «Estado tras la 0.1.73»** (nada rompe la operativa diaria; dos hallazgos permiten a cualquiera con el instalador o con un PIN de técnico hacerse con el control del taller) · Alcance: tarball `doel-taller-v0.1.72` (Electron + React + SQLite + servidores LAN + `reserva-online/` en Netlify) y la PWA estática de este repositorio (`index.html`, `sw.js`, `manifest.json`, `.well-known/`).
 
 ## Resumen ejecutivo
 
@@ -91,3 +91,34 @@ Verde Neón `#62E70E` y Azul Marino `#082947` como tokens en `src/styles.css` y 
 2. Leer `docs/REVISION_HACKER_0.1.72.md` y decidir qué se cierra **antes** de entregar el programa al revisor externo (como mínimo SEC‑01 y SEC‑10, o el revisor dedicará su tiempo a lo que ya sabemos).
 3. Planificar la 0.1.74 con SEC‑01/11/12 (modelo de secretos) y la 0.1.75 con SEC‑10 y la nube (SEC‑14/19).
 4. Subir Electron a la estable actual y volver a pasar las pruebas de WebHID, gamepad y visor PDF.
+
+## Estado tras la 0.1.73 (17/10/2026)
+
+El tarball `doel-taller-v0.1.73.tar.gz` y el parche acumulado `docs/parches/0.1.73-endurecimiento.patch` (sobre la 0.1.72) llevan todo esto. Ritual completo en verde salvo las dos baterías de entorno de siempre.
+
+| # | Estado | Qué se hizo |
+|---|---|---|
+| SEC-01 | ◐ **Abierto en lo esencial** | Freno de 5 fallos/5 min en `licencia:activar` y `dev:acceso`; `timingSafeEqual` en la firma. El secreto HMAC y la semilla TOTP **siguen en el `asar`**: pasar a firma asimétrica cambia cómo Doel emite los códigos (nuevo generador, enrolar un autenticador por instalación) y es una decisión de producto. Mientras tanto: rotar el secreto antes de entregar código a terceros y no distribuir `tools/generar-licencia.cjs`. |
+| SEC-02 | ✅ | `CANALES_PIN` en `/rpc` (`fichaje:login/admin`, `app:salir`, `caja:cajonAbrir`) con el mismo freno que `auth:login`. |
+| SEC-03 | ◐ | `config:all` por `/rpc` sin `*_token/_clave/_key/_hash/_pin/_hmac/_sello` para quien no tenga «Ajustes». Pendiente: `safeStorage` para los tokens. |
+| SEC-04 | ✅ | `clientes:list`/`ficha` sin `portal_pass_*`; `ordenGet` sin `password_cifrada` (`tiene_password`); `taller:pass-ver` lee la columna aparte; `uid` del rastro = usuario de la sesión. |
+| SEC-05 | ◐ | Certificado de hoja, 825 días, formato 3. Pendiente: huella visible antes de instalar; retirar raíces antiguas. |
+| SEC-06 | ✅ | Sesión antes del cuerpo; 256 KB sin sesión. |
+| SEC-07 | ◐ | DevTools cerradas en producción. Pendiente: autorización por canal también en IPC. |
+| SEC-08 | ✅ | `endurecerVentana()` en todas las ventanas (`electron/seguridad-app.cjs`). |
+| SEC-09 | ✅ | Nombre de impresora validado antes del respaldo `cmd /c copy`; `caja:cajonProbar` con permiso. |
+| SEC-10 | ✅ | scrypt + sal por usuario (`s1$sal$hash`) en `usuarios`, `fichaje_empleados` y admin de fichaje, migración perezosa al primer login; freno local 5/5 min (solo intentos del mostrador); PIN de 4 a 8 dígitos admitido por la capa de datos (el teclado de Login sigue enviando al 4.º: cambiarlo es UX). Los PIN de fábrica siguen existiendo; la puesta en marcha obliga a cambiar el del admin. |
+| SEC-11 | ◐ | Clave por instalación (`clave-instalacion.bin`, DPAPI en Windows) para `cifrarTexto` v2: contraseñas de equipos, claves de portal, claves web de distribuidores y frase de copias; lo antiguo se sigue leyendo. `dev:restaurar` solo rutas de `copiasDisponibles()` o diálogo. La puesta en marcha pide la frase propia de copias. **DOELBAK1 sin frase sigue usando la clave común** (sin frase no hay recuperación en otro PC); fotos espejadas siguen en claro. |
+| SEC-12 | ✅ | Puerta del Panel Dev en main (`devAbrir` 30 min tras TOTP), `DEV_PUERTA` para renovar/desactivar/reset/restaurar/guardar‑todo/reloj, `config:set` rechaza `licencia_*`, `modulo_*`, `activacion_*`, `primer_arranque`, `reloj_*`, `backup_clave`, `fichaje_admin_*` con la puerta cerrada. |
+| SEC-13 | ◐ | Token escapado y validado; cabeceras X‑Frame‑Options/nosniff/Referrer/HSTS/Permissions. Pendiente: CSP. |
+| SEC-14 | ✅ | `/api/diag-validar` (Netlify) y `/api/movil-validar` (comandero, con freno) validan el código; la clave ya no va en `movil.html`, `taller.html` ni `diagnostico-movil.html`. |
+| SEC-15 | ◐ | `sat:*`, cajón de prueba, `tpv-impresora-test`, `salud:mantenimiento`, `docs:borrar`, `fichaje:export` con permiso; ventanas de impresión en sandbox. Pendiente: deny‑by‑default con batería. |
+| SEC-16 | ✅ | `auth:logout` (servidor y botón «Cerrar sesión»), permisos releídos en cada llamada (`usuarioVivo`), caducidad absoluta 24 h. |
+| SEC-17 | ✅ | Freno global (6× el de IP) en `crearFreno`; comandero solo IP privadas. |
+| SEC-18 | ✅ | `Host` en `/rpc` y en `/api/*` del comandero; `Content-Type: application/json` obligatorio en `/rpc`. |
+| SEC-19 | ◐ | Freno por IP (blob `doel-freno`) en portal, demo, multitienda y hotel; fuera el maestro de demo y su frase en `panel.html`; sesiones firmadas con caducidad 12 h (`DOEL_SESION_SECRETO` opcional); recortes y topes en reservas/outlet; `timingSafeEqual`; `grupo.html` escapado; `crm-productos` con `uid`/`content-type` validados. Pendiente: clave por slug obligatoria, `hotel-foto?k=` fuera de la URL, CORS por lista, `pass_hash` con sal en la nube. |
+| SEC-20 | ✅ | `abrir-url` solo `https/http/mailto`; DiskSpd con `execFile` y letra/duración validadas; `usbTestVelocidad` con tope 1 GB. |
+| SEC-21 | ✅ | `sandbox` en los tres iframes; `esc` en `e.numero`, `c.listos`, `f.momento/creada/hash`, `inf.numero`, `o.numero`, `emitido_en`; imágenes solo `data:image/(png|jpeg)`. |
+| SEC-22 | ◐ | `python -I`; las copias de `%TEMP%` se reverifican contra el manifiesto antes de ejecutar. Pendiente: firmar `HUELLAS.json`; `jc_toolkit` sigue abriendo binarios «de usuario» por diseño (la pantalla avisa). |
+| SEC-23 | — | Sin cambios: subir Electron y `selfsigned` requiere probar WebHID/gamepad/PDF en Windows. |
+| SEC-24 | ◐ | 500 sin detalle, `randomInt`, `timingSafeEqual`, separador en estáticos, `escHtml` en el móvil del cliente, índice `ordenes(numero)` (no único: una base vieja con duplicados no debe negarse a arrancar). Pendiente: HSTS/426 con HTTPS, `UNIQUE` con contador en `series`, copia previa fuera de la rotación, efectivo sin caja. |
