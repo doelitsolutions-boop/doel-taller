@@ -10,14 +10,14 @@ index adb3b45..d02e571 100644
 +licencia-doel.json
 +*.pem
 diff --git a/ESTADO.md b/ESTADO.md
-index a10ed4f..c002322 100644
+index a10ed4f..880eb3d 100644
 --- a/ESTADO.md
 +++ b/ESTADO.md
 @@ -1,6 +1,6 @@
  # Doel Taller · Estado del proyecto y pasos siguientes
  
 -**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
-+**Versión actual:** 0.1.82 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.83 · **Fecha:** 18 de octubre de 2026
  **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
  
  ---
@@ -58,7 +58,7 @@ index a10ed4f..c002322 100644
 +(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
 +`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
 +numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 arranque y puente ✅ 0.1.82 (`usb.ids` ya estaba fuera del bundle; cuerpo LAN en bytes, avisos con baja, una lectura de config) ·
-+10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
++10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados) ✅ 0.1.83. **Los diez puntos están hechos** (0.1.74 → 0.1.83); queda probar en Windows lo que el contenedor no puede (Electron 44: WebHID, mando, PDF, impresión, instalador) y redesplegar la nube.
 +
  ### Herramientas de verificación (el «ritual de entrega»)
  
@@ -130,13 +130,14 @@ index 888ccd6..f96482d 100644
  ---
  
 diff --git a/VERSION.md b/VERSION.md
-index 7a2a139..81ff6a6 100644
+index 7a2a139..04f9b25 100644
 --- a/VERSION.md
 +++ b/VERSION.md
-@@ -160,6 +160,16 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+@@ -160,6 +160,17 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
  | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
  | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
  | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.83 | 🧹 **Higiene (punto 10 del plan · CAL‑01/CAL‑04).** Fuera el código muerto que veían los limpiadores: 6 exportaciones en `src/` (`limpiar-muertos --aplicar`; el limpiador ahora respeta lo que ejercita una batería de `tools/`, que no está muerto para el proyecto, y lo lista aparte) y **ninguna** en `electron/db/`: las seis que `limpiar-datos-muertos` daba por muertas (`ubicacionBonita`, `modeloParaOrden`, `taxonomia`…) estaban vivas (su regla «declaración + registro = 2 usos» fallaba con funciones internas); ahora cuenta usos reales fuera de la declaración y de las líneas de registro. El limpiador de `src/` tampoco se lleva ya la cabecera del módulo cuando borra su primera declaración. La batería nueva falla si vuelve a aparecer código muerto. **Versión en un solo sitio**: `version-subir` sella también `electron/scripts/HUELLAS.json` (decía 0.1.46 con la app en 0.1.72) y `check-puente` lo exige; avisa si la nube (`HUELLAS-NUBE.json`) está empaquetada en otra versión. **Los dos servidores de la LAN sin duplicados**: `ipLocal`, `ipsLocales`, `esLocal`, `hostPermitido` y la respuesta JSON viven en `seguridad-lan.cjs` (el comandero ya no importa `puesto-red.cjs` solo para eso), y el puesto en red usa la misma fábrica de sesiones que el comandero (`crearSesiones(vida, tope)`, ahora con tope absoluto opcional) en vez de un `Map` y un `limpiarSesiones` propios. Nueva batería `test-higiene.cjs` (14). |
 +| 0.1.82 | 🚦 **Arranque y puente sin ruido (punto 9 del plan).** Lo previsto era sacar `usb.ids` del bundle; **ya estaba fuera**: se lee en el proceso principal, una vez y solo cuando se pide (`electron/usb-ids.cjs`), y la batería nueva lo deja comprobado. Lo que sí había (CAL‑02): **el cuerpo de las peticiones LAN** se leía trozo a trozo como texto (un carácter UTF‑8 partido entre dos trozos llegaba como «�») y el tope contaba caracteres, no bytes (200 K «ñ» son 400 KB y pasaban por 256 KB) → ahora búferes y bytes. **Los avisos del puente** (`onCierreSolicitado`, `onNuevas`) pasaban por `unwrap()` como si fueran llamadas: cada arranque dejaba una promesa rechazada («Error desconocido») que desde la 0.1.79 habría ido al registro; ahora `api.js` no los envuelve, el preload generado los sirve con un ayudante `on()` que **devuelve la baja** (`removeListener`) y `App.jsx` la usa al desmontar (en el puesto en red la baja es una función vacía). **Una sola lectura de config por arranque**: `cargarModulos` y `aplicarEscala` reciben el mismo objeto (antes dos lecturas, y dos más por cada `doel:cfg`). Nueva batería `test-arranque.cjs` (14). |
 +| 0.1.81 | ☁️ **Nube sin escrituras perdidas (punto 8 del plan · CAL‑02).** Nuevo `modificar(store, clave, fn)` en `api.mjs`: todo leer‑modificar‑escribir sobre un blob JSON va con **escritura condicional** (`onlyIfMatch` con el etag leído, `onlyIfNew` si no existía) y se repite si otro escribió entre medias. Hasta ahora dos peticiones a la vez se pisaban en silencio: dos clientes reservando (una reserva desaparecía), el TPV drenando la cola del portal mientras un cliente mandaba un mensaje (mensaje perdido), un latido de diagnóstico borrando el código que el panel acababa de crear, dos locales de multitienda subiendo a la vez. Convertidos: índice de negocios, `sync`/`reservar`/`anular`, cola del portal (drenaje atómico), solicitudes del outlet, frenos por IP y del hotel, usuarios de demo, códigos de diagnóstico, multitienda. De paso: **el mismo hueco pedido dos veces a la vez** ya solo entra una (el otro recibe 409), y el tope de tres reservas por teléfono se mira **antes** de descontar el hueco (antes el hueco se perdía hasta la siguiente sync). **`negocio-borrar` borra todo lo del negocio** (reservas, portal del cliente, outlet y hotel; antes solo las reservas) y devuelve el detalle por almacén (RGPD). `@netlify/blobs` ^11 en `reserva-online/package.json` (las escrituras condicionales lo necesitan). Baterías: nuevo stub compartido `tools/_blobs-falso.cjs` con etags (las cuatro de la nube lo usan) y nueva `test-nube-concurrencia.cjs` (21). **Hay que redesplegar `reserva-online/`** (ZIP `doel-reservas-v0.1.81-netlify-drop.zip`). |
 +| 0.1.80 | 🗄️ **Esquema que dice la verdad (punto 7 del plan · CAL‑03).** Nueva tabla `contadores` y **número de orden por contador atómico** (`OT-AAAA-NNNN`): el `COUNT(*)+1` de antes repetía número en cuanto se borraba una orden del año (y dos puestos a la vez podían sacar el mismo); ahora además es **único** (`ux_ordenes_numero`; si una instalación trae repetidos heredados no se crea el índice, se apunta en config y Salud lo enseña en rojo). **FK declaradas** donde faltaban (`ordenes.tecnico_id/recibido_por/reparado_por → usuarios`, `ticket_id → tickets`, `orden_origen_id → ordenes`, `ordenes_lineas.producto_id → productos` y `tecnico_id → usuarios`, `ordenes_firmas.usuario_id/anulada_por → usuarios`), todas `ON DELETE SET NULL`: dar de baja un producto o un usuario no se bloquea, y un id inventado ya no entra (`foreign_keys` estaba en ON desde siempre); la migración reconstruye la tabla copiando también las columnas que esa instalación tenga de más. **Diez índices** nuevos (hijas de la orden por `orden_id`, `ordenes(cliente_id/equipo_id)`, `tickets(fecha_hora)`, `ticket_lineas(ticket_id)`). **`tickets.nif_emisor`**: el hash de la cadena usaba el NIF leído en vivo, así que corregir una letra del NIF en Ajustes invalidaba todos los tickets; ahora cada ticket guarda con qué NIF se emitió y se verifica con él (los anteriores se rellenan con el actual). Salud: nueva fila «Numeración de órdenes». El reset operativo pone el contador a cero. Nueva batería `test-esquema.cjs` (26: instalación nueva, numeración, migración desde una base vieja fabricada a propósito, Salud). |
@@ -698,28 +699,47 @@ index 0000000..adacae8
 +
 +module.exports = { CANALES, EVENTOS, PERMISOS_VALIDOS, permisoDeCanal, prohibido, mideElMostrador, enRed, PIN, POS_USUARIO, MIDEN_ESTE_PC, LOCALES, puente, validar };
 diff --git a/electron/comandero.cjs b/electron/comandero.cjs
-index 3138736..7b30283 100644
+index 3138736..31674bd 100644
 --- a/electron/comandero.cjs
 +++ b/electron/comandero.cjs
-@@ -258,6 +258,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+@@ -40,14 +40,7 @@ function marcarAbierta(ordenId, sesion) {
+   ordenesAbiertas.set(Number(ordenId), { usuarioId: sesion.usuarioId, nombre: sesion.nombre, ts: Date.now() });
+ }
+ 
+-const ipLocal = () => {
+-  for (const ifz of Object.values(os.networkInterfaces())) {
+-    for (const d of ifz || []) {
+-      if (d.family === 'IPv4' && !d.internal) return d.address;
+-    }
+-  }
+-  return '127.0.0.1';
+-};
++const ipLocal = seg.ipLocal; // v0.1.83 · punto 10 · compartido con el puesto en red (seguridad-lan.cjs)
+ 
+ // Espejo compacto del htmlComanda de src/print.js (80 mm, sin dependencias del renderer)
+ const HTML_TALLER = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+@@ -256,8 +249,10 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+     // v0.0.85 · SEC-06 · charset, no-store, nosniff, no-referrer y DENY de iframe en TODAS
+     // las respuestas. El `no-store` no es cosmético: sin él el móvil del técnico deja la
      // ficha del último cliente en la caché y se la enseña al siguiente que abra la PWA.
-     const json = (code, obj) => { res.writeHead(code, seg.cabeceras('json')); res.end(JSON.stringify(obj)); };
+-    const json = (code, obj) => { res.writeHead(code, seg.cabeceras('json')); res.end(JSON.stringify(obj)); };
++    const json = (code, obj) => seg.respuestaJson(res, code, obj); // v0.1.83 · compartido con el puesto en red
      const ip = seg.ipDe(req);
 +    // v0.1.73 · SEC-18 · como el puesto en red: solo IP privadas (un puerto abierto en el router no entra)
-+    if (!require('./puesto-red.cjs').esLocal(ip)) return json(403, { ok: false, error: 'El comandero solo funciona dentro del taller' });
++    if (!seg.esLocal(ip)) return json(403, { ok: false, error: 'El comandero solo funciona dentro del taller' });
      try {
        if (req.method === 'GET' && req.url === '/manifest.webmanifest') {
          /* App instalable: «Añadir a pantalla de inicio» → pantalla completa sin barras.
-@@ -281,6 +283,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+@@ -281,6 +276,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
          return res.end(HTML_MOVIL);
        }
        if (!req.url.startsWith('/api/')) return json(404, { error: 'No existe' });
 +      // v0.1.73 · SEC-18 · como /rpc del puesto: el Host debe ser el mostrador (una web ajena con DNS rebinding no entra)
-+      if (!require('./puesto-red.cjs').hostPermitido(req.headers.host)) return json(421, { error: 'Entra por la IP del mostrador' });
++      if (!seg.hostPermitido(req.headers.host)) return json(421, { error: 'Entra por la IP del mostrador' });
        // v0.0.85 · SEC-05 · el cuerpo se corta EN CUANTO pasa de 256 KB, no después de
        // habérselo tragado entero: el sentido del tope es no llenar la memoria del PC del
        // mostrador, no enterarse de que ya está llena.
-@@ -315,6 +319,16 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+@@ -315,6 +312,16 @@ function iniciar({ db, imprimirHtml, logEvento }) {
          return json(200, { token, nombre: u.nombre, id: u.id, es_repartidor: u.es_repartidor === 1,
            nivel: u.nivel || 9, agenda: false });
        }
@@ -2998,10 +3018,10 @@ index 16e6a91..0a12b04 100644
 +  app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => on('app:cierre-solicitado', cb) },
  });
 diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
-index e497d4f..1dd3dd7 100644
+index e497d4f..13a4ea4 100644
 --- a/electron/puesto-red.cjs
 +++ b/electron/puesto-red.cjs
-@@ -27,7 +27,8 @@ const fs = require('fs');
+@@ -27,140 +27,43 @@ const fs = require('fs');
  const path = require('path');
  const os = require('os');
  const seg = require('./seguridad-lan.cjs'); // v0.0.85 · freno de PIN, tope de cuerpo, cabeceras
@@ -3011,31 +3031,16 @@ index e497d4f..1dd3dd7 100644
  
  let servidor = null;
  let servidorHttps = null;     // v0.1.18 · el mismo programa por https, para WebHID desde otro PC
-@@ -35,119 +36,39 @@ let certActual = null;        // { cert, key, fingerprint, ips, ruta }
+ let certActual = null;        // { cert, key, fingerprint, ips, ruta }
  let HANDLERS = new Map();     // canal → función, prestado por main.cjs
- const sesiones = new Map();   // token → { usuarioId, nombre, ip, desde }
+-const sesiones = new Map();   // token → { usuarioId, nombre, ip, desde }
  const VIDA_MS = 12 * 3600000; // 12 h: una jornada larga, y a volver a entrar
 +const VIDA_MAX_MS = 24 * 3600000; // v0.1.73 · SEC-16 · tope absoluto: por mucho uso que tenga, a las 24 h de abrirla caduca
++const sesiones = seg.crearSesiones(VIDA_MS, VIDA_MAX_MS); // v0.1.83 · punto 10 · la misma fábrica de sesiones que el comandero (antes un Map propio y un limpiarSesiones aparte)
  // v0.0.85 · SEC-03 · el PIN que abre este puesto es el mismo de cuatro cifras del
  // comandero, así que merece el mismo freno: cinco fallos por IP y a esperar.
  const freno = seg.crearFreno();
-+/* v0.1.73 · SEC-10 · canales que validan un PIN además de auth:login: pasan por el mismo freno.
-+   Sin esto, fichaje:login por /rpc permitía probar los 10 000 PIN de todos los usuarios. */
-+const CANALES_PIN = canales.PIN; // v0.1.77 · `pin: true` en canales.cjs
-+/* v0.1.73 · SEC-11 · el usuario que firma el rastro (log de la orden, caja, anulaciones) es el de
-+   la sesión del puesto, no el que mande el cliente: posición del argumento por canal. */
-+const POS_USUARIO = canales.POS_USUARIO; // v0.1.77 · `usuario: n` en canales.cjs
-+/* v0.1.73 · SEC-12 · claves de config que no salen por la red a quien no tenga «ajustes» */
-+const SECRETAS = /(_token|_clave|_key|_hash|_pin|_hmac|_sello)$/;
-+/* v0.1.73 · SEC-13 · el Host de la petición debe ser el mostrador (DNS rebinding) */
-+function hostPermitido(host) {
-+  const h = String(host || '').toLowerCase().replace(/^\[|\]$/g, '');
-+  const nombre = h.replace(/:\d+$/, '');
-+  if (!nombre) return false;
-+  if (nombre === 'localhost' || nombre === '127.0.0.1' || nombre === '::1') return true;
-+  return ipsLocales().includes(nombre);
-+}
- 
+-
 -/* Canales prohibidos en remoto: abren diálogos del sistema en el PC del mostrador.
 -   El aviso dice DÓNDE hacerlo, que es lo que el usuario necesita saber. */
 -const PROHIBIDOS = [
@@ -3130,14 +3135,7 @@ index e497d4f..1dd3dd7 100644
 -      out[G.grupo][m[1]] = { canal: m[3], params: m[2].trim(), expr: trozo.slice(abre + 1, k).trim() };
 -      envueltas.add(m[1]);
 -    }
-+/* v0.1.77 · punto 4 · Los canales PROHIBIDOS en remoto (abren diálogos o ventanas en el PC del mostrador:
-+   `red: 'local'`) y los que MIDEN EL PC DONDE CORRE DOEL TALLER (batería, disco, USB, temperatura…:
-+   `red: 'mide'`) se marcan fila a fila en canales.cjs. El aviso al usuario dice DÓNDE hacerlo, que es lo
-+   que necesita saber; el de medir dice qué medir y con qué (agente portable). */
-+const MIDEN_ESTE_PC = canales.MIDEN_ESTE_PC;
-+const mideElMostrador = canales.mideElMostrador;
-+const prohibido = canales.prohibido;
- 
+-
 -    /* Avisos que el escritorio manda hacia la pantalla (cierre de la aplicación,
 -       reservas nuevas). En el navegador no existen: se dejan como método que no hace
 -       nada pero RESPONDE. Si no estuvieran, la pantalla que los llama se cae —y se
@@ -3152,14 +3150,47 @@ index e497d4f..1dd3dd7 100644
 -  }
 -  return out;
 -}
+-
+-const ipLocal = () => {
+-  for (const ifz of Object.values(os.networkInterfaces())) {
+-    for (const d of ifz || []) if (d.family === 'IPv4' && !d.internal) return d.address;
+-  }
+-  return '127.0.0.1';
+-};
+-
+-const ipsLocales = () => {
+-  const out = [];
+-  for (const ifz of Object.values(os.networkInterfaces())) for (const d of ifz || []) if (d.family === 'IPv4' && !d.internal) out.push(d.address);
+-  return out;
+-};
++/* v0.1.73 · SEC-10 · canales que validan un PIN además de auth:login: pasan por el mismo freno.
++   Sin esto, fichaje:login por /rpc permitía probar los 10 000 PIN de todos los usuarios. */
++const CANALES_PIN = canales.PIN; // v0.1.77 · `pin: true` en canales.cjs
++/* v0.1.73 · SEC-11 · el usuario que firma el rastro (log de la orden, caja, anulaciones) es el de
++   la sesión del puesto, no el que mande el cliente: posición del argumento por canal. */
++const POS_USUARIO = canales.POS_USUARIO; // v0.1.77 · `usuario: n` en canales.cjs
++/* v0.1.73 · SEC-12 · claves de config que no salen por la red a quien no tenga «ajustes» */
++const SECRETAS = /(_token|_clave|_key|_hash|_pin|_hmac|_sello)$/;
++
++/* v0.1.77 · punto 4 · Los canales PROHIBIDOS en remoto (abren diálogos o ventanas en el PC del mostrador:
++   `red: 'local'`) y los que MIDEN EL PC DONDE CORRE DOEL TALLER (batería, disco, USB, temperatura…:
++   `red: 'mide'`) se marcan fila a fila en canales.cjs. El aviso al usuario dice DÓNDE hacerlo, que es lo
++   que necesita saber; el de medir dice qué medir y con qué (agente portable). */
++const MIDEN_ESTE_PC = canales.MIDEN_ESTE_PC;
++const mideElMostrador = canales.mideElMostrador;
++const prohibido = canales.prohibido;
++
 +/* ── El puente ─────────────────────────────────────────────────────────────────
 +   v0.1.77 · ya no se parsea el texto de preload.cjs: la tabla canales.cjs es la fuente (el preload se
 +   genera de ella). grupo → método → { canal } | { canal, params, expr } | { evento: true }. */
 +function leerPuente() { return canales.puente(); }
++
++/* v0.1.83 · punto 10 · IP local, redes privadas y Host del mostrador viven en seguridad-lan.cjs (los comparte el comandero) */
++const { esLocal, hostPermitido, ipLocal, ipsLocales } = seg;
  
- const ipLocal = () => {
-   for (const ifz of Object.values(os.networkInterfaces())) {
-@@ -173,25 +94,27 @@ const ipsLocales = () => {
+ /* ══ v0.1.18 · HTTPS para el puesto en red ═══════════════════════════════════════════
+    Edmundo, desde otro PC por Chrome: la batería del mando y los datos internos (WebHID)
+@@ -173,25 +76,27 @@ const ipsLocales = () => {
     Chrome trata https://IP:8736 como seguro: WebHID, cámara, portapapeles… todo.
     El certificado lleva en el SAN todas las IP privadas del mostrador (Chrome exige SAN);
     si la IP cambia, se regenera solo y hay que reinstalarlo en el otro PC. */
@@ -3194,7 +3225,7 @@ index e497d4f..1dd3dd7 100644
        { name: 'extKeyUsage', serverAuth: true },
        { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }, ...ips.map((ip) => ({ type: 7, ip }))] },
      ],
-@@ -199,7 +122,7 @@ function certificado(dirDatos) {
+@@ -199,26 +104,10 @@ function certificado(dirDatos) {
    fs.mkdirSync(dir, { recursive: true });
    fs.writeFileSync(path.join(dir, 'cert.pem'), p.cert);
    fs.writeFileSync(path.join(dir, 'key.pem'), p.private, { mode: 0o600 });
@@ -3203,16 +3234,26 @@ index e497d4f..1dd3dd7 100644
    return { cert: p.cert, key: p.private, fingerprint: p.fingerprint, ips, ruta: dir, nuevo: true };
  }
  
-@@ -216,7 +139,7 @@ function esLocal(ip) {
- 
- function limpiarSesiones() {
-   const ahora = Date.now();
+-/* Solo redes privadas. Si alguien abre el puerto en el router, esto sigue diciendo
+-   que no: la lista blanca va por IP de origen, no por buena voluntad. */
+-function esLocal(ip) {
+-  const s = String(ip || '').replace('::ffff:', '');
+-  if (s === '127.0.0.1' || s === '::1') return true;
+-  if (/^10\./.test(s) || /^192\.168\./.test(s)) return true;
+-  const m = /^172\.(\d+)\./.exec(s);
+-  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+-  return false;
+-}
+-
+-function limpiarSesiones() {
+-  const ahora = Date.now();
 -  for (const [t, s] of sesiones) if (ahora - s.ts > VIDA_MS) sesiones.delete(t);
-+  for (const [t, s] of sesiones) if (ahora - s.ts > VIDA_MS || ahora - (s.creada || s.ts) > VIDA_MAX_MS) sesiones.delete(t);
- }
- 
+-}
+-
  /* v0.1.38 · versión del proceso en marcha (package.json leído al arrancar y cacheado). El
-@@ -239,7 +162,7 @@ function shim(puente) {
+    instalador sustituye dist/ bajo un proceso que sigue vivo: el puesto en red sirve pantallas
+    nuevas con handlers viejos («El mostrador no conoce print:html» en la captura de Edmundo). */
+@@ -239,7 +128,7 @@ function shim(puente) {
      simples[g] = {};
      for (const m of Object.keys(puente[g])) {
        const d = puente[g][m];
@@ -3221,7 +3262,7 @@ index e497d4f..1dd3dd7 100644
        if (d.params === undefined) { simples[g][m] = d.canal; continue; }
        envueltos.push(`  D[${JSON.stringify(g)}][${JSON.stringify(m)}] = function (${d.params}) { `
          + `return rpc(${JSON.stringify(d.canal)}, [ ${d.expr} ]); };`);
-@@ -269,8 +192,9 @@ function shim(puente) {
+@@ -269,8 +158,9 @@ function shim(puente) {
           Ajustes cuando cambias la configuración: vuelve a pedirlo todo. */
        try { window.dispatchEvent(new Event('doel:cfg')); } catch (e) { /* sin window */ }
      }
@@ -3232,7 +3273,7 @@ index e497d4f..1dd3dd7 100644
        return { ok: false, error: 'La sesión ha caducado: vuelve a entrar con tu PIN' };
      }
      var j;
-@@ -303,7 +227,7 @@ ${eventos.join('\n')}
+@@ -303,7 +193,7 @@ ${eventos.join('\n')}
  })();`;
  }
  
@@ -3241,7 +3282,7 @@ index e497d4f..1dd3dd7 100644
    detener();
    if (handlers) HANDLERS = handlers;
    const cfg = db.configAll();
-@@ -317,7 +241,7 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+@@ -317,16 +207,13 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
    catch (e) { try { logEvento && logEvento('puesto-red', 'No se pudo leer el puente: ' + e.message, null); } catch (x) { /* nada */ } return null; }
    certActual = null;
    if (conHttps) {
@@ -3250,7 +3291,17 @@ index e497d4f..1dd3dd7 100644
      catch (e) { try { logEvento && logEvento('puesto-red', 'No se pudo crear el certificado https: ' + e.message, null); } catch (x) { /* nada */ } }
    }
  
-@@ -352,12 +276,26 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+   const manejador = async (req, res) => {
+     const ip = (req.socket.remoteAddress || '');
+-    const json = (code, obj, cab = {}) => {
+-      res.writeHead(code, seg.cabeceras('json', cab));   // v0.0.85 · SEC-06
+-      res.end(JSON.stringify(obj));
+-    };
++    const json = (code, obj, cab = {}) => seg.respuestaJson(res, code, obj, cab); // v0.0.85 · SEC-06 · v0.1.83 · compartido con el comandero
+     if (!esLocal(ip)) return json(403, { ok: false, error: 'El puesto en red solo funciona dentro del taller' });
+     try {
+       const ruta = req.url.split('?')[0];
+@@ -352,12 +239,26 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
        }
  
        if (req.method === 'POST' && ruta === '/rpc') {
@@ -3261,9 +3312,9 @@ index e497d4f..1dd3dd7 100644
 +        if (!/^application\/json/i.test(String(req.headers['content-type'] || ''))) return json(415, { ok: false, error: 'El puesto en red solo habla JSON' });
 +        // v0.1.73 · SEC-15 · la sesión se mira ANTES de leer el cuerpo: sin sesión caben 256 KB (el login);
 +        // con sesión, 16 MB (fotos). Antes cualquiera de la Wi-Fi podía mandar 16 MB por conexión sin PIN.
-+        limpiarSesiones();
++        sesiones.limpiar();
 +        const token = req.headers['x-token'];
-+        const sesion = token ? sesiones.get(token) : null;
++        const sesion = token ? sesiones.tocar(token) : null; // v0.1.83 · tocar() renueva la vida deslizante (12 h) y respeta el tope (24 h)
 +        // v0.0.85 · SEC-05 · tope de cuerpo, cortado según llega
          let peticion;
 -        try { peticion = seg.parsearCuerpo(await seg.leerCuerpo(req, seg.CUERPO_MAX_RPC)); } // v0.1.44 · 16 MB: fotos desde el puesto
@@ -3273,13 +3324,13 @@ index e497d4f..1dd3dd7 100644
          if (!canal || typeof canal !== 'string') return json(400, { ok: false, error: 'Llamada sin canal' });
 +        /* v0.1.73 · SEC-16 · cerrar sesión de verdad: el token muere en el servidor, no solo en la pantalla */
 +        if (canal === 'auth:logout') {
-+          if (sesion) { sesiones.delete(token); try { logEvento && logEvento('puesto-red', 'Salió ' + sesion.nombre, sesion.usuarioId); } catch (e) { /* nada */ } }
++          if (sesion) { sesiones.cerrar(token); try { logEvento && logEvento('puesto-red', 'Salió ' + sesion.nombre, sesion.usuarioId); } catch (e) { /* nada */ } }
 +          return json(200, { ok: true, data: true });
 +        }
          if (prohibido(canal)) {
            return json(200, { ok: false, error: 'Esto abre una ventana en el PC del mostrador: hazlo allí' });
          }
-@@ -365,13 +303,12 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+@@ -365,13 +266,12 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
            return json(200, { ok: false, error: 'Esta prueba mide el PC donde corre Doel Taller, no este. '
              + 'Para diagnosticar ESTE equipo, usa el agente portable (pendrive) o abre la prueba en el mostrador.' });
          }
@@ -3296,21 +3347,21 @@ index e497d4f..1dd3dd7 100644
          if (canal === 'auth:login') {          // única puerta abierta: valida el PIN ella misma
            const limpio = ip.replace('::ffff:', '');
            const parado = freno.bloqueo(limpio);
-@@ -383,26 +320,49 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+@@ -383,26 +283,48 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
            if (!r || !r.ok || !r.data) { freno.fallo(limpio); return json(200, r || { ok: false, error: 'PIN incorrecto' }); }
            freno.acierto(limpio);
            const tk = crypto.randomBytes(32).toString('hex');
 -          sesiones.set(tk, { usuarioId: r.data.id, nombre: r.data.nombre, rol: r.data.rol, permisos: r.data.permisos || null, ip: ip.replace('::ffff:', ''), ts: Date.now() }); // v0.1.50 · el perfil viaja con la sesión
-+          sesiones.set(tk, { usuarioId: r.data.id, nombre: r.data.nombre, rol: r.data.rol, permisos: r.data.permisos || null, ip: ip.replace('::ffff:', ''), ts: Date.now(), creada: Date.now() }); // v0.1.50 · el perfil viaja con la sesión · v0.1.73 · creada: tope absoluto
++          sesiones.abrir(tk, { usuarioId: r.data.id, nombre: r.data.nombre, rol: r.data.rol, permisos: r.data.permisos || null, ip: ip.replace('::ffff:', '') }); // v0.1.50 · el perfil viaja con la sesión · v0.1.83 · creada/visto los pone la fábrica
            try { logEvento && logEvento('puesto-red', 'Entró ' + r.data.nombre + ' desde ' + ip.replace('::ffff:', ''), r.data.id); } catch (e) { /* nada */ }
            return json(200, r, { 'x-token': tk });
          }
          if (!sesion) return json(401, { ok: false, error: 'Entra con tu PIN' });
-         sesion.ts = Date.now();
+-        sesion.ts = Date.now();
 +        /* v0.1.73 · SEC-16 · el perfil se relee en cada llamada: baja o cambio de permisos → efecto inmediato */
 +        try {
 +          const vivo = db.usuarioVivo ? db.usuarioVivo(sesion.usuarioId) : null;
-+          if (db.usuarioVivo && !vivo) { sesiones.delete(token); return json(401, { ok: false, error: 'Tu usuario ya no está activo' }); }
++          if (db.usuarioVivo && !vivo) { sesiones.cerrar(token); return json(401, { ok: false, error: 'Tu usuario ya no está activo' }); }
 +          if (vivo) { sesion.permisos = vivo.permisos || null; sesion.rol = vivo.rol; sesion.nombre = vivo.nombre; }
 +        } catch (e) { /* base ocupada: se sigue con lo que tenía la sesión */ }
          /* v0.1.50 · AUD-01 · la barra esconde lo que el perfil no tiene; el servidor lo niega.
@@ -3349,7 +3400,7 @@ index e497d4f..1dd3dd7 100644
        if (!fs.existsSync(destino) || fs.statSync(destino).isDirectory()) {
          if (!fs.existsSync(path.join(raiz, 'index.html'))) {
            res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
-@@ -424,7 +384,9 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+@@ -424,7 +346,9 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
          'content-type': (tipos[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8' });
        return res.end(fs.readFileSync(path.join(raiz, f)));
      } catch (e) {
@@ -3360,8 +3411,21 @@ index e497d4f..1dd3dd7 100644
      }
    };
  
-@@ -462,4 +424,4 @@ const estado = (db) => {
-     sesiones: [...sesiones.values()].map((s) => ({ nombre: s.nombre, ip: s.ip })) };
+@@ -448,7 +372,7 @@ function detener() {
+   if (servidor) { try { servidor.close(); } catch (e) { /* ya cerrado */ } }
+   if (servidorHttps) { try { servidorHttps.close(); } catch (e) { /* ya cerrado */ } }
+   servidor = null; servidorHttps = null;
+-  sesiones.clear();
++  sesiones.vaciar();
+ }
+ 
+ const estado = (db) => {
+@@ -459,7 +383,7 @@ const estado = (db) => {
+     https: cfg.puesto_red_https === '1', httpsEncendido: !!servidorHttps,
+     urlHttps: 'https://' + ipLocal() + ':' + (puerto + 1),
+     certificado: certActual ? { fingerprint: certActual.fingerprint, ips: certActual.ips, ruta: certActual.ruta } : null,
+-    sesiones: [...sesiones.values()].map((s) => ({ nombre: s.nombre, ip: s.ip })) };
++    sesiones: sesiones.lista().map((s) => ({ nombre: s.nombre, ip: s.ip })) }; // v0.1.83 · lista() limpia de paso: solo las vivas
  };
  
 -module.exports = { iniciar, detener, estado, versionProceso, leerPuente, esLocal, prohibido, mideElMostrador, MIDEN_ESTE_PC, shim, certificado, ipsLocales };
@@ -3431,6 +3495,17 @@ index 0000000..2b048e7
 +function _reiniciar() { estado.desde = 0; estado.apuntados = 0; estado.vistos.clear(); estado.caidas = []; }
 +
 +module.exports = { registrarErrorPantalla, decidirTrasCaida, vigilarVentana, MAX_POR_VENTANA, REPETIDO_MS, CAIDAS_MAX, CAIDAS_VENTANA_MS, _reiniciar };
+diff --git a/electron/scripts/HUELLAS.json b/electron/scripts/HUELLAS.json
+index f8e0e37..e676791 100644
+--- a/electron/scripts/HUELLAS.json
++++ b/electron/scripts/HUELLAS.json
+@@ -1,5 +1,5 @@
+ {
+-  "version": "0.1.46",
++  "version": "0.1.83",
+   "huellas": {
+     "agente_diag.py": "3268bef5c64db37ac4537f50ece5a8537fb2af9fa8ccc19a102d750957bf3b75",
+     "doel_tm_core.py": "ea6a00eb083ea9d306f85691fa2935da1d33baf21998b71490a826706ac7b88c",
 diff --git a/electron/seguridad-app.cjs b/electron/seguridad-app.cjs
 new file mode 100644
 index 0000000..2e7fee1
@@ -3494,10 +3569,34 @@ index 0000000..2e7fee1
 +
 +module.exports = { endurecerVentana, devAbierto, devAbrir, devCerrar, exigirDev, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL, frenoCodigos, PUERTA_MS };
 diff --git a/electron/seguridad-lan.cjs b/electron/seguridad-lan.cjs
-index c49433d..bf766f5 100644
+index c49433d..f022495 100644
 --- a/electron/seguridad-lan.cjs
 +++ b/electron/seguridad-lan.cjs
-@@ -178,6 +178,12 @@ function crearFreno(intentos, ventanaMs) {
+@@ -125,11 +125,12 @@ function cabeceras(tipo, extra) {
+    queda fuera al día siguiente. */
+ const SESION_MS = 12 * 60 * 60 * 1000;
+ 
+-function crearSesiones(msVida) {
++function crearSesiones(msVida, msMax) {
+   const vida = Number(msVida) > 0 ? Number(msVida) : SESION_MS;
++  const max = Number(msMax) > 0 ? Number(msMax) : 0; // v0.1.83 · tope ABSOLUTO opcional (el puesto en red: 24 h desde que se abrió, por mucho uso que tenga)
+   const mapa = new Map();
+ 
+-  const caducada = (s, ahora) => (ahora - (s.visto || s.creada || 0)) > vida;
++  const caducada = (s, ahora) => (ahora - (s.visto || s.creada || 0)) > vida || (max > 0 && (ahora - (s.creada || 0)) > max);
+ 
+   const limpiar = (ahora = Date.now()) => {
+     let fuera = 0;
+@@ -138,7 +139,7 @@ function crearSesiones(msVida) {
+   };
+ 
+   return {
+-    vida,
++    vida, max,
+     get tamano() { return mapa.size; },
+     /* El token lo genera quien llama (así el test es determinista y el servidor
+        usa crypto.randomBytes de 32 bytes, como pide la auditoría). */
+@@ -178,6 +179,12 @@ function crearFreno(intentos, ventanaMs) {
    const tope = Number(intentos) > 0 ? Number(intentos) : FRENO_INTENTOS;
    const ventana = Number(ventanaMs) > 0 ? Number(ventanaMs) : FRENO_VENTANA_MS;
    const mapa = new Map();  // ip → [ts, ts, ...]
@@ -3510,7 +3609,7 @@ index c49433d..bf766f5 100644
  
    const vigentes = (ip, ahora) => {
      const l = (mapa.get(ip) || []).filter((t) => ahora - t < ventana);
-@@ -191,6 +197,8 @@ function crearFreno(intentos, ventanaMs) {
+@@ -191,6 +198,8 @@ function crearFreno(intentos, ventanaMs) {
      /* ¿Está bloqueada esta IP? Devuelve null o los segundos que le quedan, para
         poder decírselo al técnico en vez de un «PIN incorrecto» que le vuelve loco. */
      bloqueo(ip, ahora = Date.now()) {
@@ -3519,7 +3618,7 @@ index c49433d..bf766f5 100644
        const l = vigentes(ip, ahora);
        if (l.length < tope) return null;
        const espera = Math.ceil((ventana - (ahora - l[0])) / 1000);
-@@ -200,10 +208,12 @@ function crearFreno(intentos, ventanaMs) {
+@@ -200,10 +209,12 @@ function crearFreno(intentos, ventanaMs) {
        const l = vigentes(ip, ahora);
        l.push(ahora);
        mapa.set(ip, l);
@@ -3533,7 +3632,7 @@ index c49433d..bf766f5 100644
      get tamano() { return mapa.size; },
    };
  }
-@@ -218,16 +228,21 @@ const CUERPO_MAX_RPC = 16 * 1024 * 1024;
+@@ -218,16 +229,21 @@ const CUERPO_MAX_RPC = 16 * 1024 * 1024;
  
  async function leerCuerpo(req, max = CUERPO_MAX) {
    const tope = Number(max) > 0 ? Number(max) : CUERPO_MAX;
@@ -3559,6 +3658,49 @@ index c49433d..bf766f5 100644
  }
  
  /* JSON.parse de lo que llega por la red nunca va suelto: un `{` a medias tumbaría
+@@ -245,7 +261,42 @@ function parsearCuerpo(texto) {
+ 
+ const ipDe = (req) => String((req && req.socket && req.socket.remoteAddress) || '').replace('::ffff:', '');
+ 
++/* ── v0.1.83 · punto 10 (CAL-01) · lo que los DOS servidores de la LAN tenían copiado ────────────────────────
++   IP local, redes privadas, Host del mostrador y la respuesta JSON. Antes el comandero importaba puesto-red.cjs
++   solo para esLocal/hostPermitido (un servidor dependiendo del otro) y cada uno tenía su ipLocal. */
++const os = require('os');
++const ipLocal = () => {
++  for (const ifz of Object.values(os.networkInterfaces())) {
++    for (const d of ifz || []) if (d.family === 'IPv4' && !d.internal) return d.address;
++  }
++  return '127.0.0.1';
++};
++const ipsLocales = () => {
++  const out = [];
++  for (const ifz of Object.values(os.networkInterfaces())) for (const d of ifz || []) if (d.family === 'IPv4' && !d.internal) out.push(d.address);
++  return out;
++};
++/* Solo redes privadas. Si alguien abre el puerto en el router, esto sigue diciendo que no. */
++function esLocal(ip) {
++  const s = String(ip || '').replace('::ffff:', '');
++  if (s === '127.0.0.1' || s === '::1') return true;
++  if (/^10\./.test(s) || /^192\.168\./.test(s)) return true;
++  const m = /^172\.(\d+)\./.exec(s);
++  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
++  return false;
++}
++/* v0.1.73 · SEC-13 · el Host de la petición debe ser el mostrador (DNS rebinding) */
++function hostPermitido(host) {
++  const h = String(host || '').toLowerCase().replace(/^\[|\]$/g, '');
++  const nombre = h.replace(/:\d+$/, '');
++  if (!nombre) return false;
++  if (nombre === 'localhost' || nombre === '127.0.0.1' || nombre === '::1') return true;
++  return ipsLocales().includes(nombre);
++}
++const respuestaJson = (res, code, obj, cab) => { res.writeHead(code, cabeceras('json', cab)); res.end(JSON.stringify(obj)); };
++
+ module.exports = {
++  ipLocal, ipsLocales, esLocal, hostPermitido, respuestaJson, // v0.1.83 · compartidos por los dos servidores
+   CUERPO_MAX_RPC,
+   PERMISOS, permisoConcedido, dispositivoPermitido,
+   esc, cabeceras, CAB_BASE, CSP_PWA, CSP_APP, CSP_MOVIL,
 diff --git a/electron/sesion-local.cjs b/electron/sesion-local.cjs
 new file mode 100644
 index 0000000..2dd3967
@@ -3633,7 +3775,7 @@ index 604bc55..c2fee03 100644
      if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
      return new Promise((resolve) => {
 diff --git a/package.json b/package.json
-index 8df4662..ab9ed51 100644
+index 8df4662..a9244e9 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,7 +1,7 @@
@@ -3641,7 +3783,7 @@ index 8df4662..ab9ed51 100644
    "name": "doel-taller",
    "productName": "Doel Taller",
 -  "version": "0.1.72",
-+  "version": "0.1.82",
++  "version": "0.1.83",
    "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
    "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
    "license": "UNLICENSED",
@@ -4793,6 +4935,147 @@ index 7c75ade..0baecbe 100644
    return out;
  }
  
+diff --git a/src/components/BancoHdmi.jsx b/src/components/BancoHdmi.jsx
+index be75d2e..f4f2c60 100644
+--- a/src/components/BancoHdmi.jsx
++++ b/src/components/BancoHdmi.jsx
+@@ -15,7 +15,7 @@
+ // El diagnóstico del cable pin a pin NO es software: enlace a la ficha del multímetro.
+ // ============================================================================
+ 
+-import React, { useState, useRef, useEffect } from 'react';
++import { useState, useRef, useEffect } from 'react';
+ import { api } from '../api.js';
+ 
+ const C = { verde: '#62E70E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A', azul: '#8FC7F5' };
+@@ -153,7 +153,6 @@ function PruebaArranque() {
+   );
+ }
+ 
+-
+ /* ============ 3 · El dispositivo como FUENTE (box Yuvod, Chromecast, consola) ============
+    El HDMI de un portátil es una SALIDA: no se puede enchufar un box a él y ver nada. Para ver
+    lo que saca un dispositivo hace falta una capturadora HDMI→USB (UVC, 15–30 €), que Windows
+diff --git a/src/components/Clientes.jsx b/src/components/Clientes.jsx
+index 87eea67..3fdef7a 100644
+--- a/src/components/Clientes.jsx
++++ b/src/components/Clientes.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api } from '../api.js';
+ import { confirmar as confirmarModal } from '../confirm.js';
+ 
+diff --git a/src/components/Compras.jsx b/src/components/Compras.jsx
+index 8d2e48d..a6741c2 100644
+--- a/src/components/Compras.jsx
++++ b/src/components/Compras.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api, eur, hoy, inicioMes } from '../api.js';
+ import { confirmar } from '../confirm.js';
+ 
+diff --git a/src/components/ConfirmHost.jsx b/src/components/ConfirmHost.jsx
+index 395fcac..af330bd 100644
+--- a/src/components/ConfirmHost.jsx
++++ b/src/components/ConfirmHost.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { _setConfirmHandler } from '../confirm.js';
+ 
+ /* Host único de los diálogos de la app: confirmar (sí/no), avisar (solo Aceptar) y preguntar
+diff --git a/src/components/Croquis.jsx b/src/components/Croquis.jsx
+index 374a32f..a3490dc 100644
+--- a/src/components/Croquis.jsx
++++ b/src/components/Croquis.jsx
+@@ -1,4 +1,4 @@
+-import React from 'react';
++
+ import { PLANTILLAS, GRUPOS, siluetaSvg } from '../croquis.js';
+ 
+ /* v0.1.71 · el croquis de daños en su fichero: lo usan la recepción (Taller.jsx), la ficha y
+diff --git a/src/components/DiagnosticoMando.jsx b/src/components/DiagnosticoMando.jsx
+index deb99fe..7eb0036 100644
+--- a/src/components/DiagnosticoMando.jsx
++++ b/src/components/DiagnosticoMando.jsx
+@@ -18,24 +18,22 @@
+ // ============================================================================
+ 
+ import React, { useEffect, useRef, useState, useCallback } from 'react';
+-import { modeloDe, reportsPara, parseFirmware, parsePairing, parseBateria, fichaTexto, validarSerieDualSense, versionDualSense } from '../mando-ficha.js'; // v0.1.15 · ficha del mando
+-import YaVino, { useHistorialSeries } from './YaVino.jsx'; // v0.1.29 · «ya vino»
++import { fichaTexto } from '../mando-ficha.js'; // v0.1.15 · ficha del mando
++ // v0.1.29 · «ya vino»
+ import { htmlCertificadoPrueba } from '../print.js'; // v0.1.30 · certificado A4
+-import * as NS from '../switch-hid.js'; // v0.1.31 · mandos de Nintendo por WebHID
+-import { necesidades as repNecesidades, buscarEnCatalogo, lineaPresupuesto, textoSugerencias } from '../mando-repuestos.js'; // v0.1.29 · repuesto sugerido
+-import { webhid as webhidDisponible, avisoMostrador, avisoNavegador } from '../remoto.js'; // v0.1.18 · ¿dónde va el aparato?
+-import { parseEntrada as dsEntrada, informeSalida as dsSalida, GATILLO as DS_GATILLO, moduloG, ACC_POR_G, GYRO_POR_GRADO, TOUCH_W, TOUCH_H, CAL_REPORT, parseCalibracion, gyroGrados, accelG } from '../dualsense-hid.js'; // v0.1.22 · sensores y salidas · v0.1.31 calibración
+-import { resumenEnlace, resumenEnlaceDualSense } from '../mando-enlace.js';
++ // v0.1.31 · mandos de Nintendo por WebHID
++import { textoSugerencias } from '../mando-repuestos.js'; // v0.1.29 · repuesto sugerido
++import { webhid as webhidDisponible } from '../remoto.js'; // v0.1.18 · ¿dónde va el aparato?
++import { informeSalida as dsSalida } from '../dualsense-hid.js'; // v0.1.22 · sensores y salidas · v0.1.31 calibración
++
+ import * as HID from '../mando-hid.js'; // v0.1.39 · un solo HIDDevice compartido + mando virtual desde los informes HID
+-import { evaluar as evaluarBateria, compactar as compactarBateria, tramos as tramosBateria, textoInforme as textoInformeBateria, CODIGOS_DUALSENSE as CODIGOS_BATERIA } from '../mando-bateria.js'; // v0.1.17 · diagnóstico de batería
++import { compactar as compactarBateria } from '../mando-bateria.js'; // v0.1.17 · diagnóstico de batería
+ import { api } from '../api.js';
+-import etiquetaDS from '../assets/dualsense-etiqueta.webp';          // v0.1.41 · dónde está el S/N en un DualSense (foto de Sony)
+-import etiquetaDSMini from '../assets/dualsense-etiqueta-mini.webp';
++          // v0.1.41 · dónde está el S/N en un DualSense (foto de Sony)
+ 
+ // ---- Paleta Doel ----------------------------------------------------------
+-import { C, NOMBRES_BOTON, UMBRAL_DRIFT_AVISO, UMBRAL_DRIFT_MAL, pct, VENDORS, parseMando, conexionPorReport, inferirConexion, estilos } from './mando/comun.js'; // v0.1.69 · AUD-04
+-import { abrirDualSense, PanelFichaMando, conexionDeDescriptor, PanelSensoresDualSense, PanelRepuestos, PanelSwitch, PanelBluetooth, PanelBateriaMando, PanelMicroMando, estilosMando } from './mando/Paneles.jsx'; // v0.1.69 · AUD-04: los paneles, en su fichero
+-
++import { C, NOMBRES_BOTON, UMBRAL_DRIFT_AVISO, UMBRAL_DRIFT_MAL, pct, parseMando, inferirConexion, estilos } from './mando/comun.js'; // v0.1.69 · AUD-04
++import { abrirDualSense, PanelFichaMando, conexionDeDescriptor, PanelSensoresDualSense, PanelRepuestos, PanelSwitch, PanelBluetooth, PanelBateriaMando, PanelMicroMando } from './mando/Paneles.jsx'; // v0.1.69 · AUD-04: los paneles, en su fichero
+ 
+ // v5.0.52 · infiere la conexión: el texto del id no siempre lo dice, pero la TASA DE HZ sí
+ // delata — por cable el mando reporta a ~250+ Hz, por Bluetooth a ~60 Hz o menos.
+@@ -930,7 +928,6 @@ function DiagnosticoMandoSesion({ onGuardar, onSalir, equipo = null, libre = fal
+         return finales.map((id) => { if (vistos.has(id)) return null; vistos.add(id); return SEC[id]; });
+       })()}
+ 
+-
+       <PanelRepuestos ordenId={ordenId} usuario={usuario} onSugerencias={setSugerencias}
+         resultado={{ ficha, bateria: bateriaDiag ? bateriaDiag.ev : null,
+           sticks: { izq: { drift: Math.max(Math.hypot(offset.lx, offset.ly), monitor.maxIzq || 0), circ: circIzq.error }, der: { drift: Math.max(Math.hypot(offset.rx, offset.ry), monitor.maxDer || 0), circ: circDer.error } } }} />
+@@ -972,4 +969,4 @@ function Cabecera({ onSalir, pantallaActiva, onOtroMando = null, sesion = 0, hid
+   );
+ }
+ 
+-export const DiagramaMandoPreview = DiagramaMando; // v0.1.42 · para la batería/preview
++ // v0.1.42 · para la batería/preview
+diff --git a/src/components/DiagnosticosOrden.jsx b/src/components/DiagnosticosOrden.jsx
+index 9c0439c..f63702b 100644
+--- a/src/components/DiagnosticosOrden.jsx
++++ b/src/components/DiagnosticosOrden.jsx
+@@ -12,7 +12,7 @@
+ // ============================================================================
+ import { useEffect, useState } from 'react';
+ import { api } from '../api.js';
+-import { NOMBRE_DIAG, SEMAFORO_TXT, htmlInformeDiagnostico, htmlCertificadoPrueba } from '../print.js';
++import { NOMBRE_DIAG, htmlInformeDiagnostico, htmlCertificadoPrueba } from '../print.js';
+ 
+ const COL = { ok: '#62E70E', aviso: '#FFC24D', fallo: '#FF7A7A', info: '#9DB6C6' };
+ const ICO = { ok: '🟢', aviso: '🟡', fallo: '🔴', info: 'ℹ' };
+diff --git a/src/components/FirmaCliente.jsx b/src/components/FirmaCliente.jsx
+index df9e5a0..eed12ee 100644
+--- a/src/components/FirmaCliente.jsx
++++ b/src/components/FirmaCliente.jsx
+@@ -6,7 +6,7 @@ import { confirmar as confirmarModal, avisar as avisarModal, preguntar as pregun
+    validado en vivo: se avisa en rojo pero no bloquea, para pasaportes y extranjeros).
+    Una firma no se edita: se anula (queda rastro con motivo) y se firma otra.
+    El DNI del cliente de la orden viene precargado si lo tiene. */
+-import React, { useEffect, useRef, useState } from 'react';
++import { useRef, useState } from 'react';
+ import { api } from '../api.js';
+ import FirmaPad from './FirmaPad.jsx';
+ import { validarDniNie, normalizarDni } from '../dni.js';
 diff --git a/src/components/LimiteVista.jsx b/src/components/LimiteVista.jsx
 new file mode 100644
 index 0000000..87e8f84
@@ -4854,6 +5137,68 @@ index 86610bd..013e468 100644
      }
    };
  
+diff --git a/src/components/MetricasTaller.jsx b/src/components/MetricasTaller.jsx
+index 99d78c0..fc04d2b 100644
+--- a/src/components/MetricasTaller.jsx
++++ b/src/components/MetricasTaller.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api, eur } from '../api.js';
+ import Plegable from './Plegable.jsx';
+ 
+diff --git a/src/components/Outlet.jsx b/src/components/Outlet.jsx
+index 92e5d05..ffabf13 100644
+--- a/src/components/Outlet.jsx
++++ b/src/components/Outlet.jsx
+@@ -3,7 +3,7 @@
+    dos veces. Publicar exige tener los papeles hechos, y el checklist dice cuáles
+    faltan Y cómo se arreglan (mismo patrón que «Probar enlace con el CRM»).
+    Aquí no se emite nada fiscal: la venta se cierra en el Mostrador como ticket. */
+-import React, { useEffect, useRef, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ import { api, eur, puede } from '../api.js';
+ import { confirmar } from '../confirm.js';
+ import { htmlJustificanteSenal, htmlInformeSenales } from '../print.js';
+@@ -391,7 +391,6 @@ function Ficha({ id, usuario, onCerrar, onCambio }) {
+   );
+ }
+ 
+-
+ /* 📋 Reservas (v0.0.72)
+    La señal es dinero de un cliente que todavía no se ha llevado nada: hasta que no se
+    entrega el equipo, es una deuda, no una venta. Por eso esta pantalla enseña siempre
+@@ -577,7 +576,6 @@ function PanelReservas({ usuario, onCambio }) {
+   );
+ }
+ 
+-
+ /* 🗂 Familias del Outlet: se editan aquí porque el vocabulario de lo usado cambia con lo
+    que entra por la puerta. Son SUYAS, no las del catálogo del TPV: allí están los
+    servicios del taller, que no sirven para vender una PS4. */
+diff --git a/src/components/PatronesTV.jsx b/src/components/PatronesTV.jsx
+index 9b7e88f..934a296 100644
+--- a/src/components/PatronesTV.jsx
++++ b/src/components/PatronesTV.jsx
+@@ -19,7 +19,7 @@
+ // midiéndola desde dentro del propio equipo que la pinta.
+ // ============================================================================
+ 
+-import React, { useEffect, useRef, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ 
+ const C = { marino: '#082947', verde: '#62E70E', verde2: '#92FF4E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A' };
+ 
+diff --git a/src/components/PuestaEnMarcha.jsx b/src/components/PuestaEnMarcha.jsx
+index d149cf7..47fb310 100644
+--- a/src/components/PuestaEnMarcha.jsx
++++ b/src/components/PuestaEnMarcha.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api } from '../api.js';
+ 
+ /* Lo que hay que dejar hecho antes de cobrar al primer cliente. El estado sale de la
 diff --git a/src/components/TPV.jsx b/src/components/TPV.jsx
 index b691d4b..3e98418 100644
 --- a/src/components/TPV.jsx
@@ -4867,10 +5212,61 @@ index b691d4b..3e98418 100644
        if (!u) { setAviso('✗ Código incorrecto'); setPin(''); }
        else if ((u.nivel || 9) > 2) { setAviso(`✗ ${u.nombre} no tiene permiso para abrir caja`); setPin(''); }
        else { setQuien(u); setAviso(''); }
+diff --git a/src/components/Taller.jsx b/src/components/Taller.jsx
+index 96bbdb1..445127d 100644
+--- a/src/components/Taller.jsx
++++ b/src/components/Taller.jsx
+@@ -1,11 +1,11 @@
+ import React, { useEffect, useState } from 'react';
+ import { api, eur } from '../api.js';
+ import { confirmar, avisar as avisarModal } from '../confirm.js';
+-import { htmlContratoTaller, htmlHojaEtiquetasOT, htmlEtiquetasUbicaciones, htmlInformeTecnico, htmlCierreTaller, htmlPresupuesto, htmlPresupuestoA4, nombreDiag, htmlParteCompleto } from '../print.js';
++import { htmlContratoTaller, htmlHojaEtiquetasOT, htmlInformeTecnico, htmlCierreTaller, nombreDiag, htmlParteCompleto } from '../print.js';
+ import VistaPrevia from './VistaPrevia.jsx'; // v0.1.70 · 📄 el parte completo en pantalla
+ import TecladoNum from './TecladoNum.jsx'; // v5.0.5 · terminales táctiles sin teclado: como en Domicilio
+ import HerramientasParte from './HerramientasParte.jsx'; // v5.0.34 · herramientas de diagnóstico en el parte
+-import SelectorCatalogo from './SelectorCatalogo.jsx'; // v0.0.99 · repuestos y kits del catálogo, buscando
++ // v0.0.99 · repuestos y kits del catálogo, buscando
+ import DispositivosConectados from './DispositivosConectados.jsx'; // v0.1.16 · 🔌 marca/modelo/serie desde el aparato enchufado
+ import { FirmasOrden, ModalFirma } from './FirmaCliente.jsx';
+ import { ModalUbicaciones } from './Ubicaciones.jsx'; // v0.1.49
+@@ -14,7 +14,7 @@ import { plantillaPorDefecto, leerCroquis } from '../croquis.js'; // v0.1.70 ·
+ import { Croquis, CroquisVista } from './Croquis.jsx'; // v0.1.71 · el croquis en su fichero
+ import { TIPOS, CHECKLIST_EXTRA } from '../taller-tipos.js'; // v0.1.71
+ import ModalEditarParte from './TallerEditarParte.jsx'; // v0.1.71 · ✏ editar el parte
+-import { conIgic, sinIgic } from '../presupuesto-minutos.js'; // v0.1.46 · mano de obra base + IGIC (v0.1.60: los minutos ya no se teclean) // v0.1.37 · ✍ firma del cliente con DNI/NIE (recepción / entrega)
++ // v0.1.46 · mano de obra base + IGIC (v0.1.60: los minutos ya no se teclean) // v0.1.37 · ✍ firma del cliente con DNI/NIE (recepción / entrega)
+ 
+ /* v4.0.2 · T1 Edición Taller — recepción completa + tablero.
+    Recepción (objetivo < 2 min): cliente/factura, equipo por serie con historial, checklist por
+@@ -1372,7 +1372,6 @@ function DialogoKb({ datos, obligatorio, onListo, onCerrar }) {
+   );
+ }
+ 
+-
+ /* ============ 🔔 Aviso al cliente al pasar a LISTO ============
+    Salta en el momento del cambio de estado, desde el tablero o la ficha. Nunca envía solo:
+    abre WhatsApp o el correo con el texto preparado y se registra por qué vía se avisó,
+diff --git a/src/components/TallerEditarParte.jsx b/src/components/TallerEditarParte.jsx
+index 3fcc030..86738a7 100644
+--- a/src/components/TallerEditarParte.jsx
++++ b/src/components/TallerEditarParte.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api } from '../api.js';
+ import { Croquis } from './Croquis.jsx';
+ import { leerCroquis, plantillaPorDefecto } from '../croquis.js';
 diff --git a/src/components/TallerPresupuestos.jsx b/src/components/TallerPresupuestos.jsx
-index d268410..5920efe 100644
+index d268410..ef4e740 100644
 --- a/src/components/TallerPresupuestos.jsx
 +++ b/src/components/TallerPresupuestos.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from 'react';
++import { useEffect, useState } from 'react';
+ import { api, eur } from '../api.js';
+ import { confirmar } from '../confirm.js';
+ import { htmlPresupuesto, htmlPresupuestoA4 } from '../print.js';
 @@ -377,7 +377,7 @@ export function ModalPresupuestos({ orden, usuario, cfgM = {}, onCambio, onCerra
                  </div>
                : <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 6 }}>
@@ -4880,6 +5276,61 @@ index d268410..5920efe 100644
                  </div>}
            </div>
          </div>
+diff --git a/src/components/TestCamaraMicrofono.jsx b/src/components/TestCamaraMicrofono.jsx
+index 04a96ea..42a8eb0 100644
+--- a/src/components/TestCamaraMicrofono.jsx
++++ b/src/components/TestCamaraMicrofono.jsx
+@@ -17,7 +17,7 @@
+ //    cliente describe como «se oye fatal».
+ // ============================================================================
+ 
+-import React, { useEffect, useRef, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ 
+ const C = { marino: '#082947', verde: '#62E70E', verde2: '#92FF4E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A' };
+ 
+diff --git a/src/components/TestLectorCodigoBarras.jsx b/src/components/TestLectorCodigoBarras.jsx
+index e9ec0ce..e848c38 100644
+--- a/src/components/TestLectorCodigoBarras.jsx
++++ b/src/components/TestLectorCodigoBarras.jsx
+@@ -23,7 +23,7 @@
+ // no fijan el contraste) y aviso de que un láser 1D no suele leer pantallas.
+ // ============================================================================
+ 
+-import React, { useState, useRef, useCallback, useEffect } from 'react';
++import { useState, useRef, useCallback, useEffect } from 'react';
+ import QRCode from 'qrcode';
+ 
+ const C = { marino: '#082947', verde: '#62E70E', verde2: '#92FF4E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A' };
+diff --git a/src/components/TestMandoSwitch.jsx b/src/components/TestMandoSwitch.jsx
+index f9db684..9c33153 100644
+--- a/src/components/TestMandoSwitch.jsx
++++ b/src/components/TestMandoSwitch.jsx
+@@ -18,10 +18,7 @@
+ // ============================================================================
+ 
+ import { useState, useEffect, useRef, useCallback } from 'react';
+-import {
+-  STD, DEAD, SECT, DRIFT_OK, DRIFT_BAD, DURACION_DERIVA_MS,
+-  modeloSwitch, esNintendo, estadoNuevo, alimentar, aplicarDeriva, resultado, informe, resumenJson, etiquetas, fmt, padDemo,
+-} from '../mando-switch.js';
++import { DEAD, SECT, DRIFT_OK, DRIFT_BAD, DURACION_DERIVA_MS, modeloSwitch, esNintendo, estadoNuevo, alimentar, aplicarDeriva, resultado, informe, resumenJson, etiquetas, fmt, padDemo } from '../mando-switch.js';
+ 
+ const C = { marino: '#082947', acero: '#244964', verde: '#62E70E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A', azul: '#8FC7F5' };
+ const COLOR_ESTADO = { ok: C.verde, pend: C.muted, warn: C.ambar, bad: C.rojo };
+diff --git a/src/components/TestMandoTV.jsx b/src/components/TestMandoTV.jsx
+index 6209b89..187524f 100644
+--- a/src/components/TestMandoTV.jsx
++++ b/src/components/TestMandoTV.jsx
+@@ -18,7 +18,7 @@
+ // las de portátil casi nunca. Si no se ve nada, se prueba con un móvil.
+ // ============================================================================
+ 
+-import React, { useEffect, useRef, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ 
+ const C = { marino: '#082947', verde: '#62E70E', verde2: '#92FF4E', ink: '#EAF2F8', muted: '#9DB6C6', ambar: '#FFC24D', rojo: '#FF7A7A' };
+ const REBOTE_MS = 150;
 diff --git a/src/components/VistaPrevia.jsx b/src/components/VistaPrevia.jsx
 index 39fc2c3..e12ebdc 100644
 --- a/src/components/VistaPrevia.jsx
@@ -4893,6 +5344,72 @@ index 39fc2c3..e12ebdc 100644
            style={{ flex: 1, background: '#fff', border: 'none', borderRadius: 12, width: '100%' }} />
        </div>
      </div>
+diff --git a/src/components/ajustes/catalogo.jsx b/src/components/ajustes/catalogo.jsx
+index 7f0c32d..bb5501e 100644
+--- a/src/components/ajustes/catalogo.jsx
++++ b/src/components/ajustes/catalogo.jsx
+@@ -5,7 +5,7 @@ import Plegable from '../Plegable.jsx';
+ import { confirmar as confirmarModal, avisar as avisarModal } from '../../confirm.js';
+ 
+ import { ImportarCartaOCR } from './importar-ocr.jsx';
+-import { nivel2, nivel3, tieneHijas, idsBajo, rutaSub, padreDe } from '../../familias.js'; // v0.1.5 · tres niveles
++import { nivel2, nivel3, idsBajo, rutaSub, padreDe } from '../../familias.js'; // v0.1.5 · tres niveles
+ 
+ /* ================= Catálogo: familias > subfamilias > productos ================= */
+ 
+@@ -1215,52 +1215,6 @@ function PreciosMasivos({ familias, onRecargar }) {
+   );
+ }
+ 
+-/* v4.0.20 · Compras del artículo: último precio, precio medio y registro rápido */
+-function ComprasArticulo({ productoId, distribuidores }) {
+-  const [datos, setDatos] = useState(null);
+-  const [f, setF] = useState({ distribuidor_id: '', precio: '', cantidad: '1' });
+-  const cargar = () => api.stock.compras(productoId).then(setDatos).catch(() => {});
+-  useEffect(() => { cargar(); }, [productoId]);
+-  const eur = (n) => (n == null ? '—' : Number(n).toFixed(2).replace('.', ',') + ' €');
+-  const registrar = async () => {
+-    try {
+-      setDatos(await api.stock.compraAdd(productoId, { distribuidor_id: f.distribuidor_id ? Number(f.distribuidor_id) : null,
+-        precio: Number(String(f.precio).replace(',', '.')), cantidad: Number(String(f.cantidad).replace(',', '.')) || 1 }));
+-      setF({ distribuidor_id: f.distribuidor_id, precio: '', cantidad: '1' });
+-    } catch (e) { avisarModal(e.message || String(e)); }
+-  };
+-  if (!datos) return null;
+-  return (
+-    <div style={{ border: '1px solid #2f5a7a', borderRadius: 10, padding: '10px 12px', margin: '10px 0' }}>
+-      <p style={{ color: '#62E70E', fontSize: 12, letterSpacing: 2, margin: '0 0 6px' }}>🧾 COMPRAS DE ESTE ARTÍCULO</p>
+-      <div style={{ display: 'flex', gap: 14, fontSize: 13, marginBottom: 8, flexWrap: 'wrap' }}>
+-        <span>Último: <b>{datos.ultimo ? eur(datos.ultimo.precio) : '—'}</b>{datos.ultimo && datos.ultimo.distribuidor ? <span style={{ color: '#9db4c6' }}> · {datos.ultimo.distribuidor}</span> : null}</span>
+-        <span>Medio: <b>{eur(datos.medio)}</b></span>
+-      </div>
+-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+-        <select value={f.distribuidor_id} onChange={(e) => setF({ ...f, distribuidor_id: e.target.value })}>
+-          <option value="">Proveedor…</option>
+-          {distribuidores.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+-        </select>
+-        <input style={{ width: 90 }} inputMode="decimal" placeholder="Precio ud." value={f.precio} onChange={(e) => setF({ ...f, precio: e.target.value })} />
+-        <input style={{ width: 70 }} inputMode="decimal" placeholder="Cant." value={f.cantidad} onChange={(e) => setF({ ...f, cantidad: e.target.value })} />
+-        <button className="btn-fantasma" onClick={registrar}>➕ Registrar compra</button>
+-      </div>
+-      {datos.historial.length > 0 && (
+-        <div style={{ marginTop: 8, fontSize: 12, color: '#9db4c6' }}>
+-          {datos.historial.slice(0, 5).map((h) => (
+-            <div key={h.id} style={{ display: 'flex', gap: 8, padding: '2px 0' }}>
+-              <span>{h.fecha.slice(0, 10)}</span><span style={{ flex: 1 }}>{h.distribuidor || '—'}</span>
+-              <span>{Number(h.cantidad)} × {eur(h.precio)}</span>
+-            </div>
+-          ))}
+-        </div>
+-      )}
+-      <p style={{ color: '#5d7e99', fontSize: 11, margin: '6px 0 0' }}>Las entradas de stock con coste también cuentan aquí. El proveedor habitual se actualiza con la última compra.</p>
+-    </div>
+-  );
+-}
+-
+ /* ============ 🧰 Kits · servicios de reparación ============ */
+ export function Kits({ prods, onRecargar, abiertoInicial = false }) {
+   const [kits, setKits] = useState([]);
 diff --git a/src/components/ajustes/desarrollador.jsx b/src/components/ajustes/desarrollador.jsx
 index 48c6c32..5410e36 100644
 --- a/src/components/ajustes/desarrollador.jsx
@@ -5025,6 +5542,37 @@ index d245e43..769dda5 100644
          días</b> a la hora que elijas, al cerrar caja y, si lo eliges, al iniciar o finalizar la
          aplicación. Siempre en <b>dos sitios</b>: la carpeta local y el USB (o red) si está puesto;
          si el USB no está, la local se hace igual y queda avisado. Se conservan los últimos <b>30 días</b>.
+diff --git a/src/components/mando/Paneles.jsx b/src/components/mando/Paneles.jsx
+index aaa456d..888ec70 100644
+--- a/src/components/mando/Paneles.jsx
++++ b/src/components/mando/Paneles.jsx
+@@ -1,11 +1,11 @@
+-import React, { useEffect, useRef, useState, useCallback } from 'react';
++import { useEffect, useRef, useState, useCallback } from 'react';
+ import { modeloDe, reportsPara, parseFirmware, parsePairing, parseBateria, fichaTexto, validarSerieDualSense, versionDualSense } from '../../mando-ficha.js'; // v0.1.15 · ficha del mando
+ import YaVino, { useHistorialSeries } from '../YaVino.jsx'; // v0.1.29 · «ya vino»
+-import { htmlCertificadoPrueba } from '../../print.js'; // v0.1.30 · certificado A4
++ // v0.1.30 · certificado A4
+ import * as NS from '../../switch-hid.js'; // v0.1.31 · mandos de Nintendo por WebHID
+-import { necesidades as repNecesidades, buscarEnCatalogo, lineaPresupuesto, textoSugerencias } from '../../mando-repuestos.js'; // v0.1.29 · repuesto sugerido
++import { necesidades as repNecesidades, buscarEnCatalogo, lineaPresupuesto } from '../../mando-repuestos.js'; // v0.1.29 · repuesto sugerido
+ import { webhid as webhidDisponible, avisoMostrador, avisoNavegador } from '../../remoto.js'; // v0.1.18 · ¿dónde va el aparato?
+-import { parseEntrada as dsEntrada, informeSalida as dsSalida, GATILLO as DS_GATILLO, moduloG, ACC_POR_G, GYRO_POR_GRADO, TOUCH_W, TOUCH_H, CAL_REPORT, parseCalibracion, gyroGrados, accelG } from '../../dualsense-hid.js'; // v0.1.22 · sensores y salidas · v0.1.31 calibración
++import { parseEntrada as dsEntrada, informeSalida as dsSalida, GATILLO as DS_GATILLO, TOUCH_W, TOUCH_H, CAL_REPORT, parseCalibracion, gyroGrados, accelG } from '../../dualsense-hid.js'; // v0.1.22 · sensores y salidas · v0.1.31 calibración
+ import { resumenEnlace, resumenEnlaceDualSense } from '../../mando-enlace.js';
+ import * as HID from '../../mando-hid.js'; // v0.1.39 · un solo HIDDevice compartido + mando virtual desde los informes HID
+ import { evaluar as evaluarBateria, compactar as compactarBateria, tramos as tramosBateria, textoInforme as textoInformeBateria, CODIGOS_DUALSENSE as CODIGOS_BATERIA } from '../../mando-bateria.js'; // v0.1.17 · diagnóstico de batería
+diff --git a/src/dni.js b/src/dni.js
+index 1cee00a..c7cf039 100644
+--- a/src/dni.js
++++ b/src/dni.js
+@@ -12,5 +12,4 @@ export function validarDniNie(entrada) {
+   const num = s[0] >= 'X' ? 'XYZ'.indexOf(s[0]) + s.slice(1, 8) : s.slice(0, 8);
+   return LETRAS_DNI[parseInt(num, 10) % 23] === s[8];
+ }
+-/* formato para enseñar: 12345678Z / X1234567L (ya normalizado) */
+-export const dniBonito = (s) => normalizarDni(s);
++
 diff --git a/src/errores.js b/src/errores.js
 new file mode 100644
 index 0000000..5c33607
@@ -5071,6 +5619,19 @@ index 0000000..5c33607
 +  });
 +  return informar;
 +}
+diff --git a/src/familias.js b/src/familias.js
+index 9fdb27f..0e72f77 100644
+--- a/src/familias.js
++++ b/src/familias.js
+@@ -3,7 +3,7 @@
+    padre_id; las sub-subfamilias (nivel 3) llevan padre_id = su subfamilia. */
+ export const nivel2 = (subfams, famId) => (subfams || []).filter((s) => s.categoria_id === famId && !s.padre_id);
+ export const nivel3 = (subfams, subId) => (subfams || []).filter((s) => s.padre_id === subId);
+-export const tieneHijas = (subfams, subId) => nivel3(subfams, subId).length > 0;
++
+ /* la subfamilia y sus hijas: para filtrar («Mandos y joysticks» incluye PS5, PS4…) */
+ export const idsBajo = (subfams, subId) => [subId, ...nivel3(subfams, subId).map((s) => s.id)];
+ /* el artículo guarda el nivel más hondo; de ahí se sube a la subfamilia de nivel 2 */
 diff --git a/src/main.jsx b/src/main.jsx
 index 2183be1..a06d0e0 100644
 --- a/src/main.jsx
@@ -5100,6 +5661,27 @@ index 2183be1..a06d0e0 100644
  createRoot(document.getElementById('root')).render(
    <ErrorBoundary>
      <App />
+diff --git a/src/mando-enlace.js b/src/mando-enlace.js
+index b336784..8d741eb 100644
+--- a/src/mando-enlace.js
++++ b/src/mando-enlace.js
+@@ -24,15 +24,7 @@ export function resumenEnlace(gaps, { minimo = 10, fuente = 'gamepad', perdidosS
+     : (pctPerdidos < 3 && jitterRel < 3) ? 'aceptable' : 'inestable';
+   return { ok: true, fuente, muestras: arr.length, media: Math.round(media * 10) / 10, hz, jitter, perdidos, pctPerdidos, huecos, conSecuencia, veredicto };
+ }
+-/* perdidos por contador de secuencia de 8 bits: cuenta saltos (mod 256) entre informes seguidos */
+-export function contarSaltosSecuencia(secuencias) {
+-  let perdidos = 0;
+-  for (let i = 1; i < secuencias.length; i++) {
+-    const d = (secuencias[i] - secuencias[i - 1] + 256) % 256;
+-    if (d > 1 && d < 128) perdidos += d - 1; // hacia atrás o saltos enormes = reinicio, no pérdida
+-  }
+-  return perdidos;
+-}
++
+ export function textoEnlace(r) {
+   if (!r) return '';
+   if (!r.ok) return `Enlace: sin medir (${r.muestras} muestras)`;
 diff --git a/src/print.js b/src/print.js
 index 7095461..ba377e7 100644
 --- a/src/print.js
@@ -5187,6 +5769,18 @@ index 7095461..ba377e7 100644
      Precio total del equipo: <b>${eur(a.pvp)}</b> · Pendiente al recogerlo: <b>${eur(resto)}</b>
    </div>
    <div class="cond">
+diff --git a/src/switch-hid.js b/src/switch-hid.js
+index 6644d7d..fb57b04 100644
+--- a/src/switch-hid.js
++++ b/src/switch-hid.js
+@@ -11,7 +11,6 @@
+    WebHID entrega `data` SIN el byte de id del informe. Puro: la batería lo prueba con
+    respuestas fabricadas. */
+ 
+-export const VID_NINTENDO = 0x057e;
+ export const PIDS = { 0x2006: 'Joy-Con (izquierdo)', 0x2007: 'Joy-Con (derecho)', 0x2009: 'Pro Controller', 0x200e: 'Joy-Con (Charging Grip)' };
+ export const TIPOS = { 1: 'Joy-Con (izquierdo)', 2: 'Joy-Con (derecho)', 3: 'Pro Controller' };
+ const RUMBLE_NEUTRO = [0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40];
 diff --git a/tools/_blobs-falso.cjs b/tools/_blobs-falso.cjs
 new file mode 100644
 index 0000000..40e8ca5
@@ -5231,7 +5825,7 @@ index 0000000..40e8ca5
 +}
 +module.exports = { FUENTE, escribir };
 diff --git a/tools/check-puente.cjs b/tools/check-puente.cjs
-index 0fb154c..922c910 100644
+index 0fb154c..43bd3bb 100644
 --- a/tools/check-puente.cjs
 +++ b/tools/check-puente.cjs
 @@ -67,6 +67,14 @@ console.log('Puente preload → main:');
@@ -5249,7 +5843,17 @@ index 0fb154c..922c910 100644
  /* v0.1.35 · un canal con `ipcMain.handle` a pelo funciona en el mostrador pero NO en el puesto en
     red (solo `handle()` lo mete en HANDLERS): «El mostrador no conoce print:html». Solo se admite
     para canales prohibidos en remoto (abren diálogos allí), que se listan en puesto-red.cjs. */
-@@ -146,12 +154,22 @@ try {
+@@ -143,15 +151,32 @@ try {
+   const tpy = require(path.resolve('electron/taller-python.cjs'));
+   const v = tpy.verificarScripts();
+   if (!v.ok) mal(v.error + ' → node tools/huellas-scripts.cjs --escribir');
++  /* v0.1.83 · CAL-04 · el manifiesto dice de qué versión es (decía 0.1.46 con la app en 0.1.72): version-subir lo sella */
++  const manV = JSON.parse(fs.readFileSync('electron/scripts/HUELLAS.json', 'utf8')).version;
++  if (manV !== VER) mal(`HUELLAS.json dice ${manV} y el paquete va por ${VER} → node tools/version-subir.cjs lo sella (o huellas-scripts --escribir)`);
++  try {
++    const nubeV = JSON.parse(fs.readFileSync('reserva-online/HUELLAS-NUBE.json', 'utf8')).version;
++    if (nubeV && nubeV !== VER) console.log('  ⚠ la nube está empaquetada en la ' + nubeV + ' (app ' + VER + '): antes de desplegar, node tools/empaquetar-nube.cjs');
++  } catch (e) { /* sin manifiesto de nube: nada que comparar */ }
  } catch (e) { mal('no se pudo verificar: ' + e.message); }
  if (fallos === antes7) console.log('  firmados');
  
@@ -5487,6 +6091,85 @@ index 0000000..314a5dd
 +    }
 +  } catch (e) { console.error('\n✗ ' + e.message + '\n'); process.exit(1); }
 +}
+diff --git a/tools/limpiar-datos-muertos.cjs b/tools/limpiar-datos-muertos.cjs
+index 77866fc..25c2607 100644
+--- a/tools/limpiar-datos-muertos.cjs
++++ b/tools/limpiar-datos-muertos.cjs
+@@ -47,16 +47,33 @@ for (;;) {
+     });
+   }
+ 
++  /* v0.1.83 · punto 10 · «declaración + alta en el registro = 2 usos» era una suposición: una función interna que NO
++     está en el registro y se llama una vez en su módulo sumaba 2 y se borraba (--aplicar se llevó seis funciones vivas:
++     ubicacionBonita, modeloParaOrden, taxonomia…). Ahora se cuentan los usos REALES: toda mención fuera de su propia
++     línea de declaración y fuera de las líneas de registro (Object.assign(N.API, {…}), module.exports = {…}, N.API.x =). */
++  const lineasRegistro = (src) => {
++    const marcas = []; let dentro = false;
++    for (const l of src.split('\n')) {
++      if (/Object\.assign\(N\.API,|^\s*module\.exports\s*=|^\s*N\.API\.\w+\s*=/.test(l)) { marcas.push(true); if (/\{\s*$/.test(l) || (/\{/.test(l) && !/\}/.test(l))) dentro = true; continue; }
++      marcas.push(dentro);
++      if (dentro && /\}\s*\)?;?\s*$/.test(l)) dentro = false;
++    }
++    return marcas;
++  };
++  const registro = Object.fromEntries(modulos.map((f) => [f, lineasRegistro(fuentes[f])]));
+   const muertas = [];
+   for (const d of decls) {
+     if (new RegExp('\\b' + d.nombre + '\\b').test(fuera)) continue; // la usa main.cjs, el índice o un test
+     let usos = 0;
++    const re = new RegExp('\\b' + d.nombre + '\\b');
+     for (const f of modulos) {
+-      const src = fuentes[f];
+-      /* en su propio módulo: la declaración cuenta 1; el alta en el registro, otra */
+-      usos += (src.match(new RegExp('\\b' + d.nombre + '\\b', 'g')) || []).length;
++      fuentes[f].split('\n').forEach((l, i) => {
++        if (f === d.f && i === d.linea) return;            // su propia declaración
++        if (registro[f][i]) return;                          // su alta en el registro
++        if (re.test(l)) usos++;
++      });
+     }
+-    if (usos <= 2) muertas.push(d); // solo su declaración y su línea de registro
++    if (usos === 0) muertas.push(d);
+   }
+   if (!muertas.length) { console.log('vuelta ' + vuelta + ': estable'); break; }
+ 
+diff --git a/tools/limpiar-muertos.cjs b/tools/limpiar-muertos.cjs
+index 7e35381..a5bf490 100644
+--- a/tools/limpiar-muertos.cjs
++++ b/tools/limpiar-muertos.cjs
+@@ -72,19 +72,30 @@ for (;;) {
+       const nombres = dentro.type === 'FunctionDeclaration' ? [dentro.id.name]
+         : dentro.type === 'VariableDeclaration' ? dentro.declarations.map((d) => d.id.name) : [];
+       if (!nombres.length) { if (intocable) decls.push({ f, nombre: '__default__' + f, exportado: true, intocable: true, desde: nodo.start, hasta: nodo.end, texto: src.slice(nodo.start, nodo.end) }); continue; }
+-      const desde = nodo.leadingComments && nodo.leadingComments.length ? nodo.leadingComments[0].start : nodo.start;
++      /* v0.1.83 · el comentario que precede a la PRIMERA declaración del fichero es la cabecera del módulo, no de esa
++         función: no se va con ella (--aplicar se llevó la cabecera entera de switch-hid.js al borrar VID_NINTENDO) */
++      const esPrimera = nodo === ast.program.body.find((x) => x.type !== 'ImportDeclaration');
++      const desde = !esPrimera && nodo.leadingComments && nodo.leadingComments.length ? nodo.leadingComments[0].start : nodo.start;
+       decls.push({ f, nombre: nombres[0], exportado, intocable, desde, hasta: nodo.end, texto: src.slice(desde, nodo.end) });
+     }
+   }
+ 
+   const entradas = ENTRADAS.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
++  /* v0.1.83 · punto 10 · lo que una batería de tools/ ejercita NO está muerto para el proyecto (las funciones puras del
++     mando, la batería del DualSense, el enlace, el IMEI…): se deja en paz y se lista aparte, para saber qué vive solo
++     por sus pruebas. Sin esto, --aplicar se llevó 24 funciones y rompió diez baterías. */
++  const baterias = fs.readdirSync('tools').filter((f) => /^(test-|_).*\.cjs$/.test(f)).map((f) => fs.readFileSync(path.join('tools', f), 'utf8')).join('\n'); // solo baterías y sus ayudantes (no este fichero: sus comentarios nombran funciones)
++  const soloBateria = [];
+   const vivo = (d) => {
+     if (d.intocable) return true;
+     if (new RegExp('\\b' + d.nombre + '\\b').test(entradas)) return true;
+-    return decls.some((o) => !(o.f === d.f && o.nombre === d.nombre) && new RegExp('\\b' + d.nombre + '\\b').test(o.texto));
++    if (decls.some((o) => !(o.f === d.f && o.nombre === d.nombre) && new RegExp('\\b' + d.nombre + '\\b').test(o.texto))) return true;
++    if (new RegExp('\\b' + d.nombre + '\\b').test(baterias)) { soloBateria.push(d); return true; }
++    return false;
+   };
+ 
+   const muertos = decls.filter((d) => !vivo(d));
++  if (vuelta === 1 && soloBateria.length) console.log('(vivos solo por sus baterías, se respetan: ' + soloBateria.map((d) => path.basename(d.f) + ':' + d.nombre).join(', ') + ')');
+   if (!muertos.length) { console.log('vuelta ' + vuelta + ': estable'); break; }
+ 
+   console.log('vuelta ' + vuelta + ': ' + muertos.length + ' sin alcanzar');
 diff --git a/tools/puente-generar.cjs b/tools/puente-generar.cjs
 new file mode 100644
 index 0000000..e314c13
@@ -6051,6 +6734,62 @@ index 98d9c14..1f11260 100644
    t('la PWA del taller ya NO tiene las secciones de impresoras',
      tallerPwa.length > 1000 && !/module-print3d/.test(tallerPwa) && !/module-printers/.test(tallerPwa));
  
+diff --git a/tools/test-higiene.cjs b/tools/test-higiene.cjs
+new file mode 100644
+index 0000000..c622a96
+--- /dev/null
++++ b/tools/test-higiene.cjs
+@@ -0,0 +1,50 @@
++/* v0.1.83 · punto 10 del plan · higiene.
++   1 · no queda código muerto que los limpiadores sepan ver   2 · la versión está en un solo sitio y HUELLAS.json la lleva
++   3 · los dos servidores de la LAN comparten IP, redes privadas, Host, respuesta JSON y la fábrica de sesiones
++   4 · la fábrica de sesiones con tope absoluto (lo que el puesto en red tenía aparte) */
++const fs = require('fs'); const path = require('path'); const { execFileSync } = require('child_process');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const S = require('../electron/seguridad-lan.cjs');
++
++console.log('1 · Código muerto');
++const correr = (f) => { try { return execFileSync(process.execPath, [f], { encoding: 'utf8', timeout: 120000 }); } catch (e) { return String(e.stdout || '') + String(e.stderr || ''); } };
++const m1 = correr('tools/limpiar-muertos.cjs'), m2 = correr('tools/limpiar-datos-muertos.cjs');
++t('1a. limpiar-muertos no encuentra exportaciones sin alcanzar en src/', /TOTAL sin alcanzar: 0\b/.test(m1), (m1.match(/→ .*/g) || []).slice(0, 6).join(' · '));
++t('1b. limpiar-datos-muertos no encuentra funciones sin alcanzar en electron/db/', /TOTAL sin alcanzar: 0\b/.test(m2), (m2.match(/sin alcanzar → .*/g) || []).join(' · '));
++
++console.log('\n2 · La versión');
++const VER = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
++const man = JSON.parse(fs.readFileSync('electron/scripts/HUELLAS.json', 'utf8'));
++t('2a. HUELLAS.json lleva la versión del paquete (decía 0.1.46 con la app en 0.1.72)', man.version === VER, man.version + ' vs ' + VER);
++t('2b. version-subir la sella y check-puente la exige', /HUELLAS\.json sellado/.test(fs.readFileSync('tools/version-subir.cjs', 'utf8')) && /HUELLAS\.json dice \$\{manV\}/.test(fs.readFileSync('tools/check-puente.cjs', 'utf8')));
++t('2c. y avisa si la nube está empaquetada en otra versión', /empaquetada en la/.test(fs.readFileSync('tools/check-puente.cjs', 'utf8')));
++
++console.log('\n3 · Los dos servidores de la LAN');
++const pr = fs.readFileSync('electron/puesto-red.cjs', 'utf8'), cm = fs.readFileSync('electron/comandero.cjs', 'utf8');
++t('3a. seguridad-lan.cjs exporta ipLocal, ipsLocales, esLocal, hostPermitido y respuestaJson', ['ipLocal', 'ipsLocales', 'esLocal', 'hostPermitido', 'respuestaJson'].every((f) => typeof S[f] === 'function'));
++t('3b. puesto-red.cjs ya no define los suyos: los toma de seguridad-lan y los sigue exportando', !/^const ipLocal = \(\) =>/m.test(pr) && !/^function esLocal\(/m.test(pr) && !/^function hostPermitido\(/m.test(pr) && /const \{ esLocal, hostPermitido, ipLocal, ipsLocales \} = seg;/.test(pr) && typeof require('../electron/puesto-red.cjs').esLocal === 'function' && require('../electron/puesto-red.cjs').esLocal === S.esLocal);
++t('3c. el comandero ya no importa puesto-red.cjs (un servidor dependía del otro) y usa los compartidos', !/require\('\.\/puesto-red\.cjs'\)/.test(cm) && /seg\.esLocal\(ip\)/.test(cm) && /seg\.hostPermitido\(/.test(cm) && /const ipLocal = seg\.ipLocal/.test(cm));
++t('3d. los dos responden JSON por seg.respuestaJson', /seg\.respuestaJson\(res, code, obj, cab\)/.test(pr) && /seg\.respuestaJson\(res, code, obj\)/.test(cm));
++t('3e. el puesto en red usa la misma fábrica de sesiones que el comandero (fuera el Map y el limpiarSesiones propios)', /const sesiones = seg\.crearSesiones\(VIDA_MS, VIDA_MAX_MS\)/.test(pr) && !/function limpiarSesiones/.test(pr) && !/sesiones\.(get|set|delete|clear)\(/.test(pr) && /sesiones\.(tocar|abrir|cerrar|vaciar|limpiar|lista)\(/.test(pr));
++const res = { cab: null, cuerpo: null, writeHead(c, h) { this.code = c; this.cab = h; }, end(b) { this.cuerpo = b; } };
++S.respuestaJson(res, 418, { ok: false, error: 'tetera' }, { 'x-token': 'abc' });
++t('3f. respuestaJson: código, cabeceras de seguridad + extra, y el cuerpo', res.code === 418 && res.cab['x-token'] === 'abc' && /application\/json/.test(res.cab['content-type']) && res.cab['x-content-type-options'] === 'nosniff' && res.cuerpo === '{"ok":false,"error":"tetera"}', JSON.stringify(res.cab));
++t('3g. esLocal y hostPermitido compartidos se comportan igual que antes', ['192.168.1.40', '10.0.0.7', '172.20.5.1', '127.0.0.1', '::ffff:192.168.0.3'].every(S.esLocal) && !['8.8.8.8', '172.35.0.1', ''].some(S.esLocal) && S.hostPermitido('localhost:8735') && S.hostPermitido('127.0.0.1') && !S.hostPermitido('mostrador.local:8735') && !S.hostPermitido(''));
++
++console.log('\n4 · Sesiones con tope absoluto');
++const H = 3600000; const T0 = 1700000000000;
++const ses = S.crearSesiones(12 * H, 24 * H);
++ses.abrir('tk', { nombre: 'Paco' }, T0);
++let viva = true; for (let h = 1; h <= 23; h++) if (!ses.tocar('tk', T0 + h * H)) viva = false;
++t('4a. tocándola cada hora sigue viva 23 horas (vida deslizante de 12 h)', viva && ses.max === 24 * H);
++t('4b. …pero a las 25 horas de abrirla caduca aunque se haya usado sin parar (tope absoluto)', ses.tocar('tk', T0 + 25 * H) === null && ses.tamano === 0);
++const sinTope = S.crearSesiones(12 * H);
++sinTope.abrir('tk', {}, T0); let viva2 = true; for (let h = 1; h <= 30; h++) if (!sinTope.tocar('tk', T0 + h * H)) viva2 = false;
++t('4c. sin tope (el comandero, como siempre) la deslizante manda: 30 horas tocándola cada hora sigue viva', viva2 && sinTope.max === 0);
++const s3 = S.crearSesiones(12 * H, 24 * H); s3.abrir('a', {}, T0); s3.abrir('b', {}, T0 + 20 * H);
++t('4d. lista() y limpiar() tiran las caducadas por cualquiera de los dos motivos', s3.lista(T0 + 25 * H).map((x) => x.token).join() === 'b');
++
++console.log(`\n${ko === 0 ? '✅' : '❌'}  Higiene: ${ok} OK · ${ko} fallos`);
++process.exit(ko === 0 ? 0 : 1);
 diff --git a/tools/test-hotel-nube.cjs b/tools/test-hotel-nube.cjs
 index 31e2b5d..264b37f 100644
 --- a/tools/test-hotel-nube.cjs
@@ -6937,3 +7676,20 @@ index b8473c3..41db08c 100644
  }
  
  /* ── puesta en marcha: el estado sale de la base, no de casillas ── */
+diff --git a/tools/version-subir.cjs b/tools/version-subir.cjs
+index 62c16be..951854c 100644
+--- a/tools/version-subir.cjs
++++ b/tools/version-subir.cjs
+@@ -37,3 +37,12 @@ pkg.version = partes.join('.');
+ 
+ fs.writeFileSync(RUTA, JSON.stringify(pkg, null, 2) + '\n');
+ console.log(`Doel Taller  ${anterior}  →  ${pkg.version}`);
++/* v0.1.83 · punto 10 (CAL-04) · el manifiesto de los scripts de Python lleva la versión que lo firmó: se sella con la
++   del paquete (las huellas no cambian; si un .py cambió, huellas-scripts --escribir las rehace). check-puente lo exige. */
++try {
++  const H = 'electron/scripts/HUELLAS.json';
++  const man = JSON.parse(fs.readFileSync(H, 'utf8'));
++  man.version = pkg.version;
++  fs.writeFileSync(H, JSON.stringify(man, null, 2) + '\n');
++  console.log('HUELLAS.json sellado para la ' + pkg.version);
++} catch (e) { console.log('(HUELLAS.json no sellado: ' + e.message + ')'); }
