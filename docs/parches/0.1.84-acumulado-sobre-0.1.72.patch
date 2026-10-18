@@ -10,14 +10,14 @@ index adb3b45..d02e571 100644
 +licencia-doel.json
 +*.pem
 diff --git a/ESTADO.md b/ESTADO.md
-index a10ed4f..880eb3d 100644
+index a10ed4f..f6bffdc 100644
 --- a/ESTADO.md
 +++ b/ESTADO.md
 @@ -1,6 +1,6 @@
  # Doel Taller · Estado del proyecto y pasos siguientes
  
 -**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
-+**Versión actual:** 0.1.83 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.84 · **Fecha:** 18 de octubre de 2026
  **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
  
  ---
@@ -55,7 +55,7 @@ index a10ed4f..880eb3d 100644
 +
 +Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
 +1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
-+(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
++(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador; 0.1.84: Electron 44 → 42 y better-sqlite3 13 → 12.11 porque sin precompilado no salía el instalador) · 4 `canales.cjs` único + deny‑by‑default en
 +`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
 +numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 arranque y puente ✅ 0.1.82 (`usb.ids` ya estaba fuera del bundle; cuerpo LAN en bytes, avisos con baja, una lectura de config) ·
 +10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados) ✅ 0.1.83. **Los diez puntos están hechos** (0.1.74 → 0.1.83); queda probar en Windows lo que el contenedor no puede (Electron 44: WebHID, mando, PDF, impresión, instalador) y redesplegar la nube.
@@ -130,13 +130,14 @@ index 888ccd6..f96482d 100644
  ---
  
 diff --git a/VERSION.md b/VERSION.md
-index 7a2a139..04f9b25 100644
+index 7a2a139..c450302 100644
 --- a/VERSION.md
 +++ b/VERSION.md
-@@ -160,6 +160,17 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+@@ -160,6 +160,18 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
  | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
  | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
  | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.84 | 🩹 **Vuelven el instalador y el portable de Windows.** Desde la 0.1.76 `npm run dist` moría antes de generar `DoelTaller-Setup-*.exe` y `DoelTaller-Portable-*.exe`: better-sqlite3 **13.x no publica binarios precompilados** para Electron y **Electron 44 no tiene precompilado en ninguna versión** de better-sqlite3, así que electron-builder intentaba compilar el módulo nativo desde el código fuente (Visual Studio Build Tools, Python…) y fallaba. Se vuelve a **better-sqlite3 12.11.1** y se baja a **Electron 42.11** (la última con precompilado para Windows x64; sigue con soporte oficial, Electron mantiene las tres últimas mayores). Sin herramientas de compilación: `npm install` descarga el binario. El resto de la 0.1.76 (electron-builder 26, Vite 8, selfsigned 5, auditoría a cero) se queda. **Regla para subir Electron en el futuro**: antes, comprobar que exista `better-sqlite3-vX-electron-vABI-win32-x64.tar.gz` en las releases de WiseLibs/better-sqlite3 (`node tools/comprobar-prebuild.cjs` lo mira). |
 +| 0.1.83 | 🧹 **Higiene (punto 10 del plan · CAL‑01/CAL‑04).** Fuera el código muerto que veían los limpiadores: 6 exportaciones en `src/` (`limpiar-muertos --aplicar`; el limpiador ahora respeta lo que ejercita una batería de `tools/`, que no está muerto para el proyecto, y lo lista aparte) y **ninguna** en `electron/db/`: las seis que `limpiar-datos-muertos` daba por muertas (`ubicacionBonita`, `modeloParaOrden`, `taxonomia`…) estaban vivas (su regla «declaración + registro = 2 usos» fallaba con funciones internas); ahora cuenta usos reales fuera de la declaración y de las líneas de registro. El limpiador de `src/` tampoco se lleva ya la cabecera del módulo cuando borra su primera declaración. La batería nueva falla si vuelve a aparecer código muerto. **Versión en un solo sitio**: `version-subir` sella también `electron/scripts/HUELLAS.json` (decía 0.1.46 con la app en 0.1.72) y `check-puente` lo exige; avisa si la nube (`HUELLAS-NUBE.json`) está empaquetada en otra versión. **Los dos servidores de la LAN sin duplicados**: `ipLocal`, `ipsLocales`, `esLocal`, `hostPermitido` y la respuesta JSON viven en `seguridad-lan.cjs` (el comandero ya no importa `puesto-red.cjs` solo para eso), y el puesto en red usa la misma fábrica de sesiones que el comandero (`crearSesiones(vida, tope)`, ahora con tope absoluto opcional) en vez de un `Map` y un `limpiarSesiones` propios. Nueva batería `test-higiene.cjs` (14). |
 +| 0.1.82 | 🚦 **Arranque y puente sin ruido (punto 9 del plan).** Lo previsto era sacar `usb.ids` del bundle; **ya estaba fuera**: se lee en el proceso principal, una vez y solo cuando se pide (`electron/usb-ids.cjs`), y la batería nueva lo deja comprobado. Lo que sí había (CAL‑02): **el cuerpo de las peticiones LAN** se leía trozo a trozo como texto (un carácter UTF‑8 partido entre dos trozos llegaba como «�») y el tope contaba caracteres, no bytes (200 K «ñ» son 400 KB y pasaban por 256 KB) → ahora búferes y bytes. **Los avisos del puente** (`onCierreSolicitado`, `onNuevas`) pasaban por `unwrap()` como si fueran llamadas: cada arranque dejaba una promesa rechazada («Error desconocido») que desde la 0.1.79 habría ido al registro; ahora `api.js` no los envuelve, el preload generado los sirve con un ayudante `on()` que **devuelve la baja** (`removeListener`) y `App.jsx` la usa al desmontar (en el puesto en red la baja es una función vacía). **Una sola lectura de config por arranque**: `cargarModulos` y `aplicarEscala` reciben el mismo objeto (antes dos lecturas, y dos más por cada `doel:cfg`). Nueva batería `test-arranque.cjs` (14). |
 +| 0.1.81 | ☁️ **Nube sin escrituras perdidas (punto 8 del plan · CAL‑02).** Nuevo `modificar(store, clave, fn)` en `api.mjs`: todo leer‑modificar‑escribir sobre un blob JSON va con **escritura condicional** (`onlyIfMatch` con el etag leído, `onlyIfNew` si no existía) y se repite si otro escribió entre medias. Hasta ahora dos peticiones a la vez se pisaban en silencio: dos clientes reservando (una reserva desaparecía), el TPV drenando la cola del portal mientras un cliente mandaba un mensaje (mensaje perdido), un latido de diagnóstico borrando el código que el panel acababa de crear, dos locales de multitienda subiendo a la vez. Convertidos: índice de negocios, `sync`/`reservar`/`anular`, cola del portal (drenaje atómico), solicitudes del outlet, frenos por IP y del hotel, usuarios de demo, códigos de diagnóstico, multitienda. De paso: **el mismo hueco pedido dos veces a la vez** ya solo entra una (el otro recibe 409), y el tope de tres reservas por teléfono se mira **antes** de descontar el hueco (antes el hueco se perdía hasta la siguiente sync). **`negocio-borrar` borra todo lo del negocio** (reservas, portal del cliente, outlet y hotel; antes solo las reservas) y devuelve el detalle por almacén (RGPD). `@netlify/blobs` ^11 en `reserva-online/package.json` (las escrituras condicionales lo necesitan). Baterías: nuevo stub compartido `tools/_blobs-falso.cjs` con etags (las cuatro de la nube lo usan) y nueva `test-nube-concurrencia.cjs` (21). **Hay que redesplegar `reserva-online/`** (ZIP `doel-reservas-v0.1.81-netlify-drop.zip`). |
@@ -3496,13 +3497,13 @@ index 0000000..2b048e7
 +
 +module.exports = { registrarErrorPantalla, decidirTrasCaida, vigilarVentana, MAX_POR_VENTANA, REPETIDO_MS, CAIDAS_MAX, CAIDAS_VENTANA_MS, _reiniciar };
 diff --git a/electron/scripts/HUELLAS.json b/electron/scripts/HUELLAS.json
-index f8e0e37..e676791 100644
+index f8e0e37..57fcc27 100644
 --- a/electron/scripts/HUELLAS.json
 +++ b/electron/scripts/HUELLAS.json
 @@ -1,5 +1,5 @@
  {
 -  "version": "0.1.46",
-+  "version": "0.1.83",
++  "version": "0.1.84",
    "huellas": {
      "agente_diag.py": "3268bef5c64db37ac4537f50ece5a8537fb2af9fa8ccc19a102d750957bf3b75",
      "doel_tm_core.py": "ea6a00eb083ea9d306f85691fa2935da1d33baf21998b71490a826706ac7b88c",
@@ -3775,7 +3776,7 @@ index 604bc55..c2fee03 100644
      if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
      return new Promise((resolve) => {
 diff --git a/package.json b/package.json
-index 8df4662..a9244e9 100644
+index 8df4662..65fd56d 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,7 +1,7 @@
@@ -3783,18 +3784,11 @@ index 8df4662..a9244e9 100644
    "name": "doel-taller",
    "productName": "Doel Taller",
 -  "version": "0.1.72",
-+  "version": "0.1.83",
++  "version": "0.1.84",
    "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
    "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
    "license": "UNLICENSED",
-@@ -15,23 +15,28 @@
-   },
-   "dependencies": {
-     "adm-zip": "^0.6.0",
--    "better-sqlite3": "^12.11.1",
-+    "better-sqlite3": "^13.0.3",
-     "exceljs": "^4.4.0",
-     "pdf-parse": "^2.4.5",
+@@ -21,17 +21,22 @@
      "qrcode": "^1.5.4",
      "react": "^18.3.1",
      "react-dom": "^18.3.1",
@@ -3815,7 +3809,7 @@ index 8df4662..a9244e9 100644
 +    "@vitejs/plugin-react": "^6.1.2",
 +    "concurrently": "^10.0.6",
 +    "cross-env": "^10.1.0",
-+    "electron": "^44.9.0",
++    "electron": "^42.11.15",
 +    "electron-builder": "^26.15.3",
 +    "esbuild": "^0.28.2",
 +    "eslint": "^8.57.1",
@@ -5939,6 +5933,38 @@ index d3a8b81..0000000
 -  tick();
 -  setInterval(tick, 2000);
 -})();
+diff --git a/tools/comprobar-prebuild.cjs b/tools/comprobar-prebuild.cjs
+new file mode 100644
+index 0000000..2340f03
+--- /dev/null
++++ b/tools/comprobar-prebuild.cjs
+@@ -0,0 +1,26 @@
++#!/usr/bin/env node
++/* v0.1.84 · ¿Existe el binario precompilado de better-sqlite3 para el Electron del proyecto en Windows x64?
++   Si no existe, electron-builder compila desde el código fuente y en un PC sin Visual Studio Build Tools el
++   instalador NO sale (pasó en la 0.1.76 → 0.1.83 con Electron 44 y better-sqlite3 13). Ejecutar antes de
++   subir Electron o better-sqlite3: node tools/comprobar-prebuild.cjs [--electron 44.9.0] [--sqlite 13.0.3] */
++const https = require('https');
++const path = require('path');
++process.chdir(path.join(__dirname, '..'));
++const arg = (n) => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : null; };
++const electron = arg('electron') || require('electron/package.json').version;
++const sqlite = arg('sqlite') || require('better-sqlite3/package.json').version;
++const abi = require('node-abi').getAbi(electron, 'electron');
++const url = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${sqlite}/better-sqlite3-v${sqlite}-electron-v${abi}-win32-x64.tar.gz`;
++const pedir = (u, saltos = 0) => new Promise((res, rej) => {
++  https.request(u, { method: 'HEAD' }, (r) => {
++    if ([301, 302, 307, 308].includes(r.statusCode) && saltos < 5 && r.headers.location && !/releases\/download/.test(r.headers.location)) return res(r.statusCode); // el 302 al CDN ya dice que existe
++    res(r.statusCode);
++  }).on('error', rej).end();
++});
++pedir(url).then((code) => {
++  const hay = code === 302 || code === 200;
++  console.log(`Electron ${electron} (ABI ${abi}) · better-sqlite3 ${sqlite} · win32-x64 → ${hay ? 'HAY precompilado ✅' : 'NO hay precompilado ❌ (HTTP ' + code + ')'}`);
++  console.log(url);
++  if (!hay) console.log('Sin precompilado, electron-builder compila desde el código fuente: en un PC sin Visual Studio Build Tools el instalador no sale.');
++  process.exit(hay ? 0 : 1);
++}).catch((e) => { console.log('No se pudo comprobar: ' + e.message); process.exit(2); });
 diff --git a/tools/generar-licencia.cjs b/tools/generar-licencia.cjs
 deleted file mode 100644
 index f911e37..0000000
