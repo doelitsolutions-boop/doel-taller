@@ -10,18 +10,18 @@ index adb3b45..d02e571 100644
 +licencia-doel.json
 +*.pem
 diff --git a/ESTADO.md b/ESTADO.md
-index a10ed4f..b20a3e8 100644
+index a10ed4f..2b32d10 100644
 --- a/ESTADO.md
 +++ b/ESTADO.md
 @@ -1,6 +1,6 @@
  # Doel Taller · Estado del proyecto y pasos siguientes
  
 -**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
-+**Versión actual:** 0.1.74 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.75 · **Fecha:** 18 de octubre de 2026
  **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
  
  ---
-@@ -69,6 +69,32 @@ y desde la 0.0.85 lo comprueba `check-puente.cjs`, que no deja entregar si `pack
+@@ -69,6 +69,41 @@ y desde la 0.0.85 lo comprueba `check-puente.cjs`, que no deja entregar si `pack
  
  ---
  
@@ -51,14 +51,38 @@ index a10ed4f..b20a3e8 100644
 +restaura en OTRO PC, la frase de copias hay que volver a ponerla y las contraseñas de equipos de órdenes abiertas
 +se piden otra vez al cliente); la nube necesita redesplegar `reserva-online/` (nueva ruta `/api/diag-validar`).
 +
++### Plan de mejoras tras la auditoría (0.1.75 → )
++
++Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
++1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día
++(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta) · 4 `canales.cjs` único + deny‑by‑default en
++`/rpc` · 5 permisos por canal también en IPC · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
++numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
++10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
++
  ### Herramientas de verificación (el «ritual de entrega»)
  
  Se corre **entero** antes de cada versión. Si algo sale rojo, no se entrega.
 diff --git a/MANUAL.md b/MANUAL.md
-index 888ccd6..0204935 100644
+index 888ccd6..f96482d 100644
 --- a/MANUAL.md
 +++ b/MANUAL.md
-@@ -823,17 +823,35 @@ salen avisos «El mostrador no conoce…»; desde la 0.1.38 una banda naranja ar
+@@ -800,6 +800,14 @@ otro Doel ni Doel IT Solutions pueden. Por eso mismo, **si pierdes la clave pier
+ apúntala fuera del PC. Las copias anteriores siguen abriendo. «Quitar» vuelve a la clave de
+ fábrica para las copias nuevas.
+ 
++**📦 Un solo archivo con todo (0.1.75).** Cada `.doelbak` lleva dentro la base **y las fotos** de
++órdenes, outlet y hotel, cifradas juntas (antes las fotos quedaban en claro en una carpeta al lado:
++cualquiera con el USB las veía). Con **clave propia**, el paquete lleva además la clave de
++instalación: restaurar en **otro PC** recupera también las contraseñas de los equipos y la licencia
++(si cambia el ID de equipo, Doel emite un DL2 nuevo). Sin clave propia, en otro PC hay que volver a
++pegar el DL2 y las contraseñas de equipos de las órdenes abiertas se piden otra vez al cliente.
++«Probar la última copia» dice cuántas fotos lleva.
++
+ **📂 Restaurar.** Ajustes → Copias → «Restaurar copia…» (escribe RESTAURAR) admite las copias
+ `.doelbak` que hace el programa —con clave de fábrica o propia— y un `.db` suelto. Si la copia es
+ de otro taller, o de antes de cambiar la clave, el programa te pide la clave con la que se hizo y
+@@ -823,17 +831,35 @@ salen avisos «El mostrador no conoce…»; desde la 0.1.38 una banda naranja ar
  versión vieja: lo que te ofrecen limpiar después es tu base de datos. Panel Dev →
  ℹ️ Información técnica enseña las dos carpetas.
  
@@ -106,13 +130,14 @@ index 888ccd6..0204935 100644
  ---
  
 diff --git a/VERSION.md b/VERSION.md
-index 7a2a139..d00e218 100644
+index 7a2a139..b5c8f3d 100644
 --- a/VERSION.md
 +++ b/VERSION.md
-@@ -160,6 +160,8 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+@@ -160,6 +160,9 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
  | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
  | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
  | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.75 | 📦 **Copias recuperables de verdad (punto 2 del plan).** Cada `.doelbak` es ahora un **paquete DOELBAK3**: un ZIP cifrado con la base, las fotos de órdenes/outlet/hotel y un manifiesto (antes la base iba cifrada y las fotos EN CLARO en una carpeta al lado del USB). Con frase propia el paquete lleva también la **clave de instalación**: restaurar en otro PC recupera contraseñas de equipos, claves de portal y la semilla de licencia. Restaurar extrae base + fotos (+ clave) y las copias antiguas (DOELBAK1/2 con su espejo) se siguen abriendo. La prueba en seco cuenta las fotos. Una base restaurada en otra instalación ya no sale como «manipulada»: pide volver a pegar el DL2. Las entradas del ZIP se validan (zip‑slip). `test-copias` 55 → 64 comprobaciones; `test-taller` 55 adaptado. Manual y Ajustes al día. |
 +| 0.1.74 | 🔑 **Licencia v2: se cierra SEC‑01.** El instalador ya no lleva ningún secreto con el que fabricar licencias. La licencia es un **código DL2** firmado con Ed25519 (la app solo lleva la clave pública; la privada vive en `~/.doel/licencia-doel.json` del PC de Doel) que se pega una vez e incluye cliente, módulos, modo, caducidad y una **semilla TOTP propia de la instalación**; de ella salen los códigos por teléfono (6 dígitos renovación/Panel Dev, 12 dígitos módulos) y solo valen para ese equipo. Fuera los códigos cortos con máscara oculta (se aceptaban al azar un 2 %), `SECRETO`, `TOTP_SECRET_B32`, `generar-licencia.cjs`, `codigo-instalacion.cjs` y `codigo-renovacion.cjs`; nuevo `tools/licencia-v2.cjs` (claves · emitir · codigo · modulos · qr). Sello de integridad v11 con la clave de instalación. **Lo activado antes sigue activado** («heredada»): se re-sella al arrancar y Ajustes → Licencia pide pegar su DL2 para volver a renovar o cambiar módulos por teléfono. `check-puente` avisa si la compilación sale sin clave pública. La clave de las copias DOELBAK1 queda como constante derivada (solo lectura de lo antiguo). Batería nueva `test-licencia-v2.cjs` (43); `test-taller`, `test-taller-ubicaciones`, `test-multitienda` y `test-diagnostico` adaptadas. Manual al día. |
 +| 0.1.73 | 🔒 **Endurecimiento tras la auditoría 0.1.72** (`docs/AUDITORIA_0.1.72.md`, `docs/REVISION_HACKER_0.1.72.md`). **Mostrador**: PIN con scrypt y sal por usuario (migración perezosa al primer login, SEC‑10), freno local de 5 fallos/5 min, DevTools cerradas en producción, `setWindowOpenHandler`/`will-navigate` en todas las ventanas (SEC‑07/08), puerta del Panel Dev en el proceso principal con freno y `config:set` protegido para licencia/módulos/activación (SEC‑12), freno en `licencia:activar` y `dev:acceso` (SEC‑01 parcial), clave por instalación (DPAPI) para contraseñas de equipos, claves de portal y frase de copias (SEC‑11), restaurar solo desde las carpetas de copias, nombre de impresora del cajón saneado antes de `cmd /c copy` (SEC‑09), `abrir-url` solo `https/http/mailto`, DiskSpd sin shell, iframes de impresión en sandbox y escapes que faltaban en `print.js` (SEC‑21), `python -I` y reverificación de las copias de scripts (SEC‑22). **Puesto en red / comandero**: freno en `fichaje:login/admin`, `app:salir`, `caja:cajonAbrir` (SEC‑02), sesión antes de leer el cuerpo (256 KB sin sesión), `Host` y `Content-Type` validados (SEC‑06/18), `config:all` sin tokens para perfiles sin «Ajustes» (SEC‑03), `uid` del rastro desde la sesión y columnas `portal_pass_*`/`password_cifrada` fuera de lo que viaja (SEC‑04), `auth:logout`, permisos releídos en cada llamada y caducidad absoluta de 24 h (SEC‑16), freno global además del de IP (SEC‑17), certificado de hoja (no CA) de 825 días (SEC‑05), `sat:*` y cajón con permiso, ventanas de impresión en sandbox (SEC‑15), comandero solo IP privadas, errores 500 sin detalle. **Nube**: XSS reflejado de `index.html` cerrado y cabeceras de seguridad (SEC‑13), códigos de diagnóstico validados en servidor (`/api/diag-validar`, `/api/movil-validar`) sin clave en el HTML (SEC‑14), freno por IP en portal/demo/multitienda/hotel, fuera el acceso maestro de demo, sesiones firmadas con caducidad de 12 h, recortes y topes en reservas y outlet, `timingSafeEqual` en tokens, `grupo.html` escapado, `crm-productos` con `uid` y `content-type` validados (SEC‑19). Nuevo `electron/seguridad-app.cjs`. 91 baterías: las de LAN, PIN, taller y actividad del móvil actualizadas al comportamiento nuevo. |
  | 0.1.72 | ⏰ **Plazos del tablero según un taller** (Edmundo: «ajústalo según los plazos que suelen haber en un taller, en entrega, en almacenamiento, archivado»). Cada tarjeta mide **las horas/días en su fase** contra el plazo de esa fase (antes: días desde la recepción, en rojo a los 7 fuese la columna que fuese): gris en plazo, ámbar pasado el 75 %, rojo y ⏰ fuera. Plazos típicos de fábrica: diagnosticar 2 d, presupuestar 1, enviarlo 1, aceptación 3, pieza 7, reparar 2, garantía 7 (nuevas fases *presupuestado* y *garantía*). En **Listo** corre la recogida desde el aviso: recordar al cliente a los 7 d, almacenaje a los 30 (RD 58/1988), abandono automático a los 60; la tarjeta lo dice. Bajo el tablero, **📤 Entregadas en los últimos 30 días** (plegado); después quedan archivadas y se encuentran por el buscador. Ajustes → Tiempos: recordatorio, abandono (nunca antes que el almacenaje), archivo y «↺ Plazos típicos de un taller». Batería nueva `test-plazos-taller.cjs` (22). |
@@ -158,9 +183,18 @@ index 3138736..7b30283 100644
        // las rutas se salvaban por accidente, porque reventaban con un 500 al tocar
        // `sesion.usuarioId`. Pero `cliente-buscar` y `taller-linea-del` no tocaban la sesión
 diff --git a/electron/db.cjs b/electron/db.cjs
-index a96ffdd..dea3212 100644
+index a96ffdd..12ec649 100644
 --- a/electron/db.cjs
 +++ b/electron/db.cjs
+@@ -124,7 +124,7 @@ const PUBLICAS = [
+   "articuloCompras",
+   "backupA",
+   "verificarCopia", "copiasDisponibles",
+-  "backupCompletoA",
++  "backupCompletoA", "abrirPaquete",
+   "bateriaInforme",
+   "cajaAbiertaAhora",
+   "cajaAbrir",
 @@ -297,6 +297,9 @@ const PUBLICAS = [
    "validarDniNie",
    "normalizarDni",
@@ -399,7 +433,7 @@ index b584efe..a69f058 100644
    return true;
  }
 diff --git a/electron/db/sistema.cjs b/electron/db/sistema.cjs
-index 1281500..76d12b8 100644
+index 1281500..39bb3c6 100644
 --- a/electron/db/sistema.cjs
 +++ b/electron/db/sistema.cjs
 @@ -56,10 +56,19 @@ function deletePerfil(id) {
@@ -469,7 +503,151 @@ index 1281500..76d12b8 100644
    // v3.0.66 · su ficha de fichaje al vuelo, para que aparezca en Fichaje sin tener que fichar antes
    try { empleadosSyncUsuarios(); } catch { /* no crítico */ }
    return nuevoId;
-@@ -579,9 +597,11 @@ Object.assign(N.API, {
+@@ -210,14 +228,72 @@ function restaurarDesde(rutaOrigen, rutaDestino) {
+ }
+ 
+ 
+-const backupCompletoA = async (destino) => {
++/* ══ v0.1.75 · PAQUETE DE COPIA ═══════════════════════════════════════════════════
++   Un .doelbak es ahora un ZIP cifrado (DOELBAK3) con:
++     doel-taller.db      la base, consistente (N.db.backup)
++     fotos_taller/**     las fotos de órdenes, outlet y hotel (antes iban EN CLARO al lado de la copia)
++     manifiesto.json     versión, fecha, número de fotos y, si la copia lleva frase propia, la clave de
++                         instalación: restaurar en otro PC recupera contraseñas de equipos y licencia.
++   Las copias anteriores (DOELBAK1/2 con la base sola, y su carpeta fotos_taller al lado) se siguen
++   abriendo y restaurando. */
++function construirPaquete(tmpDb, fotosDir, incluirClave) {
++  const AdmZip = require('adm-zip');
++  const fs = require('fs');
++  const lic = require('../licencia.cjs');
++  const zip = new AdmZip();
++  zip.addFile('doel-taller.db', fs.readFileSync(tmpDb));
++  let fotos = 0;
++  if (fotosDir && fs.existsSync(fotosDir)) {
++    zip.addLocalFolder(fotosDir, 'fotos_taller');
++    fotos = zip.getEntries().filter((e) => !e.isDirectory && e.entryName.startsWith('fotos_taller/')).length;
++  }
++  const man = { formato: 'doel-paquete', version: 1, generado: nowISO(), fotos };
++  if (incluirClave) { try { man.clave_instalacion = lic.exportarClaveInstalacion(); } catch (e) { /* sin clave: el paquete sale sin ella */ } }
++  zip.addFile('manifiesto.json', Buffer.from(JSON.stringify(man), 'utf8'));
++  return { zip: zip.toBuffer(), fotos };
++}
++/* Abre un paquete YA descifrado (ZIP): deja la base en dirTmp y devuelve cómo extraer las fotos.
++   Las rutas del ZIP se comprueban (nada absoluto, nada con «..»): un paquete manipulado no escribe fuera. */
++function abrirPaquete(rutaZip, dirTmp) {
++  const AdmZip = require('adm-zip');
++  const fs = require('fs');
++  const path = require('path');
++  const zip = new AdmZip(rutaZip);
++  const entradas = zip.getEntries();
++  const segura = (n) => !/^([a-zA-Z]:|\/|\\)/.test(n) && !String(n).split(/[\\/]/).includes('..');
++  const eDb = entradas.find((e) => e.entryName === 'doel-taller.db');
++  if (!eDb) throw new Error('El paquete no lleva la base de datos');
++  fs.mkdirSync(dirTmp, { recursive: true });
++  const rutaDb = path.join(dirTmp, 'doel-taller.db');
++  fs.writeFileSync(rutaDb, eDb.getData());
++  let manifiesto = null;
++  const eMan = entradas.find((e) => e.entryName === 'manifiesto.json');
++  if (eMan) { try { manifiesto = JSON.parse(eMan.getData().toString('utf8')); } catch (e) { manifiesto = null; } }
++  const fotos = entradas.filter((e) => !e.isDirectory && e.entryName.startsWith('fotos_taller/') && segura(e.entryName));
++  const extraerFotos = (destino) => {
++    fs.rmSync(destino, { recursive: true, force: true });
++    fs.mkdirSync(destino, { recursive: true });
++    let n = 0;
++    for (const e of fotos) {
++      const d = path.join(destino, e.entryName.slice('fotos_taller/'.length));
++      if (!path.resolve(d).startsWith(path.resolve(destino) + path.sep)) continue;
++      fs.mkdirSync(path.dirname(d), { recursive: true });
++      fs.writeFileSync(d, e.getData()); n++;
++    }
++    return n;
++  };
++  return { db: rutaDb, fotos: fotos.length, manifiesto, extraerFotos, claveInstalacion: (manifiesto && manifiesto.clave_instalacion) || null };
++}
++
++const backupCompletoA = async (destino, fotosDir = null) => {
+   const lic = require('../licencia.cjs');
+   const os = require('os');
+   const path = require('path');
+   const fs = require('fs');
+   const tmp = path.join(os.tmpdir(), 'doel-bak-' + Date.now() + '.db');
+   await N.db.backup(tmp);
+-  lic.cifrarArchivo(tmp, destino, backupClave()); // v0.1.65 · con la clave propia si la hay
++  const clavePropia = backupClave();
++  lic.cifrarPaquete(construirPaquete(tmp, fotosDir, !!clavePropia).zip, destino, clavePropia); // v0.1.75 · paquete; v0.1.65 · con la clave propia si la hay
+   fs.rmSync(tmp, { force: true });
+   return destino;
+ };
+@@ -266,8 +342,9 @@ function verificarCopia(ruta, clave) { // v0.1.65 · clave: la propia si la copi
+   const path = require('path');
+   const Database = require('better-sqlite3');
+   const lic = require('../licencia.cjs');
+-  const r = { ok: false, ruta, bytes: 0, cifrada: false, formato: null, integridad: null, tablas_faltan: [], recuentos: {}, vivos: {}, error: null, necesitaClave: false };
++  const r = { ok: false, ruta, bytes: 0, cifrada: false, formato: null, integridad: null, tablas_faltan: [], recuentos: {}, vivos: {}, error: null, necesitaClave: false, paquete: false, fotos: 0 };
+   let tmp = null;
++  let tmpDir = null; // v0.1.75 · carpeta temporal del paquete
+   let bd = null;
+   try {
+     if (!ruta || !fs.existsSync(ruta)) { r.error = 'La copia no existe: ' + ruta; return r; }
+@@ -286,6 +363,11 @@ function verificarCopia(ruta, clave) { // v0.1.65 · clave: la propia si la copi
+         r.error = 'La copia cifrada no se puede descifrar: está dañada o no es de este Doel'; return r;
+       }
+       origen = tmp;
++      if (/^paquete/.test(r.formato)) { // v0.1.75 · dentro va un ZIP: la base se saca a una carpeta temporal
++        tmpDir = tmp + '-paq';
++        try { const paq = abrirPaquete(tmp, tmpDir); origen = paq.db; r.paquete = true; r.fotos = paq.fotos; }
++        catch (e) { r.error = 'El paquete de copia no se puede abrir: ' + e.message; return r; }
++      }
+     }
+     try { bd = new Database(origen, { readonly: true }); }
+     catch (e) { r.error = 'El archivo no es una base de datos SQLite'; return r; }
+@@ -315,6 +397,7 @@ function verificarCopia(ruta, clave) { // v0.1.65 · clave: la propia si la copi
+     for (const sufijo of ['', '-wal', '-shm', '-journal']) {
+       try { if (tmp) fs.rmSync(tmp + sufijo, { force: true }); } catch (e) { /* nada */ }
+     }
++    try { if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* nada */ } // v0.1.75
+   }
+ }
+ 
+@@ -497,21 +580,20 @@ async function backupA(dirs, fotosDir, motivo = 'manual') { // v4.0.21 · fotosD
+         const os = require('os');
+         const tmp = path.join(os.tmpdir(), 'doel-bak-' + Date.now() + '.db');
+         await N.db.backup(tmp); // copia consistente aunque la BD esté en uso
+-        lic.cifrarArchivo(tmp, destino, clavePropia); // v0.1.65 · DOELBAK2 si hay clave propia
++        /* v0.1.75 · PAQUETE: base + fotos + manifiesto en un solo ZIP cifrado (DOELBAK3). Con frase propia lleva
++           también la clave de instalación. Antes: base cifrada y fotos EN CLARO en una carpeta al lado. */
++        lic.cifrarPaquete(construirPaquete(tmp, fotosDir, !!clavePropia).zip, destino, clavePropia);
+         fs.rmSync(tmp, { force: true });
+       }
+       /* v0.0.91 · restauración en seco de lo que se acaba de escribir. Una copia
+          que no abre es un fallo de la copia, aunque el archivo esté ahí. */
+       const v = verificarCopia(destino, clavePropia);
+       if (!v.ok) { errores.push(dir + ' (copia escrita pero NO verificada): ' + v.error); continue; }
+-      verificadas.push({ ruta: destino, bytes: v.bytes, recuentos: v.recuentos });
++      verificadas.push({ ruta: destino, bytes: v.bytes, recuentos: v.recuentos, fotos: v.fotos });
+       rutas.push(destino);
+-      // v4.0.21 · las FOTOS DEL PARTE viajan con la copia (espejo junto al .doelbak):
+-      // sin esto, restaurar en otro equipo perdería la prueba con huella
+-      if (fotosDir && fs.existsSync(fotosDir)) {
+-        try { fs.cpSync(fotosDir, path.join(dir, 'fotos_taller'), { recursive: true, force: true }); }
+-        catch (e2) { errores.push(dir + ' (fotos): ' + e2.message); }
+-      }
++      /* v0.1.75 · las fotos van DENTRO del paquete; el espejo en claro de la 4.0.21 ya no se escribe. Si quedaba
++         uno de versiones anteriores en esta carpeta, se retira: era la única copia de las fotos sin cifrar. */
++      try { const espejo = path.join(dir, 'fotos_taller'); if (fs.existsSync(espejo)) fs.rmSync(espejo, { recursive: true, force: true }); } catch (e2) { /* se queda: no es grave */ }
+       // Retención: borrar backups de más de 30 días
+       const limite = Date.now() - 30 * 86400000;
+       for (const f of fs.readdirSync(dir)) {
+@@ -569,7 +651,7 @@ function hayVentasSinBackupHoy() {
+ /* Alta en el registro */
+ Object.assign(N.API, {
+   verificarCopia, copiasDisponibles, backupClave, backupClaveSet, backupClaveEstado,
+-  backupMomento, backupDestinos, MOMENTOS_BACKUP, usuarioBaja, listPerfiles, savePerfil, deletePerfil, login, configAll, configSet, getEmpresa, saveEmpresa, listUsuarios, saveUsuario, usuarioProfesionalSet, RELOJ_TOLERANCIA_MS, relojTick, relojEstado, relojReset, empleadosSyncUsuarios, restaurarDesde, backupCompletoA, rutaBD, cerrarBD, saludArranque, saludQuickCheck, saludEstado, saludCompleta, saludMantenimiento, backupA, hayVentasSinBackupHoy, backupDiarioToca, fsF, pathF,
++  backupMomento, backupDestinos, MOMENTOS_BACKUP, usuarioBaja, listPerfiles, savePerfil, deletePerfil, login, configAll, configSet, getEmpresa, saveEmpresa, listUsuarios, saveUsuario, usuarioProfesionalSet, RELOJ_TOLERANCIA_MS, relojTick, relojEstado, relojReset, empleadosSyncUsuarios, restaurarDesde, abrirPaquete, backupCompletoA, rutaBD, cerrarBD, saludArranque, saludQuickCheck, saludEstado, saludCompleta, saludMantenimiento, backupA, hayVentasSinBackupHoy, backupDiarioToca, fsF, pathF,
+ });
+ 
+ /* ---- Puesta en marcha ----
+@@ -579,9 +661,11 @@ Object.assign(N.API, {
  function puestaEnMarcha() {
    const cfg = configAll();
    const emp = N.db.prepare('SELECT nombre, nif, direccion, municipio FROM empresa WHERE id = 1').get() || {};
@@ -483,7 +661,7 @@ index 1281500..76d12b8 100644
    const articulos = N.db.prepare('SELECT COUNT(*) c FROM productos WHERE activo = 1 AND (coste IS NOT NULL OR precio > 0)').get().c;
    let ultimoBackup = null;
    try { ultimoBackup = JSON.parse(cfg.backup_ultimo || 'null'); } catch { ultimoBackup = null; }
-@@ -598,6 +618,9 @@ function puestaEnMarcha() {
+@@ -598,6 +682,9 @@ function puestaEnMarcha() {
        detalle: 'Repuestos con coste y margen, o servicios con precio cerrado', tab: 'productos' },
      { id: 'backup', titulo: 'Copia de seguridad fuera del PC', hecho: !!String(cfg.backup_carpeta_extra || '').trim() && !!(ultimoBackup && ultimoBackup.ok),
        detalle: 'Un USB o una carpeta de red. Si el disco muere, el taller sigue', tab: 'sistema' },
@@ -493,7 +671,7 @@ index 1281500..76d12b8 100644
    ];
    const pendientes = puntos.filter((p) => !p.hecho);
    return { puntos, pendientes: pendientes.length, completa: pendientes.length === 0, descartada: cfg.puesta_en_marcha_ok === '1' };
-@@ -605,4 +628,4 @@ function puestaEnMarcha() {
+@@ -605,4 +692,4 @@ function puestaEnMarcha() {
  
  const puestaEnMarchaDescartar = () => { configSet('puesta_en_marcha_ok', '1'); return true; };
  
@@ -709,7 +887,7 @@ index 779d765..e9a387f 100644
  }
  
 diff --git a/electron/licencia.cjs b/electron/licencia.cjs
-index bfca72e..276d898 100644
+index bfca72e..14e029c 100644
 --- a/electron/licencia.cjs
 +++ b/electron/licencia.cjs
 @@ -1,12 +1,44 @@
@@ -848,7 +1026,12 @@ index bfca72e..276d898 100644
 +  for (let i = 0; i + 5 <= bits.length; i += 5) out += B32[parseInt(bits.slice(i, i + 5), 2)];
 +  return out;
 +}
-+
+ 
+-function totpEn(contador) {
+-  const buf = Buffer.alloc(8);
+-  buf.writeBigUInt64BE(BigInt(contador));
+-  const h = crypto.createHmac('sha1', b32decode(TOTP_SECRET_B32)).update(buf).digest();
+-  const off = h[h.length - 1] & 0xf;
 +// ===== Código DL2 =====
 +// DL2.<base64url(JSON)>.<base64url(firma Ed25519 de 'DL2|' + JSON)>
 +// JSON: { v: 2, e: equipoId, c: cliente, m: [módulos activos], modo: permanente|mensual|anual,
@@ -870,12 +1053,7 @@ index bfca72e..276d898 100644
 +    return p;
 +  } catch (e) { return null; }
 +}
- 
--function totpEn(contador) {
--  const buf = Buffer.alloc(8);
--  buf.writeBigUInt64BE(BigInt(contador));
--  const h = crypto.createHmac('sha1', b32decode(TOTP_SECRET_B32)).update(buf).digest();
--  const off = h[h.length - 1] & 0xf;
++
 +// ===== Semilla TOTP de esta instalación (viene en el DL2; duerme cifrada con la clave de instalación) =====
 +function semillaInstalacion(configAll) {
 +  try {
@@ -966,7 +1144,7 @@ index bfca72e..276d898 100644
  const MODULOS = ['modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modulo_pago_qr',
    'modulo_domicilio',                                              // bit 4
    'modulo_pasarela',                                               // bit 5 · 💳 Pasarela Doel (v3.0.131)
-@@ -162,114 +141,145 @@ const MODULOS = ['modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modul
+@@ -162,114 +141,151 @@ const MODULOS = ['modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modul
    'modulo_iso',                                                  // bit 15 · v5.0.12 📍 Trazabilidad ISO (Taller)
    'modulo_kb',                                                  // bit 16 · v5.0.12 💡 KB de diagnosis (Taller)
    'modulo_diagnostico'];                                         // bit 17 · v5.0.29 🎮 Diagnóstico de mandos (Taller)
@@ -1054,19 +1232,7 @@ index bfca72e..276d898 100644
 +      motivo: 'La fecha del equipo se ha modificado. Contacte con Doel IT Solutions.' };
 +    if (caduca && isoHoy() > caduca) return { activada: false, caducada: true, bloqueada: true, equipo, diasRestantes: 0, caduca };
      return null;
-+  };
-+
-+  // 1 · Licencia DL2 (0.1.74+): el código se vuelve a comprobar cada vez; el sello cubre caducidad y módulos
-+  const dl2 = String(cfg.licencia_v2 || '').trim();
-+  if (dl2) {
-+    const p = verificarDL2(dl2);
-+    if (!p) return manipulada(tieneClavePublica() ? 'El código de activación no corresponde a este equipo.' : 'Esta compilación no lleva la clave pública de Doel.');
-+    if (cfg.licencia_sello_v !== '11' || !selloOk(cfg)) return manipulada('Los datos de licencia han sido modificados.');
-+    const caduca = String(cfg.licencia_caduca || '').trim();
-+    const b = bloqueoPorCaducidad(caduca); if (b) return b;
-+    return { activada: true, v2: true, cliente: p.c || 'Doel Taller', equipo, diasRestantes: null, caduca: caduca || null,
-+      modo: cfg.licencia_modo || 'permanente', modulos: modulosDeMascara(mascaraDeModulos(p.m)) };
-   }
+-  }
 -  if (!/^\d{6}$|^\d{8}$|^\d{9}$/.test(c)) return null;
 -  // v5.0.12 · tercera época: 9 dígitos → espacio con bit 16 (ISO/KB). Cada ancho, su espacio.
 -  const tope = c.length === 9 ? 262144 : c.length === 8 ? 65536 : 4096; // v5.0.29 · bit 17 (diagnostico) → 2^18
@@ -1079,8 +1245,25 @@ index bfca72e..276d898 100644
 -    const sec = secretoMascara(m);
 -    for (let v = -2; v <= 2; v++) {
 -      if (gen(ahora + v, sec) === c) { candidatas.push(m); break; }
--    }
--  }
++  };
++
++  // 1 · Licencia DL2 (0.1.74+): el código se vuelve a comprobar cada vez; el sello cubre caducidad y módulos
++  const dl2 = String(cfg.licencia_v2 || '').trim();
++  if (dl2) {
++    const p = verificarDL2(dl2);
++    if (!p) return manipulada(tieneClavePublica() ? 'El código de activación no corresponde a este equipo.' : 'Esta compilación no lleva la clave pública de Doel.');
++    if (cfg.licencia_sello_v !== '11' || !selloOk(cfg)) {
++      /* v0.1.75 · si además la semilla no se puede abrir, la base viene de OTRA instalación (restaurada sin frase, o
++         PC reinstalado): no es manipulación, es que hay que volver a pegar el DL2 de este equipo. */
++      if (!semillaInstalacion(configAll)) return { activada: false, bloqueada: true, necesitaDL2: true, restaurada: true, equipo, diasRestantes: 0,
++        motivo: 'Esta base viene de otra instalación (restaurada o PC nuevo): vuelve a pegar el código de activación DL2 de este equipo (ID ' + equipo + '). Contacte con Doel IT Solutions (922 979 655).' };
++      return manipulada('Los datos de licencia han sido modificados.');
+     }
++    const caduca = String(cfg.licencia_caduca || '').trim();
++    const b = bloqueoPorCaducidad(caduca); if (b) return b;
++    return { activada: true, v2: true, cliente: p.c || 'Doel Taller', equipo, diasRestantes: null, caduca: caduca || null,
++      modo: cfg.licencia_modo || 'permanente', modulos: modulosDeMascara(mascaraDeModulos(p.m)) };
+   }
 -  if (!candidatas.length) return null;
 -  if (candidatas.length > 1) return { mascara: null, ambiguo: true, candidatas };
 -  return { mascara: candidatas[0] };
@@ -1197,7 +1380,7 @@ index bfca72e..276d898 100644
    return { activada: true, modulos: modulosFijados };
  }
  
-@@ -281,7 +291,10 @@ function activarConTotp(codigo, configSet, configAll) {
+@@ -281,9 +297,17 @@ function activarConTotp(codigo, configSet, configAll) {
       la frase que elige el dueño). Sin la frase no la abre nadie, ni otro Doel: es la que
       permite dejar la copia en un NAS compartido o en la nube. Si se pierde la frase, se
       pierde la copia; por eso la pantalla lo avisa dos veces. */
@@ -1208,8 +1391,15 @@ index bfca72e..276d898 100644
 +const CLAVE_BAK = Buffer.from('77114fed0eec7a9d24ce3f054060c2523ab4776a18b4c1852a1de8f7d807a410', 'hex');
  const MAGIA_BAK = Buffer.from('DOELBAK1');
  const MAGIA_BAK2 = Buffer.from('DOELBAK2');
++/* v0.1.75 · DOELBAK3 | modo(1) | sal(16) | iv(12) | tag(16) | datos — PAQUETE: un ZIP con la base, las fotos del
++   taller y un manifiesto, cifrado entero. modo 1 = clave común (sin frase propia; la sal va a ceros),
++   modo 2 = frase propia (scrypt de la frase con la sal). Hasta la 0.1.74 la base iba cifrada y las fotos
++   quedaban EN CLARO en una carpeta al lado: cualquiera con el USB veía las fotos de los equipos. */
++const MAGIA_BAK3 = Buffer.from('DOELBAK3');
  const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }; // ~60 ms en un PC de mostrador
-@@ -309,21 +322,64 @@ function cifrarArchivo(origen, destino, clave) {
+ 
+ function claveDerivar(frase, sal) {
+@@ -309,21 +333,101 @@ function cifrarArchivo(origen, destino, clave) {
    return destino;
  }
  
@@ -1237,20 +1427,57 @@ index bfca72e..276d898 100644
 +    if (marca === 'SAFE') {
 +      if (!safeOk()) throw new Error('La clave de instalación está protegida por Windows y este usuario no puede abrirla');
 +      CLAVE_INST = Buffer.from(SAFE.decryptString(raw.subarray(4)), 'hex');
-+    } else if (marca === 'PLAN') CLAVE_INST = Buffer.from(raw.subarray(4));
-+    else throw new Error('clave-instalacion.bin no tiene un formato conocido');
++    } else if (marca === 'PLAN') {
++      CLAVE_INST = Buffer.from(raw.subarray(4));
++      if (CLAVE_INST.length === 32 && safeOk()) guardarClaveInstalacion(CLAVE_INST); // v0.1.75 · venía de una restauración: se protege con DPAPI
++    } else throw new Error('clave-instalacion.bin no tiene un formato conocido');
 +    if (CLAVE_INST.length !== 32) throw new Error('clave-instalacion.bin corrupta');
 +    return CLAVE_INST;
 +  } catch (e) {
 +    if (e.code !== 'ENOENT') throw e;
 +  }
 +  const k = crypto.randomBytes(32);
++  guardarClaveInstalacion(k);
++  return k;
++}
++/* escribe la clave de instalación (DPAPI si se puede, en claro si no) y deja la caché al día */
++function guardarClaveInstalacion(k) {
++  const fs = require('fs'); const path = require('path');
++  const dir = CLAVE_INST_DIR || path.join(require('os').tmpdir(), 'doel-taller-pruebas');
++  const safeOk = () => { try { return !!(SAFE && SAFE.isEncryptionAvailable()); } catch (e) { return false; } };
 +  fs.mkdirSync(dir, { recursive: true });
 +  const cuerpo = safeOk() ? Buffer.concat([Buffer.from('SAFE', 'latin1'), SAFE.encryptString(k.toString('hex'))])
 +    : Buffer.concat([Buffer.from('PLAN', 'latin1'), k]);
-+  fs.writeFileSync(ruta, cuerpo, { mode: 0o600 });
++  fs.writeFileSync(path.join(dir, 'clave-instalacion.bin'), cuerpo, { mode: 0o600 });
 +  CLAVE_INST = k;
-+  return k;
++}
++
++/* v0.1.75 · cifra un paquete (buffer ZIP) → DOELBAK3 */
++function cifrarPaquete(zipBuf, destino, clave) {
++  const fs = require('fs');
++  const iv = crypto.randomBytes(12);
++  if (clave) {
++    const sal = crypto.randomBytes(16);
++    const c = crypto.createCipheriv('aes-256-gcm', claveDerivar(clave, sal), iv);
++    const cuerpo = Buffer.concat([c.update(zipBuf), c.final()]);
++    fs.writeFileSync(destino, Buffer.concat([MAGIA_BAK3, Buffer.from([2]), sal, iv, c.getAuthTag(), cuerpo]));
++    return destino;
++  }
++  const c = crypto.createCipheriv('aes-256-gcm', CLAVE_BAK, iv);
++  const cuerpo = Buffer.concat([c.update(zipBuf), c.final()]);
++  fs.writeFileSync(destino, Buffer.concat([MAGIA_BAK3, Buffer.from([1]), Buffer.alloc(16), iv, c.getAuthTag(), cuerpo]));
++  return destino;
++}
++
++/* v0.1.75 · la clave de instalación viaja dentro del paquete con FRASE PROPIA: restaurar en otro PC recupera las
++   contraseñas de equipos, las claves de portal y la semilla de licencia. (Sin frase no viaja: el paquete lo abre
++   cualquier Doel.) */
++function exportarClaveInstalacion() { return claveInstalacion().toString('hex'); }
++function importarClaveInstalacion(hex) {
++  const k = Buffer.from(String(hex || ''), 'hex');
++  if (k.length !== 32) throw new Error('clave de instalación con formato raro');
++  guardarClaveInstalacion(k);
++  return true;
 +}
 +
  // v4.0.2 · Taller: la contraseña del equipo viaja y duerme CIFRADA (GCM detecta manipulación)
@@ -1278,11 +1505,55 @@ index bfca72e..276d898 100644
  
  /* 'doel' (DOELBAK1) · 'clave' (DOELBAK2, hace falta la frase) · null (no está cifrada: .db suelto) */
  function formatoBackup(ruta) {
-@@ -368,4 +424,9 @@ function descifrarArchivo(origen, destino, clave) {
+@@ -331,14 +435,16 @@ function formatoBackup(ruta) {
+   let fd = null;
+   try {
+     fd = fs.openSync(ruta, 'r');
+-    const cab = Buffer.alloc(8);
+-    fs.readSync(fd, cab, 0, 8, 0);
+-    if (cab.equals(MAGIA_BAK)) return 'doel';
+-    if (cab.equals(MAGIA_BAK2)) return 'clave';
++    const cab = Buffer.alloc(9);
++    fs.readSync(fd, cab, 0, 9, 0);
++    if (cab.subarray(0, 8).equals(MAGIA_BAK)) return 'doel';
++    if (cab.subarray(0, 8).equals(MAGIA_BAK2)) return 'clave';
++    if (cab.subarray(0, 8).equals(MAGIA_BAK3)) return cab[8] === 2 ? 'paquete-clave' : 'paquete'; // v0.1.75
+     return null;
+   } finally { if (fd != null) fs.closeSync(fd); }
+ }
+ function esBackupCifrado(ruta) { return formatoBackup(ruta) !== null; }
++function esPaquete(ruta) { return /^paquete/.test(formatoBackup(ruta) || ''); } // v0.1.75
+ 
+ /* Error con `codigo` para que la pantalla sepa si pedir la clave o dar la copia por dañada */
+ function errorClave(msg, codigo) { const e = new Error(msg); e.codigo = codigo; return e; }
+@@ -351,6 +457,12 @@ function descifrarArchivo(origen, destino, clave) {
+   else if (todo.subarray(0, 8).equals(MAGIA_BAK2)) {
+     if (!clave) throw errorClave('Esta copia está cifrada con la clave propia del taller: hace falta la clave para abrirla', 'CLAVE_NECESARIA');
+     k = claveDerivar(clave, todo.subarray(8, 24)); off = 24;
++  } else if (todo.subarray(0, 8).equals(MAGIA_BAK3)) { // v0.1.75 · paquete
++    if (todo[8] === 2) {
++      if (!clave) throw errorClave('Esta copia está cifrada con la clave propia del taller: hace falta la clave para abrirla', 'CLAVE_NECESARIA');
++      k = claveDerivar(clave, todo.subarray(9, 25));
++    } else k = CLAVE_BAK;
++    off = 25;
+   } else throw new Error('No es una copia cifrada Doel');
+   const iv = todo.subarray(off, off + 12);
+   const tag = todo.subarray(off + 12, off + 28);
+@@ -359,7 +471,7 @@ function descifrarArchivo(origen, destino, clave) {
+   let datos;
+   try { datos = Buffer.concat([descifrador.update(todo.subarray(off + 28)), descifrador.final()]); }
+   catch (e) {
+-    if (off === 24) throw errorClave('La clave no es la de esta copia (o el archivo está dañado)', 'CLAVE_INCORRECTA');
++    if (off === 24 || (off === 25 && todo[8] === 2)) throw errorClave('La clave no es la de esta copia (o el archivo está dañado)', 'CLAVE_INCORRECTA');
+     throw e;
+   }
+   fs.writeFileSync(destino, datos);
+@@ -368,4 +480,10 @@ function descifrarArchivo(origen, destino, clave) {
  
  module.exports = {
    cifrarArchivo, descifrarArchivo, esBackupCifrado, formatoBackup, claveDerivar, cifrarTexto, descifrarTexto,
 -  sellar, selloCalcular, equipoId, validar, estado, activar, activarConTotp, totpValido, totpEn, marcaEquipo, SECRETO, TOTP_SECRET_B32, MODULOS, codigoModulos, codigoModulosSeguro, mascaraValida, SELLO_CLAVES_V3 };
++  cifrarPaquete, esPaquete, exportarClaveInstalacion, importarClaveInstalacion, // v0.1.75 · paquete de copia
 +  configurarClaveInstalacion, claveInstalacion, textoCifradoLegado, // v0.1.73 · SEC-11
 +  // v0.1.74 · licencia v2
 +  equipoId, estado, activar, activarConTotp, verificarDL2, totpValido, semillaInstalacion, codigoRenovacion,
@@ -1290,7 +1561,7 @@ index bfca72e..276d898 100644
 +  sellar, selloCalcular, SELLO_CLAVES, configurarClavePublica, tieneClavePublica, b32encode, b32decode,
 +};
 diff --git a/electron/main.cjs b/electron/main.cjs
-index eccebb0..2984496 100644
+index eccebb0..e4a9fdf 100644
 --- a/electron/main.cjs
 +++ b/electron/main.cjs
 @@ -1,5 +1,5 @@
@@ -1300,17 +1571,16 @@ index eccebb0..2984496 100644
  const fs = require('fs');
  const path = require('path');
  const db = require('./db.cjs');
-@@ -30,6 +30,9 @@ let win;
+@@ -30,6 +30,8 @@ let win;
  
  let permitirSalir = false;
  
-+// v0.1.73 · SEC-12/20 · ventanas, puerta del Panel Dev, claves protegidas y freno de códigos: electron/seguridad-app.cjs
-+const { endurecerVentana, exigirDev, devAbrir, devCerrar, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL } = require('./seguridad-app.cjs');
++const { endurecerVentana, exigirDev, devAbrir, devCerrar, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL } = require('./seguridad-app.cjs'); // v0.1.73 · SEC-12/20
 +
  function createWindow() {
    const cfg = db.configAll();
    win = new BrowserWindow({
-@@ -45,9 +48,11 @@ function createWindow() {
+@@ -45,9 +47,11 @@ function createWindow() {
        preload: path.join(__dirname, 'preload.cjs'),
        contextIsolation: true,
        nodeIntegration: false,
@@ -1322,7 +1592,7 @@ index eccebb0..2984496 100644
    // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que
    // aprobarla explícitamente o getGamepads() devuelve siempre vacío (el mando va en la web
    // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID).
-@@ -115,8 +120,9 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+@@ -115,8 +119,9 @@ function abrirVentanaHerramienta(herramienta, usuario) {
      width: 1100, height: 760, minWidth: 900, minHeight: 600,
      backgroundColor: '#082947', autoHideMenuBar: true,
      icon: path.join(__dirname, '..', 'build', 'icon.ico'),
@@ -1333,25 +1603,22 @@ index eccebb0..2984496 100644
    ventanasHerramienta.set(ficha, { herramienta: id, usuario: usuario || null, win: v });
    v.on('closed', () => ventanasHerramienta.delete(ficha));
    const query = { herramienta: id, v: ficha };
-@@ -136,6 +142,10 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+@@ -136,6 +141,8 @@ function abrirVentanaHerramienta(herramienta, usuario) {
  async function pulsoCajon(deviceName, ajuste = null) {
    const dev = (deviceName || '').trim();
    if (!dev) return { ok: false, error: 'No hay impresora del cajón configurada (Ajustes → Impresoras)' };
-+  /* v0.1.73 · SEC-22 · el respaldo «copy /b» pasa por cmd.exe, que vuelve a interpretar comillas y «&»:
-+     un nombre de impresora con esos caracteres ejecutaba lo que llevara detrás. Solo letras, cifras y
-+     los signos que Windows admite en un nombre de impresora. */
++  // v0.1.73 · SEC-22 · el respaldo «copy /b» pasa por cmd.exe (reinterpreta comillas y «&»): solo caracteres de nombre de impresora
 +  if (!/^[\p{L}\p{N} _.#()\-]{1,64}$/u.test(dev)) return { ok: false, error: 'Nombre de impresora no válido: ' + dev.slice(0, 40) };
    /* v0.0.82 · pin y duración del pulso configurables: el cajón puede estar cableado al
       pin 5 y hay solenoides que necesitan más de 50 ms para saltar. */
    const aj = ajuste || cajon.desdeConfig(db.configAll());
-@@ -194,15 +204,20 @@ async function enviarRawImpresora(nombreImpresora, archivoBytes) {
+@@ -194,15 +201,19 @@ async function enviarRawImpresora(nombreImpresora, archivoBytes) {
     mostrador y este registro para el puesto en red, que lo llama por HTTP. Una sola
     implementación: lo que se arregla aquí queda arreglado en los dos sitios. */
  const HANDLERS = new Map();
 -function handle(canal, fn) {
 +function handle(canal, fn0, fnLocal) { // v0.1.73 · fnLocal: variante solo para IPC (el puesto en red usa fn0)
-+  // v0.1.73 · SEC-12 · los canales del Panel Dev que renuevan, borran o restauran exigen la puerta abierta;
-+  // SEC-01 · los que validan un código (licencia, autenticador) pasan por el freno de 5 fallos / 5 min
++  // v0.1.73 · SEC-12 · los canales del Panel Dev peligrosos exigen la puerta abierta; SEC-01 · los que validan un código pasan por el freno
 +  const fn1 = DEV_PUERTA.has(canal) ? (...args) => { exigirDev(); return fn0(...args); } : fn0;
 +  const fn = FRENO_CANAL[canal] ? (...args) => conFreno(FRENO_CANAL[canal], () => fn1(...args)) : fn1;
    HANDLERS.set(canal, async (...args) => {
@@ -1367,7 +1634,7 @@ index eccebb0..2984496 100644
      } catch (err) {
        return { ok: false, error: err.message };
      }
-@@ -211,6 +226,7 @@ function handle(canal, fn) {
+@@ -211,6 +222,7 @@ function handle(canal, fn) {
  
  app.whenReady().then(() => {
    const userData = app.getPath('userData'); // v0.1.3 · ya redirigido arriba a la carpeta del usuario
@@ -1375,7 +1642,7 @@ index eccebb0..2984496 100644
    db.init(userData);
    if (RUTAS.migrado) {
      dialog.showMessageBox({ type: 'info', title: 'Doel Taller — tus datos han cambiado de sitio',
-@@ -233,7 +249,8 @@ app.whenReady().then(() => {
+@@ -233,7 +245,8 @@ app.whenReady().then(() => {
      }
    } catch (e) { /* nunca bloquear el arranque por el chequeo */ }
  
@@ -1385,7 +1652,7 @@ index eccebb0..2984496 100644
  
    /* v0.1.68 · AUD-04: los dominios grandes viven en electron/main/*.cjs y reciben este contexto.
       `ventana()` y no `win`: la ventana se reasigna al recrearla y hay que leerla viva. */
-@@ -323,11 +340,12 @@ app.whenReady().then(() => {
+@@ -323,11 +336,12 @@ app.whenReady().then(() => {
    handle('catalogo:deleteSubfamilia', (id) => db.deleteSubfamilia(id));
    handle('config:all', () => db.configAll());
    handle('config:set', (clave, valor) => {
@@ -1399,7 +1666,7 @@ index eccebb0..2984496 100644
        licencia.sellar(db.configAll, db.configSet);
      }
      return r;
-@@ -721,8 +739,8 @@ app.whenReady().then(() => {
+@@ -721,8 +735,8 @@ app.whenReady().then(() => {
    handle('taller:ia-sugerir', (ordenId, pregunta) => require('./ia.cjs').texto(db, ordenId, pregunta)); // v4.0.18 · 🤖 externo→reglas
    handle('taller:pass-ver', (ordenId, uid) => {
      db.ordenLog(ordenId, uid, 'pass-vista', 'Contraseña consultada'); // v4.0.18 · hasta esto deja rastro
@@ -1410,34 +1677,86 @@ index eccebb0..2984496 100644
    });
    handle('taller:orden-get', (id) => db.ordenGet(id));
    handle('taller:orden-estado', (id, estado, uid) => db.ordenEstado(id, estado, uid));
-@@ -866,6 +884,11 @@ app.whenReady().then(() => {
+@@ -853,7 +867,7 @@ app.whenReady().then(() => {
+       filters: [{ name: 'Copia cifrada Doel TPV', extensions: ['doelbak'] }]
+     });
+     if (sel.canceled || !sel.filePath) return null;
+-    await db.backupCompletoA(sel.filePath);
++    await db.backupCompletoA(sel.filePath, path.join(app.getPath('userData'), 'fotos_taller')); // v0.1.75 · paquete con fotos
+     return sel.filePath;
+   });
+   /* v0.1.65 · UNA sola restauración para los dos botones (Ajustes → Copias y Panel Dev).
+@@ -866,6 +880,10 @@ app.whenReady().then(() => {
           actual; fotos del espejo; reinicio. */
    const restaurarCopia = async ({ ruta, clave } = {}) => {
      let elegida = ruta;
-+    /* v0.1.73 · SEC-11 · una ruta que venga del puente solo vale si es una copia de las carpetas configuradas
-+       (las mismas que lista backup:listar); cualquier otro archivo entra solo por el diálogo nativo. */
++    // v0.1.73 · SEC-11 · una ruta del puente solo vale si es una copia de las carpetas configuradas; lo demás, por el diálogo
 +    if (elegida && !db.copiasDisponibles(dirsBackup()).some((c) => c.ruta === elegida)) {
 +      return { ok: false, error: 'Esa ruta no es una copia de las carpetas configuradas. Elige el archivo con el botón «Buscar…».' };
 +    }
      if (!elegida) {
        const sel = await dialog.showOpenDialog(win, {
          title: 'Restaurar copia de seguridad (sustituye TODO lo actual)',
-@@ -1020,6 +1043,10 @@ app.whenReady().then(() => {
+@@ -878,6 +896,7 @@ app.whenReady().then(() => {
+     const laClave = clave || db.backupClave() || null;
+     let origen = elegida;
+     let tmp = null;
++    let paquete = null; // v0.1.75
+     if (licencia.esBackupCifrado(elegida)) {
+       const os = require('os');
+       tmp = path.join(os.tmpdir(), 'doel-restaurar-' + Date.now() + '.db');
+@@ -887,6 +906,10 @@ app.whenReady().then(() => {
+         return { ok: false, error: 'La copia cifrada no se puede leer (archivo dañado)' };
+       }
+       origen = tmp;
++      if (licencia.esPaquete(elegida)) { // v0.1.75 · base + fotos (+ clave de instalación si va con frase)
++        try { paquete = db.abrirPaquete(tmp, tmp + '-paq'); origen = paquete.db; }
++        catch (e) { fs.rmSync(tmp, { force: true }); return { ok: false, error: 'El paquete de copia no se puede abrir: ' + e.message }; }
++      }
+     }
+     const v = db.verificarCopia(elegida, laClave);
+     if (!v.ok) { if (tmp) fs.rmSync(tmp, { force: true }); return { ok: false, error: 'La copia no pasa la verificación: ' + v.error }; }
+@@ -895,15 +918,22 @@ app.whenReady().then(() => {
+     const destino = db.rutaBD();
+     db.cerrarBD();
+     fs.copyFileSync(origen, destino);
++    let fotosRestauradas = 0;
++    if (paquete) { // v0.1.75 · fotos y, si viene, la clave de instalación (paquete con frase propia)
++      try { fotosRestauradas = paquete.extraerFotos(path.join(app.getPath('userData'), 'fotos_taller')); } catch (e2) { /* la base manda */ }
++      if (paquete.claveInstalacion) { try { licencia.importarClaveInstalacion(paquete.claveInstalacion); } catch (e3) { /* sin clave: pedirá el DL2 */ } }
++      try { fs.rmSync(tmp + '-paq', { recursive: true, force: true }); } catch (e4) { /* nada */ }
++    } else {
++      // v4.0.21 · copias anteriores a la 0.1.75: si venían con su espejo de fotos al lado, se restauran también
++      try {
++        const carpetaFotos = path.join(path.dirname(elegida), 'fotos_taller');
++        if (fs.existsSync(carpetaFotos)) fs.cpSync(carpetaFotos, path.join(app.getPath('userData'), 'fotos_taller'), { recursive: true, force: true });
++      } catch (e2) { /* sin fotos que restaurar */ }
++    }
+     if (tmp) fs.rmSync(tmp, { force: true });
+-    // v4.0.21 · si la copia venía acompañada de su espejo de fotos, se restauran también
+-    try {
+-      const carpetaFotos = path.join(path.dirname(elegida), 'fotos_taller');
+-      if (fs.existsSync(carpetaFotos)) fs.cpSync(carpetaFotos, path.join(app.getPath('userData'), 'fotos_taller'), { recursive: true, force: true });
+-    } catch (e2) { /* sin fotos que restaurar */ }
+     permitirSalir = true;
+     setTimeout(() => { app.relaunch(); app.exit(0); }, 800);
+-    return { ok: true, backup: previa.rutas, origen: elegida };
++    return { ok: true, backup: previa.rutas, origen: elegida, fotos: fotosRestauradas, paquete: !!paquete };
+   };
+   handle('dev:restaurar-todo', (opts) => restaurarCopia(opts || {}));
+   handle('dev:restaurar', (opts) => restaurarCopia(opts || {}));
+@@ -1020,6 +1050,9 @@ app.whenReady().then(() => {
      // el recordatorio de cita, el aviso de hueco a la lista de espera y compartir
      // el enlace de reservas. Lista blanca estrecha a propósito: nada más entra.
      const cfg = db.configAll();
-+    /* v0.1.73 · SEC-23 · esquema antes que lista: file://, \\\\servidor\\x.exe o ms-*: nunca llegan a ShellExecute,
-+       aunque alguien los haya guardado como web de un proveedor o como url_contacto. */
++    // v0.1.73 · SEC-23 · esquema antes que lista: file://, UNC o ms-*: nunca llegan a ShellExecute
 +    let proto = null; try { proto = new URL(String(url || '')).protocol; } catch (e) { /* no es una URL */ }
 +    if (!['https:', 'http:', 'mailto:'].includes(proto)) throw new Error('URL no permitida');
      const permitidas = ['https://doelitcard.netlify.app', 'https://doel-tpv-restaurante.netlify.app',
        'https://wa.me/', 'https://api.whatsapp.com/', 'https://web.whatsapp.com/',
        'mailto:', // v0.1.4 · el presupuesto (y el aviso de listo) por correo: abre el cliente de correo del PC, nada más
-@@ -1045,15 +1072,20 @@ app.whenReady().then(() => {
-     /* v0.1.34 · los códigos de módulos de 8, 9 y 12 dígitos también van por TOTP: hasta ahora
-        solo entraban los de 6, y los de CRM/ISO/KB/Diagnóstico (bits 12+) caían en «no válido
+@@ -1047,13 +1080,16 @@ app.whenReady().then(() => {
         para este equipo». Solo el código firmado (con punto) va por `activar`. */
-+    // v0.1.74 · dígitos (6 o 12, con guion) → código corto con la semilla de la instalación; el DL2 (con puntos) → activar
      return /^[\d\s-]{6,13}$/.test(c) && !c.includes('.')
        ? licencia.activarConTotp(c, db.configSet, db.configAll)
 -      : licencia.activar(c, db.configSet);
@@ -1447,7 +1766,6 @@ index eccebb0..2984496 100644
 -  handle('dev:acceso', (codigo) => {
 -    if (!licencia.totpValido(codigo)) throw new Error('Código no válido');
 +  handle('dev:acceso', (codigo) => { // v0.1.73 · SEC-12 · abre la puerta 30 min en main (el freno lo pone handle())
-+    /* v0.1.74 · el código es el TOTP de ESTA instalación (semilla del DL2), no el de un autenticador común */
 +    if (!licencia.semillaInstalacion(db.configAll)) throw new Error('Este equipo aún no tiene su código de activación DL2: el Panel de Desarrollador se abre con el código de 6 dígitos de ESTA instalación (node tools/licencia-v2.cjs codigo --equipo ' + licencia.equipoId() + ')');
 +    if (!licencia.totpValido(codigo, db.configAll)) throw new Error('Código no válido');
 +    devAbrir();
@@ -1457,7 +1775,7 @@ index eccebb0..2984496 100644
    handle('dev:info', () => {
      const fs = require('fs');
      const dbPath = db.rutaBD();
-@@ -1259,6 +1291,7 @@ El técnico (Edmundo) te consulta desde el Panel de Desarrollador del propio TPV
+@@ -1259,6 +1295,7 @@ El técnico (Edmundo) te consulta desde el Panel de Desarrollador del propio TPV
      db.configSet('activacion_hmac', '');
      db.configSet('licencia_caduca', '');
      db.configSet('licencia_codigo', '');
@@ -1865,7 +2183,7 @@ index 604bc55..c2fee03 100644
      if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
      return new Promise((resolve) => {
 diff --git a/package.json b/package.json
-index 8df4662..eb44158 100644
+index 8df4662..f2a2e39 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,7 +1,7 @@
@@ -1873,7 +2191,7 @@ index 8df4662..eb44158 100644
    "name": "doel-taller",
    "productName": "Doel Taller",
 -  "version": "0.1.72",
-+  "version": "0.1.74",
++  "version": "0.1.75",
    "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
    "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
    "license": "UNLICENSED",
@@ -2461,7 +2779,7 @@ index ee13bd6..3c3bb37 100644
  Si esta URL no muestra la version que esperas, el sitio esta desplegado
  con un paquete anterior: vuelve a arrastrar la carpeta reserva-online/.
 diff --git a/src/App.jsx b/src/App.jsx
-index 9ab7746..1968087 100644
+index 9ab7746..40e9a5a 100644
 --- a/src/App.jsx
 +++ b/src/App.jsx
 @@ -327,7 +327,7 @@ export default function App() {
@@ -2473,8 +2791,17 @@ index 9ab7746..1968087 100644
            <button className="sb-btn" title="Salir de la aplicación"
              onClick={async () => { try { setModalSalir(await api.app.estadoSalida()); } catch { setModalSalir({ cajaAbierta: false, backupPendiente: false }); } }}>⏻{!barraPlegada && <span> Salir</span>}</button>
            {!barraPlegada && <small className="sb-version">v{version || ''}</small>}
-@@ -490,16 +490,16 @@ function PantallaActivacion({ licencia, onActivada }) {
-             : 'El periodo de demostración ha terminado.'}
+@@ -485,21 +485,22 @@ function PantallaActivacion({ licencia, onActivada }) {
+       <div className="modal" style={{ width: 'min(520px, 94vw)' }}>
+         <h3>🔑 Activar Doel Taller</h3>
+         <p style={{ color: '#e0a852', fontSize: 14 }}>
+-          {licencia.caducada
+-            ? `La licencia caducó el ${licencia.caduca}. Contacta con Doel IT Solutions para renovarla.`
+-            : 'El periodo de demostración ha terminado.'}
++          {licencia.motivo ? licencia.motivo /* v0.1.75 · base restaurada en otra instalación, reloj, manipulación */
++            : licencia.caducada
++              ? `La licencia caducó el ${licencia.caduca}. Contacta con Doel IT Solutions para renovarla.`
++              : 'El periodo de demostración ha terminado.'}
          </p>
          <p style={{ color: '#9db4c6', fontSize: 14 }}>
 -          Introduce el <b>código de 6 dígitos</b> del autenticador de Doel IT Solutions
@@ -2570,7 +2897,7 @@ index b232c1c..30d58ce 100644
        style={{ width: ancho, minHeight: 200, background: '#fff', border: 'none', borderRadius: 10, display: 'block', overflow: 'hidden' }} />
    );
 diff --git a/src/components/ajustes/sistema.jsx b/src/components/ajustes/sistema.jsx
-index d245e43..e298bb5 100644
+index d245e43..769dda5 100644
 --- a/src/components/ajustes/sistema.jsx
 +++ b/src/components/ajustes/sistema.jsx
 @@ -69,28 +69,53 @@ function LicenciaPanel() {
@@ -2665,6 +2992,16 @@ index d245e43..e298bb5 100644
            <button onClick={async () => { const c = await api.config.all(); api.sistema.abrirUrl((c.url_contacto || 'https://doelitcard.netlify.app/').trim()); }}
              style={{ marginTop: 12, padding: '9px 18px', fontSize: 13, background: 'transparent', border: '1px solid #244964', borderRadius: 999, color: '#9db4c6' }}>
              📞 Contacto y soporte — Doel IT Solutions
+@@ -192,7 +209,8 @@ export function CopiasSeguridad() {
+   return (
+     <Plegable titulo="💾 Copias de seguridad" maxWidth={720}>
+       <p style={{ color: '#9db4c6', fontSize: 14, marginBottom: 12 }}>
+-        Copia <b>cifrada</b> de toda la base de datos y de las fotos de las órdenes, <b>todos los
++        Copia <b>cifrada</b> en un solo archivo con toda la base de datos <b>y las fotos</b> de órdenes, outlet y
++        hotel (desde la 0.1.75 las fotos van dentro, ya no en una carpeta aparte), <b>todos los
+         días</b> a la hora que elijas, al cerrar caja y, si lo eliges, al iniciar o finalizar la
+         aplicación. Siempre en <b>dos sitios</b>: la carpeta local y el USB (o red) si está puesto;
+         si el USB no está, la local se hace igual y queda avisado. Se conservan los últimos <b>30 días</b>.
 diff --git a/src/print.js b/src/print.js
 index 7095461..ba377e7 100644
 --- a/src/print.js
@@ -2985,6 +3322,116 @@ index 0000000..314a5dd
 +    }
 +  } catch (e) { console.error('\n✗ ' + e.message + '\n'); process.exit(1); }
 +}
+diff --git a/tools/test-copias.cjs b/tools/test-copias.cjs
+index 3223a64..01c9ac3 100644
+--- a/tools/test-copias.cjs
++++ b/tools/test-copias.cjs
+@@ -43,7 +43,7 @@ const bakDir = path.join(dir, 'backups');
+   t('1c. backup_ultimo lo apunta: verificadas: 1', ultimo.ok && ultimo.verificadas === 1);
+   const copia = b.rutas[0];
+   const v = db.verificarCopia(copia);
+-  t('1d. la restauración en seco de esa copia: ok, cifrada, integrity_check ok', v.ok && v.cifrada && v.integridad === 'ok' && v.error === null);
++  t('1d. la restauración en seco de esa copia: ok, cifrada, paquete (v0.1.75), integrity_check ok', v.ok && v.cifrada && v.paquete === true && v.fotos === 0 && v.integridad === 'ok' && v.error === null);
+   t('1e. con los recuentos de la copia y los de la base viva', v.recuentos.ordenes === 3 && v.recuentos.clientes === 1 && v.vivos.ordenes === 3);
+   t('1f. y no deja temporales por ahí', !fs.readdirSync(os.tmpdir()).some((f) => f.startsWith('doel-verifica-')));
+   const Sq0 = require('better-sqlite3'); const raw = new Sq0(db.rutaBD(), { readonly: true });
+@@ -86,7 +86,7 @@ const bakDir = path.join(dir, 'backups');
+      no vale: va en WAL y los datos están en el -wal; eso mismo es lo que le pasa a
+      quien copia el archivo con el explorador con el programa abierto.) */
+   const plano = path.join(dir, 'doel-taller_plana.db');
+-  lic.descifrarArchivo(copia, plano);
++  { const zipTmp = path.join(dir, 'paquete.zip'); lic.descifrarArchivo(copia, zipTmp); fs.copyFileSync(db.abrirPaquete(zipTmp, path.join(dir, 'paquete')).db, plano); } // v0.1.75 · dentro va un ZIP
+   t('2g. un .db sin cifrar de Doel Taller sí pasa (copias antiguas, copias manuales)', (() => {
+     const vp = db.verificarCopia(plano);
+     return vp.ok && !vp.cifrada && vp.recuentos.ordenes === 3;
+@@ -165,21 +165,21 @@ const bakDir = path.join(dir, 'backups');
+   {
+     console.log('\n7 · Clave propia de las copias (v0.1.65)');
+     const dir7 = path.join(dir, 'clave');
+-    t('7a. sin clave propia: estado inactivo y la copia sale en formato Doel', !db.backupClaveEstado().activa && lic.formatoBackup(b.rutas[0]) === 'doel');
++    t('7a. sin clave propia: estado inactivo y la copia sale como paquete con clave común', !db.backupClaveEstado().activa && lic.formatoBackup(b.rutas[0]) === 'paquete');
+     let err7 = null; try { db.backupClaveSet('corta'); } catch (e) { err7 = e.message; }
+     t('7b. una clave de menos de 8 caracteres se rechaza', /8 caracteres/.test(err7 || ''));
+     db.backupClaveSet('mi-taller-2026-ñ');
+     t('7c. la clave se guarda CIFRADA en config (un volcado de la tabla no la enseña) y se recupera', db.backupClaveEstado().activa && db.configAll().backup_clave !== 'mi-taller-2026-ñ' && db.backupClave() === 'mi-taller-2026-ñ');
+     const b7 = await db.backupA([dir7], null, 'manual');
+-    t('7d. 🔴 la copia con clave propia se escribe, sale en DOELBAK2 y queda verificada', b7.ok && b7.verificadas.length === 1 && lic.formatoBackup(b7.rutas[0]) === 'clave', JSON.stringify(b7));
++    t('7d. 🔴 la copia con clave propia se escribe, sale como paquete con frase (DOELBAK3/2) y queda verificada', b7.ok && b7.verificadas.length === 1 && lic.formatoBackup(b7.rutas[0]) === 'paquete-clave', JSON.stringify(b7));
+     t('7e. backup_ultimo recuerda que fue con clave propia', JSON.parse(db.configAll().backup_ultimo).clavePropia === true);
+-    t('7f. copiasDisponibles dice el formato de cada copia', db.copiasDisponibles([dir7])[0].formato === 'clave' && db.copiasDisponibles([bakDir]).every((c) => c.formato === 'doel'));
++    t('7f. copiasDisponibles dice el formato de cada copia', db.copiasDisponibles([dir7])[0].formato === 'paquete-clave' && db.copiasDisponibles([bakDir]).every((c) => c.formato === 'paquete'));
+     const sinClave = db.verificarCopia(b7.rutas[0], null);
+     t('7g. 🔴 sin la clave NO se abre y el resultado dice que hace falta la clave (no «dañada»)', !sinClave.ok && sinClave.necesitaClave && /clave propia/.test(sinClave.error), JSON.stringify(sinClave));
+     const malClave = db.verificarCopia(b7.rutas[0], 'otra-clave-distinta');
+     t('7h. con otra clave tampoco, y lo dice', !malClave.ok && malClave.necesitaClave && /no es la de esta copia/.test(malClave.error));
+     const bienClave = db.verificarCopia(b7.rutas[0], 'mi-taller-2026-ñ');
+-    t('7i. con la clave correcta abre, pasa integrity_check y cuenta las órdenes', bienClave.ok && bienClave.formato === 'clave' && bienClave.recuentos.ordenes >= 3, JSON.stringify(bienClave.recuentos));
++    t('7i. con la clave correcta abre, pasa integrity_check y cuenta las órdenes', bienClave.ok && bienClave.formato === 'paquete-clave' && bienClave.recuentos.ordenes >= 3, JSON.stringify(bienClave.recuentos));
+     t('7j. la clave guardada se usa por defecto (verificar sin argumento)', db.verificarCopia(b7.rutas[0]).ok);
+     t('7k. las copias antiguas (formato Doel) siguen abriendo con la clave propia activa', db.verificarCopia(b.rutas[0]).ok);
+     /* un byte cambiado: GCM lo detecta también en DOELBAK2 */
+@@ -187,11 +187,11 @@ const bakDir = path.join(dir, 'backups');
+     t('7l. un byte cambiado en una copia con clave propia no descifra', !db.verificarCopia(rota7).ok);
+     /* copia completa (Panel Dev) también con la clave */
+     const completa7 = path.join(dir7, 'completa.doelbak'); await db.backupCompletoA(completa7);
+-    t('7m. la copia completa del Panel Dev también sale con la clave propia', lic.formatoBackup(completa7) === 'clave' && db.verificarCopia(completa7).ok);
++    t('7m. la copia completa del Panel Dev también sale con la clave propia', lic.formatoBackup(completa7) === 'paquete-clave' && db.verificarCopia(completa7).ok);
+     /* quitar la clave */
+     db.backupClaveSet('');
+     const b7b = await db.backupA([path.join(dir, 'clave-quitada')], null, 'manual'); // otra carpeta: en el mismo minuto el nombre coincide y pisaría la de arriba
+-    t('7n. al quitar la clave, las copias nuevas vuelven al formato Doel; las viejas con clave la siguen pidiendo', !db.backupClaveEstado().activa && lic.formatoBackup(b7b.rutas[0]) === 'doel' && db.verificarCopia(b7.rutas[0]).necesitaClave);
++    t('7n. al quitar la clave, las copias nuevas vuelven a la clave común; las viejas con clave la siguen pidiendo', !db.backupClaveEstado().activa && lic.formatoBackup(b7b.rutas[0]) === 'paquete' && db.verificarCopia(b7.rutas[0]).necesitaClave);
+     t('7o. scrypt: la misma frase con sal distinta da claves distintas (dos copias nunca comparten clave)', !lic.claveDerivar('frase-de-prueba', Buffer.alloc(16, 1)).equals(lic.claveDerivar('frase-de-prueba', Buffer.alloc(16, 2))));
+     const main7 = fs.readFileSync('electron/main.cjs', 'utf8'), ui7 = fs.readFileSync('src/components/ajustes/sistema.jsx', 'utf8'), pre7 = fs.readFileSync('electron/preload.cjs', 'utf8'), perm7 = require(path.join(process.cwd(), 'electron', 'permisos-canal.cjs'));
+     t('7p. 🔴 los DOS botones de restaurar (Ajustes y Panel Dev) van por la misma función, que admite .doelbak (Doel o clave propia) y .db', /handle\('dev:restaurar-todo', \(opts\) => restaurarCopia\(opts \|\| \{\}\)\)/.test(main7) && /handle\('dev:restaurar', \(opts\) => restaurarCopia\(opts \|\| \{\}\)\)/.test(main7) && /extensions: \['doelbak', 'db'\]/.test(main7) && !/extensions: \['db'\]/.test(main7));
+@@ -201,6 +201,47 @@ const bakDir = path.join(dir, 'backups');
+     t('7t. puente y permisos: backup:clave-set / clave-estado exigen «ajustes» en el puesto en red', /claveEstado: call\('backup:clave-estado'\), claveSet: call\('backup:clave-set'\)/.test(pre7) && perm7.permisoDeCanal('backup:clave-set') === 'ajustes' && perm7.permisoDeCanal('backup:clave-estado') === 'ajustes');
+   }
+ 
++  /* ── 8 · v0.1.75 · paquete: las fotos van DENTRO, la clave de instalación con frase, y nada escribe fuera ── */
++  {
++    console.log('\n8 · Paquete de copia (v0.1.75): base + fotos + manifiesto');
++    const fotosDir = path.join(dir, 'fotos_taller');
++    fs.mkdirSync(path.join(fotosDir, 'orden-1'), { recursive: true });
++    fs.writeFileSync(path.join(fotosDir, 'orden-1', 'antes.jpg'), Buffer.from('JPEGFAKE-antes'));
++    fs.writeFileSync(path.join(fotosDir, 'orden-1', 'despues.jpg'), Buffer.from('JPEGFAKE-despues'));
++    const dir8 = path.join(dir, 'paquete8');
++    const b8 = await db.backupA([dir8], fotosDir, 'manual');
++    const v8 = db.verificarCopia(b8.rutas[0]);
++    t('8a. 🔴 la copia lleva las fotos DENTRO: la prueba en seco cuenta 2 y backupA lo apunta', b8.ok && v8.ok && v8.paquete && v8.fotos === 2 && b8.verificadas[0].fotos === 2, JSON.stringify(v8));
++    t('8b. y ya no deja la carpeta de fotos en claro al lado de la copia', !fs.existsSync(path.join(dir8, 'fotos_taller')));
++    t('8c. el archivo cifrado no deja ver ni el nombre de las fotos', !fs.readFileSync(b8.rutas[0]).includes('antes.jpg'));
++    const zip8 = path.join(dir, 'paq8.zip'); lic.descifrarArchivo(b8.rutas[0], zip8);
++    const paq8 = db.abrirPaquete(zip8, path.join(dir, 'paq8'));
++    const dest8 = path.join(dir, 'fotos-restauradas');
++    t('8d. abrirPaquete extrae la base y las fotos donde se le diga, y sin frase NO lleva la clave de instalación',
++      fs.existsSync(paq8.db) && paq8.extraerFotos(dest8) === 2 && fs.readFileSync(path.join(dest8, 'orden-1', 'antes.jpg')).toString() === 'JPEGFAKE-antes' && paq8.claveInstalacion === null && paq8.manifiesto.fotos === 2);
++    db.backupClaveSet('frase-para-otro-pc');
++    const dir8b = path.join(dir, 'paquete8b');
++    const b8b = await db.backupA([dir8b], fotosDir, 'manual');
++    const zip8b = path.join(dir, 'paq8b.zip'); lic.descifrarArchivo(b8b.rutas[0], zip8b, 'frase-para-otro-pc');
++    const paq8b = db.abrirPaquete(zip8b, path.join(dir, 'paq8b'));
++    t('8e. 🔴 con frase propia el paquete lleva la clave de instalación (restaurar en otro PC recupera contraseñas y licencia)', paq8b.claveInstalacion === lic.exportarClaveInstalacion() && /^[0-9a-f]{64}$/.test(paq8b.claveInstalacion));
++    t('8f. importarClaveInstalacion la deja operativa (lo cifrado antes se sigue leyendo)', (() => { const c = lic.cifrarTexto('secreto-8f'); lic.importarClaveInstalacion(paq8b.claveInstalacion); return lic.descifrarTexto(c) === 'secreto-8f'; })());
++    db.backupClaveSet('');
++    /* zip-slip: un paquete manipulado con una entrada que intenta salirse de la carpeta */
++    const AdmZip = require('adm-zip'); const malo = new AdmZip();
++    malo.addFile('doel-taller.db', fs.readFileSync(paq8.db)); malo.addFile('fotos_taller/../../fuera.txt', Buffer.from('no')); malo.addFile('fotos_taller/ok.txt', Buffer.from('si'));
++    const zipMalo = path.join(dir, 'malo.zip'); fs.writeFileSync(zipMalo, malo.toBuffer());
++    const paqMalo = db.abrirPaquete(zipMalo, path.join(dir, 'malo'));
++    const destMalo = path.join(dir, 'malo-fotos'); const n = paqMalo.extraerFotos(destMalo);
++    t('8g. 🔴 una entrada con «..» no se extrae (zip-slip): solo la legítima', n === 1 && fs.existsSync(path.join(destMalo, 'ok.txt')) && !fs.existsSync(path.join(dir, 'fuera.txt')));
++    /* copias antiguas (base sola, DOELBAK1) siguen abriendo */
++    const vieja1 = path.join(dir, 'vieja-doelbak1.doelbak'); lic.cifrarArchivo(plano, vieja1, null);
++    const vv = db.verificarCopia(vieja1);
++    t('8h. una copia de antes de la 0.1.75 (base sola, DOELBAK1) sigue verificando, sin paquete', vv.ok && vv.formato === 'doel' && vv.paquete === false);
++    const main8 = fs.readFileSync('electron/main.cjs', 'utf8');
++    t('8i. restaurar extrae las fotos del paquete e importa la clave de instalación si viene; las copias viejas siguen usando el espejo de al lado', /paquete\.extraerFotos\(/.test(main8) && /importarClaveInstalacion\(paquete\.claveInstalacion\)/.test(main8) && /carpetaFotos = path\.join\(path\.dirname\(elegida\), 'fotos_taller'\)/.test(main8));
++  }
++
+   console.log(`\n${ko === 0 ? '✅' : '❌'}  Copias de seguridad: ${ok} OK · ${ko} fallos`);
+   process.exit(ko === 0 ? 0 : 1);
+ })();
 diff --git a/tools/test-diag-actividad.cjs b/tools/test-diag-actividad.cjs
 index 85d4d04..b272f33 100644
 --- a/tools/test-diag-actividad.cjs
@@ -3321,7 +3768,7 @@ index dae46d3..9dd71f5 100644
  db.configSet('modulo_kb', '1'); lic.sellar(db.configAll, db.configSet); // restaurar sellado
  
 diff --git a/tools/test-taller.cjs b/tools/test-taller.cjs
-index c514ce8..f52512a 100644
+index c514ce8..6a54352 100644
 --- a/tools/test-taller.cjs
 +++ b/tools/test-taller.cjs
 @@ -59,7 +59,7 @@ const reintentar = async (fn, veces = 3) => {
@@ -3343,7 +3790,28 @@ index c514ce8..f52512a 100644
  
    t('19. la app es monovertical: ni zonas ni mesas que adaptar',
      typeof db.mesasAdaptarEdicion !== 'function' && typeof db.cuentaGuardar !== 'function');
-@@ -327,10 +328,16 @@ const reintentar = async (fn, veces = 3) => {
+@@ -262,12 +263,16 @@ const reintentar = async (fn, veces = 3) => {
+ 
+   // ── v4.0.21 · las fotos VIAJAN con la copia y sobreviven al cambio de equipo ──
+   const dirBk = path.join(os2.tmpdir(), 'doel-test-bak'); fs2.rmSync(dirBk, { recursive: true, force: true });
+-  await db.backupA([dirBk], dirFotos);
+-  t('55. backupA espeja fotos_taller junto al .doelbak',
+-    fs2.existsSync(path.join(dirBk, 'fotos_taller', String(oT1.id)))
++  const b55 = await db.backupA([dirBk], dirFotos);
++  /* v0.1.75 · las fotos van DENTRO del paquete cifrado (ya no en una carpeta en claro al lado) */
++  const lic55 = require('../electron/licencia.cjs');
++  const zip55 = path.join(dirBk, 'paquete55.zip'); lic55.descifrarArchivo(b55.rutas[0], zip55);
++  const paq55 = db.abrirPaquete(zip55, path.join(dirBk, 'paq55'));
++  t('55. backupA mete fotos_taller DENTRO del .doelbak (paquete cifrado), no en claro al lado',
++    paq55.fotos >= 1 && !fs2.existsSync(path.join(dirBk, 'fotos_taller'))
+     && fs2.readdirSync(dirBk).some((f) => f.endsWith('.doelbak')));
+   const dirNuevo = path.join(os2.tmpdir(), 'doel-test-equipo2'); fs2.rmSync(dirNuevo, { recursive: true, force: true });
+-  fs2.cpSync(path.join(dirBk, 'fotos_taller'), dirNuevo, { recursive: true });
++  paq55.extraerFotos(dirNuevo);
+   const port = db.ordenFotoLeer(oF2.fotos[0].id, dirNuevo);
+   t('56. restaurada en OTRO equipo (rutas relativas): la foto abre y la huella verifica',
+     port.integra === true);
+@@ -327,10 +332,16 @@ const reintentar = async (fn, veces = 3) => {
  
    // ── v4.0.17 · 🤖 Chat IA del portal (bit 12, máscara 16 bits, sello v6) ──
    const lic2 = require('../electron/licencia.cjs');
@@ -3363,7 +3831,7 @@ index c514ce8..f52512a 100644
  
    const rIa = db.chatIaResponder(oT1.id, '¿Cuánto me va a costar?');
    t('43. el asistente responde PRECIO con los números reales del parte (pendiente 20 €)',
-@@ -493,8 +500,8 @@ const reintentar = async (fn, veces = 3) => {
+@@ -493,8 +504,8 @@ const reintentar = async (fn, veces = 3) => {
        .log.some((g) => g.accion === 'portal-clave'));
  
    // ── v4.0.35 · CRM como módulo (bit 13) + sello v7 ──
@@ -3374,3 +3842,16 @@ index c514ce8..f52512a 100644
  
    // ── v4.0.33 · árbol de familias del SAT ──
    const rF1 = db.seedFamiliasTaller();
+diff --git a/tools/test-turnos.cjs b/tools/test-turnos.cjs
+index b8473c3..41db08c 100644
+--- a/tools/test-turnos.cjs
++++ b/tools/test-turnos.cjs
+@@ -87,7 +87,7 @@ t('5f. planMesEmpleado trae solo el plan de ese empleado', ve.plan[mes + '-15']
+   db.configSet('backup_auto', '1');
+   const main = require('fs').readFileSync('electron/main.cjs', 'utf8');
+   t('copia: main vigila cada minuto y también al arrancar', /setInterval\(vigilarCopia, 60 \* 1000\)/.test(main) && /setTimeout\(vigilarCopia/.test(main));
+-  t('copia: la copia programada sigue siendo la cifrada (.doelbak)', /cifrarArchivo\(tmp, destino, clavePropia\)/.test(require('fs').readFileSync('electron/db/sistema.cjs', 'utf8')));
++  t('copia: la copia programada sigue siendo la cifrada (.doelbak, paquete desde la 0.1.75)', /cifrarPaquete\(construirPaquete\(tmp, fotosDir, !!clavePropia\)\.zip, destino, clavePropia\)/.test(require('fs').readFileSync('electron/db/sistema.cjs', 'utf8')));
+ }
+ 
+ /* ── puesta en marcha: el estado sale de la base, no de casillas ── */
