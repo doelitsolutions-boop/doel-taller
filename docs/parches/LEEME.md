@@ -1,4 +1,4 @@
-# Parches de endurecimiento y del plan de mejoras (0.1.73 → 0.1.84)
+# Parches de endurecimiento y del plan de mejoras (0.1.73 → 0.1.85)
 
 | Fichero | Sobre | Qué lleva |
 |---|---|---|
@@ -14,7 +14,8 @@
 | `0.1.82-arranque.patch` | 0.1.81 | **Punto 9**: cuerpo LAN en bytes (UTF‑8 partido), avisos del puente sin `unwrap` y con baja, una lectura de config por arranque; `usb.ids` ya estaba fuera del bundle (constatado); batería `test-arranque.cjs` (14) |
 | `0.1.83-higiene.patch` | 0.1.82 | **Punto 10**: código muerto fuera (6 exportaciones; limpiadores corregidos para no borrar lo que ejercitan las baterías ni funciones internas vivas), `version-subir` sella `HUELLAS.json` y `check-puente` lo exige, servidores LAN sin duplicados (`esLocal`/`hostPermitido`/`ipLocal`/JSON y la fábrica de sesiones en `seguridad-lan.cjs`); batería `test-higiene.cjs` (16) |
 | `0.1.84-instalador.patch` | 0.1.83 | **Arreglo**: desde la 0.1.76 no salían el Setup ni el Portable de Windows (better-sqlite3 13 sin precompilados y Electron 44 sin precompilado en ninguna versión → electron-builder compilaba desde fuente y fallaba). Vuelve better-sqlite3 12.11.1 y Electron pasa a 42.11 (con precompilado y soporte oficial). Nueva herramienta `tools/comprobar-prebuild.cjs` |
-| `0.1.84-acumulado-sobre-0.1.72.patch` | 0.1.72 | **todos los anteriores juntos** (sin `package-lock.json`): el plan completo 0.1.73 → 0.1.84 |
+| `0.1.85-avisos-correo.patch` | 0.1.84 | **Avisos automáticos al cliente por correo**: cola en el TPV, envío por la nube (`/api/aviso-enviar`, proveedor SMTP/Brevo/Resend por variables de Netlify), plantillas, prueba y cola en Ajustes; batería `test-avisos.cjs` (35). **Redesplegar** `reserva-online/` (ZIP `doel-reservas-v0.1.85-netlify-drop.zip`) y crear las variables `DOEL_CORREO…` en Netlify |
+| `0.1.85-acumulado-sobre-0.1.72.patch` | 0.1.72 | **todos los anteriores juntos** (sin `package-lock.json`): 0.1.73 → 0.1.85 |
 
 Tras aplicar el de la 0.1.76 (y el de la 0.1.84, que baja a Electron 42 para que el instalador vuelva a salir) hay que **probar en Windows** lo que toca a Electron: WebHID y mando, visor PDF de diagramas, impresión silenciosa, safeStorage e instalador NSIS. El contenedor no puede arrancar Electron.
 
