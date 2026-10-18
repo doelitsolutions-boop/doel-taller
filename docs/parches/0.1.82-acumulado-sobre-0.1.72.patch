@@ -10,14 +10,14 @@ index adb3b45..d02e571 100644
 +licencia-doel.json
 +*.pem
 diff --git a/ESTADO.md b/ESTADO.md
-index a10ed4f..be67bdd 100644
+index a10ed4f..c002322 100644
 --- a/ESTADO.md
 +++ b/ESTADO.md
 @@ -1,6 +1,6 @@
  # Doel Taller · Estado del proyecto y pasos siguientes
  
 -**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
-+**Versión actual:** 0.1.81 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.82 · **Fecha:** 18 de octubre de 2026
  **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
  
  ---
@@ -57,7 +57,7 @@ index a10ed4f..be67bdd 100644
 +1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
 +(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
 +`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
-+numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 `usb.ids` fuera del bundle ·
++numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 arranque y puente ✅ 0.1.82 (`usb.ids` ya estaba fuera del bundle; cuerpo LAN en bytes, avisos con baja, una lectura de config) ·
 +10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
 +
  ### Herramientas de verificación (el «ritual de entrega»)
@@ -130,13 +130,14 @@ index 888ccd6..f96482d 100644
  ---
  
 diff --git a/VERSION.md b/VERSION.md
-index 7a2a139..0805e0b 100644
+index 7a2a139..81ff6a6 100644
 --- a/VERSION.md
 +++ b/VERSION.md
-@@ -160,6 +160,15 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+@@ -160,6 +160,16 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
  | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
  | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
  | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.82 | 🚦 **Arranque y puente sin ruido (punto 9 del plan).** Lo previsto era sacar `usb.ids` del bundle; **ya estaba fuera**: se lee en el proceso principal, una vez y solo cuando se pide (`electron/usb-ids.cjs`), y la batería nueva lo deja comprobado. Lo que sí había (CAL‑02): **el cuerpo de las peticiones LAN** se leía trozo a trozo como texto (un carácter UTF‑8 partido entre dos trozos llegaba como «�») y el tope contaba caracteres, no bytes (200 K «ñ» son 400 KB y pasaban por 256 KB) → ahora búferes y bytes. **Los avisos del puente** (`onCierreSolicitado`, `onNuevas`) pasaban por `unwrap()` como si fueran llamadas: cada arranque dejaba una promesa rechazada («Error desconocido») que desde la 0.1.79 habría ido al registro; ahora `api.js` no los envuelve, el preload generado los sirve con un ayudante `on()` que **devuelve la baja** (`removeListener`) y `App.jsx` la usa al desmontar (en el puesto en red la baja es una función vacía). **Una sola lectura de config por arranque**: `cargarModulos` y `aplicarEscala` reciben el mismo objeto (antes dos lecturas, y dos más por cada `doel:cfg`). Nueva batería `test-arranque.cjs` (14). |
 +| 0.1.81 | ☁️ **Nube sin escrituras perdidas (punto 8 del plan · CAL‑02).** Nuevo `modificar(store, clave, fn)` en `api.mjs`: todo leer‑modificar‑escribir sobre un blob JSON va con **escritura condicional** (`onlyIfMatch` con el etag leído, `onlyIfNew` si no existía) y se repite si otro escribió entre medias. Hasta ahora dos peticiones a la vez se pisaban en silencio: dos clientes reservando (una reserva desaparecía), el TPV drenando la cola del portal mientras un cliente mandaba un mensaje (mensaje perdido), un latido de diagnóstico borrando el código que el panel acababa de crear, dos locales de multitienda subiendo a la vez. Convertidos: índice de negocios, `sync`/`reservar`/`anular`, cola del portal (drenaje atómico), solicitudes del outlet, frenos por IP y del hotel, usuarios de demo, códigos de diagnóstico, multitienda. De paso: **el mismo hueco pedido dos veces a la vez** ya solo entra una (el otro recibe 409), y el tope de tres reservas por teléfono se mira **antes** de descontar el hueco (antes el hueco se perdía hasta la siguiente sync). **`negocio-borrar` borra todo lo del negocio** (reservas, portal del cliente, outlet y hotel; antes solo las reservas) y devuelve el detalle por almacén (RGPD). `@netlify/blobs` ^11 en `reserva-online/package.json` (las escrituras condicionales lo necesitan). Baterías: nuevo stub compartido `tools/_blobs-falso.cjs` con etags (las cuatro de la nube lo usan) y nueva `test-nube-concurrencia.cjs` (21). **Hay que redesplegar `reserva-online/`** (ZIP `doel-reservas-v0.1.81-netlify-drop.zip`). |
 +| 0.1.80 | 🗄️ **Esquema que dice la verdad (punto 7 del plan · CAL‑03).** Nueva tabla `contadores` y **número de orden por contador atómico** (`OT-AAAA-NNNN`): el `COUNT(*)+1` de antes repetía número en cuanto se borraba una orden del año (y dos puestos a la vez podían sacar el mismo); ahora además es **único** (`ux_ordenes_numero`; si una instalación trae repetidos heredados no se crea el índice, se apunta en config y Salud lo enseña en rojo). **FK declaradas** donde faltaban (`ordenes.tecnico_id/recibido_por/reparado_por → usuarios`, `ticket_id → tickets`, `orden_origen_id → ordenes`, `ordenes_lineas.producto_id → productos` y `tecnico_id → usuarios`, `ordenes_firmas.usuario_id/anulada_por → usuarios`), todas `ON DELETE SET NULL`: dar de baja un producto o un usuario no se bloquea, y un id inventado ya no entra (`foreign_keys` estaba en ON desde siempre); la migración reconstruye la tabla copiando también las columnas que esa instalación tenga de más. **Diez índices** nuevos (hijas de la orden por `orden_id`, `ordenes(cliente_id/equipo_id)`, `tickets(fecha_hora)`, `ticket_lineas(ticket_id)`). **`tickets.nif_emisor`**: el hash de la cadena usaba el NIF leído en vivo, así que corregir una letra del NIF en Ajustes invalidaba todos los tickets; ahora cada ticket guarda con qué NIF se emitió y se verifica con él (los anteriores se rellenan con el actual). Salud: nueva fila «Numeración de órdenes». El reset operativo pone el contador a cero. Nueva batería `test-esquema.cjs` (26: instalación nueva, numeración, migración desde una base vieja fabricada a propósito, Salud). |
 +| 0.1.79 | 🧱 **Robustez del quiosco (punto 6 del plan).** Cada vista va dentro de un **límite de error propio** (`src/components/LimiteVista.jsx`, montado en `App.jsx` con `key={vista}`): un `.map` sobre undefined en Informes ya no tira la barra lateral, el TPV ni la orden a medio escribir; la pantalla enseña «Esta pantalla ha fallado» con el mensaje y tres salidas (↻ Reintentar, 🏠 Volver al inicio, Reiniciar). El fallo, con vista, mensaje, pila y componente, se apunta en el **registro de eventos del mostrador** (tipo «pantalla», canal nuevo `sistema:error-pantalla`, `electron/robustez.cjs`: sin repetidos en un minuto y con tope de 40 por diez minutos). `src/errores.js` engancha `window.onerror` y las promesas sin `catch` (lo que no pasa por ningún límite: manejadores de botones, `setTimeout`) al mismo registro, una vez por fallo y minuto y 30 por sesión de pantalla; el límite raíz de `main.jsx` también informa. En el proceso principal, si la ventana **muere** (`render-process-gone`: GPU, memoria, driver) se apunta y se recarga sola; tres caídas en cinco minutos → se deja de recargar y se avisa; `unresponsive`/`responsive` quedan en el registro. Nueva batería `test-robustez.cjs` (26: monta el límite con jsdom, pulsa los botones, fuerza caídas con una ventana falsa). |
@@ -151,7 +152,7 @@ index 7a2a139..0805e0b 100644
  | 0.1.70 | 🖼 **Croquis con siluetas reales** y 📄 **Ver parte**. (1) El croquis de daños deja de ser un cuadradillo: 22 siluetas en `src/croquis.js` (mando PS5, PS4, Xbox, Switch Pro, Joy-Con, genérico; PS5, PS4, Xbox Series X, Xbox One/Series S, Switch, Switch Lite; móvil, tablet, portátil, torre, monitor, TV, impresora, impresora 3D, placa, otro), cada una con su cara delante y detrás. Se elige sola por tipo + marca/modelo («Sony Mando DualSense» → mando PS5) y en la recepción hay un desplegable por grupos para cambiarla; la orden guarda `{ plantilla, marcas }` (las antiguas siguen leyéndose). Ficha, contrato y parte pintan la misma silueta. (2) En la ficha, botón **📄 Ver parte**: todo lo registrado de la orden en un A4 en pantalla —cliente y equipo, avería, diagnóstico, trabajos, accesorios, croquis, condiciones, presupuesto con anticipos y pendiente, fotos en miniatura, firmas con DNI, informes, RMA, avisos, mensajes, diagnósticos de hardware e historial completo—, con imprimir y guardar PDF. Batería nueva `test-croquis-parte.cjs` (29). |
 diff --git a/electron/canales.cjs b/electron/canales.cjs
 new file mode 100644
-index 0000000..fd13ab5
+index 0000000..adacae8
 --- /dev/null
 +++ b/electron/canales.cjs
 @@ -0,0 +1,541 @@
@@ -639,7 +640,7 @@ index 0000000..fd13ab5
 +
 +/* Avisos del escritorio hacia la pantalla (ipcRenderer.on). En el puesto en red no existen: el puente
 +   remoto los deja como método que no hace nada pero RESPONDE (si faltaran, la pantalla se cae).
-+   forma: 'dato' → (cb) => ipcRenderer.on(canal, (_e, n) => cb(n)) · 'cb' → (cb) => ipcRenderer.on(canal, cb) */
++   forma: 'dato' → (cb) => on(canal, cb, true) [el oyente recibe el dato] · 'cb' → (cb) => on(canal, cb). on() devuelve la baja (v0.1.82). */
 +const EVENTOS = {
 +  'reserva:nuevas': { api: 'reserva.onNuevas', forma: 'dato' },
 +  'app:cierre-solicitado': { api: 'app.onCierreSolicitado', forma: 'cb' },
@@ -2716,16 +2717,18 @@ index 82a0415..23cf67e 100644
  /* ¿Puede este usuario llamar a este canal? Misma regla que la barra: clave ausente = sí. */
  function autorizado(usuario, canal) {
 diff --git a/electron/preload.cjs b/electron/preload.cjs
-index 16e6a91..25d3c86 100644
+index 16e6a91..0a12b04 100644
 --- a/electron/preload.cjs
 +++ b/electron/preload.cjs
-@@ -1,151 +1,148 @@
+@@ -1,151 +1,150 @@
 +/* GENERADO por `node tools/puente-generar.cjs` desde electron/canales.cjs · NO EDITAR A MANO (v0.1.77).
 +   Para añadir un canal: su fila en canales.cjs, su handle() en main, y volver a generar. check-puente
 +   falla si este fichero no coincide con la tabla. */
  const { contextBridge, ipcRenderer } = require('electron');
  
  const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
++/* v0.1.82 · avisos del escritorio hacia la pantalla: devuelven la BAJA (removeListener) para que la pantalla la use al desmontar */
++const on = (canal, cb, dato) => { const h = dato ? (_e, n) => cb(n) : cb; ipcRenderer.on(canal, h); return () => ipcRenderer.removeListener(canal, h); };
  
  contextBridge.exposeInMainWorld('doel', {
 -  auth: { login: call('auth:login') },
@@ -2936,7 +2939,7 @@ index 16e6a91..25d3c86 100644
 +    recordatorio: call('agenda:recordatorio'), buscarTel: call('agenda:buscarTel'), ficha: call('agenda:ficha'), fichaGuardar: call('agenda:fichaGuardar'),
 +    recursos: call('agenda:recursos'), aceptaOnline: call('agenda:aceptaOnline'), recursosDia: call('agenda:recursosDia'), horarios: call('agenda:horarios'),
 +    semanaSet: call('agenda:semanaSet'), vacaciones: call('agenda:vacaciones'), excBorrar: call('agenda:excBorrar') },
-+  reserva: { sync: call('reserva:sync'), estado: call('reserva:estado'), onNuevas: (cb) => ipcRenderer.on('reserva:nuevas', (_e, n) => cb(n)) },
++  reserva: { sync: call('reserva:sync'), estado: call('reserva:estado'), onNuevas: (cb) => on('reserva:nuevas', cb, true) },
 +  espera: { alta: call('espera:alta'), activas: call('espera:activas'), paraFecha: call('espera:paraFecha'), avisada: call('espera:avisada'),
 +    borrar: call('espera:borrar') },
 +  tickets: { ultimo: call('tickets:ultimo'), crear: call('tickets:crear'), anular: call('tickets:anular'),
@@ -2992,10 +2995,10 @@ index 16e6a91..25d3c86 100644
 +  sistema: { puestaEnMarcha: call('sistema:puesta-en-marcha'), puestaEnMarchaOk: call('sistema:puesta-en-marcha-ok'), autostart: call('sistema:autostart'),
 +    abrirUrl: call('sistema:abrir-url'), tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar'),
 +    errorPantalla: call('sistema:error-pantalla') },
-+  app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => ipcRenderer.on('app:cierre-solicitado', cb) },
++  app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => on('app:cierre-solicitado', cb) },
  });
 diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
-index e497d4f..12aabf6 100644
+index e497d4f..1dd3dd7 100644
 --- a/electron/puesto-red.cjs
 +++ b/electron/puesto-red.cjs
 @@ -27,7 +27,8 @@ const fs = require('fs');
@@ -3209,6 +3212,15 @@ index e497d4f..12aabf6 100644
  }
  
  /* v0.1.38 · versión del proceso en marcha (package.json leído al arrancar y cacheado). El
+@@ -239,7 +162,7 @@ function shim(puente) {
+     simples[g] = {};
+     for (const m of Object.keys(puente[g])) {
+       const d = puente[g][m];
+-      if (d.evento) { eventos.push(`  D[${JSON.stringify(g)}][${JSON.stringify(m)}] = function () { return Promise.resolve({ ok: true, data: null }); };`); continue; }
++      if (d.evento) { eventos.push(`  D[${JSON.stringify(g)}][${JSON.stringify(m)}] = function () { return function () { /* v0.1.82 · baja: aquí no hay aviso que quitar */ }; };`); continue; }
+       if (d.params === undefined) { simples[g][m] = d.canal; continue; }
+       envueltos.push(`  D[${JSON.stringify(g)}][${JSON.stringify(m)}] = function (${d.params}) { `
+         + `return rpc(${JSON.stringify(d.canal)}, [ ${d.expr} ]); };`);
 @@ -269,8 +192,9 @@ function shim(puente) {
           Ajustes cuando cambias la configuración: vuelve a pedirlo todo. */
        try { window.dispatchEvent(new Event('doel:cfg')); } catch (e) { /* sin window */ }
@@ -3482,7 +3494,7 @@ index 0000000..2e7fee1
 +
 +module.exports = { endurecerVentana, devAbierto, devAbrir, devCerrar, exigirDev, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL, frenoCodigos, PUERTA_MS };
 diff --git a/electron/seguridad-lan.cjs b/electron/seguridad-lan.cjs
-index c49433d..72a5686 100644
+index c49433d..bf766f5 100644
 --- a/electron/seguridad-lan.cjs
 +++ b/electron/seguridad-lan.cjs
 @@ -178,6 +178,12 @@ function crearFreno(intentos, ventanaMs) {
@@ -3521,6 +3533,32 @@ index c49433d..72a5686 100644
      get tamano() { return mapa.size; },
    };
  }
+@@ -218,16 +228,21 @@ const CUERPO_MAX_RPC = 16 * 1024 * 1024;
+ 
+ async function leerCuerpo(req, max = CUERPO_MAX) {
+   const tope = Number(max) > 0 ? Number(max) : CUERPO_MAX;
+-  let cuerpo = '';
++  /* v0.1.82 · punto 9 · en BYTES y concatenando búferes. Antes `cuerpo += trozo` convertía cada trozo a texto por
++     separado (un carácter UTF-8 partido entre dos trozos llegaba como «�») y el tope contaba caracteres, no bytes
++     (200 K «ñ» son 400 KB y pasaban por 256 KB). */
++  const trozos = []; let bytes = 0;
+   for await (const trozo of req) {
+-    cuerpo += trozo;
+-    if (cuerpo.length > tope) {
++    const b = Buffer.isBuffer(trozo) ? trozo : Buffer.from(String(trozo), 'utf8');
++    bytes += b.length;
++    if (bytes > tope) {
+       const e = new Error('La petición es demasiado grande (máximo ' + Math.round(tope / 1024) + ' KB)');
+       e.codigo = 'CUERPO_GRANDE';
+       throw e;
+     }
++    trozos.push(b);
+   }
+-  return cuerpo;
++  return Buffer.concat(trozos).toString('utf8');
+ }
+ 
+ /* JSON.parse de lo que llega por la red nunca va suelto: un `{` a medias tumbaría
 diff --git a/electron/sesion-local.cjs b/electron/sesion-local.cjs
 new file mode 100644
 index 0000000..2dd3967
@@ -3595,7 +3633,7 @@ index 604bc55..c2fee03 100644
      if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
      return new Promise((resolve) => {
 diff --git a/package.json b/package.json
-index 8df4662..b3b7b4a 100644
+index 8df4662..ab9ed51 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,7 +1,7 @@
@@ -3603,7 +3641,7 @@ index 8df4662..b3b7b4a 100644
    "name": "doel-taller",
    "productName": "Doel Taller",
 -  "version": "0.1.72",
-+  "version": "0.1.81",
++  "version": "0.1.82",
    "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
    "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
    "license": "UNLICENSED",
@@ -4613,7 +4651,7 @@ index ee13bd6..f2af436 100644
  Si esta URL no muestra la version que esperas, el sitio esta desplegado
  con un paquete anterior: vuelve a arrastrar la carpeta reserva-online/.
 diff --git a/src/App.jsx b/src/App.jsx
-index 9ab7746..279082f 100644
+index 9ab7746..ee8f271 100644
 --- a/src/App.jsx
 +++ b/src/App.jsx
 @@ -13,6 +13,7 @@ import TecladoNum from './components/TecladoNum.jsx';
@@ -4624,7 +4662,66 @@ index 9ab7746..279082f 100644
  import { avisar as avisarModal } from './confirm.js';
   // Edición Pizzería: carga dinámica
  const Agenda = React.lazy(() => import('./components/Agenda.jsx'));       // Edición Barbería: carga dinámica
-@@ -327,7 +328,7 @@ export default function App() {
+@@ -87,7 +88,7 @@ export default function App() {
+   const [tallerAlta, setTallerAlta] = useState(null); // v4.0.8 · salto Mostrador → Nueva orden
+   const [ventaCita, setVentaCita] = useState(null); // líneas a abrir al saltar desde 🗓 Agenda (cita→ticket)
+   useEffect(() => {
+-    const cargarModulos = () => api.config.all().then((c) => {
++    const cargarModulos = (c) => {
+       setModulos({ modulo_fichaje: c.modulo_fichaje === '1', modulo_stock: c.modulo_stock === '1', modulo_fidelizacion: c.modulo_fidelizacion === '1',
+         modulo_agenda: c.modulo_agenda === '1', // citas de taller: recogidas y salidas a domicilio
+         modulo_reserva_online: c.modulo_reserva_online === '1',
+@@ -100,18 +101,19 @@ export default function App() {
+       setLogoEmpresa(c.logo || null);
+       setEmpresaNombre(c.empresa_nombre || '');
+       try { setOrdenMenu(c.orden_menu_lateral ? JSON.parse(c.orden_menu_lateral) : []); } catch { setOrdenMenu([]); }
+-    }).catch(() => {});
+-    cargarModulos();
+-    const aplicarEscala = () => api.config.all().then((c) => {
++    };
++    const aplicarEscala = (c) => {
+       document.body.classList.remove('escala-grande', 'escala-extra');
+       if (c.ui_escala === 'grande') document.body.classList.add('escala-grande');
+       if (c.ui_escala === 'extra') document.body.classList.add('escala-extra');
+-    }).catch(() => {});
+-    aplicarEscala();
++    };
++    /* v0.1.82 · punto 9 · UNA lectura de config por arranque (antes dos, y dos más en cada doel:cfg) */
++    const cargar = () => api.config.all().then((c) => { cargarModulos(c); aplicarEscala(c); }).catch(() => {});
++    cargar();
+     /* v0.0.79 · en el puesto en red esto también se dispara al entrar con el PIN: antes
+        de entrar no hay sesión y el servidor no contesta, así que lo que se pidió al
+        abrir la pantalla llegó vacío. Se vuelve a pedir todo, licencia incluida. */
+-    const conEscala = () => { cargarModulos(); aplicarEscala(); cargarLicencia(); };
++    const conEscala = () => { cargar(); cargarLicencia(); };
+     window.addEventListener('doel:cfg', conEscala);
+     return () => window.removeEventListener('doel:cfg', conEscala);
+   }, []);
+@@ -143,10 +145,11 @@ export default function App() {
+   const [modalSalir, setModalSalir] = useState(null); // null | {cajaAbierta, backupPendiente}
+ 
+   useEffect(() => {
+-    api.app.onCierreSolicitado(async () => {
++    const baja = api.app.onCierreSolicitado(async () => {
+       try { setModalSalir(await api.app.estadoSalida()); }
+       catch { setModalSalir({ cajaAbierta: false, backupPendiente: false }); }
+-    });
++    }); // v0.1.82 · devuelve la baja (antes pasaba por unwrap y dejaba una promesa rechazada en cada arranque)
++    return typeof baja === 'function' ? baja : undefined;
+   }, []);
+   const [vista, setVista] = useState('tpv');
+   useEffect(() => { window.__doelUsuario = usuario || null; }, [usuario]); // permisos a mano de pantallas sin prop usuario (ver_coste)
+@@ -182,7 +185,8 @@ export default function App() {
+   // varias mientras nadie mira, se suman en el mismo aviso.
+   useEffect(() => {
+     if (!window.doel?.reserva?.onNuevas) return;
+-    window.doel.reserva.onNuevas((n) => setAvisoReserva((a) => ({ n: (a ? a.n : 0) + n, desde: a ? a.desde : new Date() })));
++    const baja = window.doel.reserva.onNuevas((n) => setAvisoReserva((a) => ({ n: (a ? a.n : 0) + n, desde: a ? a.desde : new Date() })));
++    return typeof baja === 'function' ? baja : undefined; // v0.1.82 · sin oyentes acumulados
+   }, []);
+   // entrar en la Agenda ya es haberlas visto
+   useEffect(() => { if (vista === 'agenda') setAvisoReserva(null); }, [vista]);
+@@ -327,7 +331,7 @@ export default function App() {
  
          <div className="sb-pie">
            <button className="sb-btn" title={barraPlegada ? 'Desplegar' : 'Contraer'} onClick={() => setBarraPlegada((x) => !x)}>{barraPlegada ? '»' : '«'}</button>
@@ -4633,7 +4730,7 @@ index 9ab7746..279082f 100644
            <button className="sb-btn" title="Salir de la aplicación"
              onClick={async () => { try { setModalSalir(await api.app.estadoSalida()); } catch { setModalSalir({ cajaAbierta: false, backupPendiente: false }); } }}>⏻{!barraPlegada && <span> Salir</span>}</button>
            {!barraPlegada && <small className="sb-version">v{version || ''}</small>}
-@@ -347,6 +348,7 @@ export default function App() {
+@@ -347,6 +351,7 @@ export default function App() {
            </div>
          </div>
          <div className="contenido">
@@ -4641,7 +4738,7 @@ index 9ab7746..279082f 100644
            {usuario.rol === 'admin' && vista === 'tpv' && <PuestaEnMarcha onIrAjustes={(tab) => { if (tab === 'productos') { setVista('productos'); return; } setAjustesTab(tab); setVista('ajustes'); }} /* v0.1.51 · el catálogo vive en Inventario */ />}
            {vista === 'tpv' && <TPV usuario={usuario} cajaAbierta={caja.abierta} onCambioCaja={refrescarCaja}
              ventaInicial={ventaCita} onVentaInicialUsada={() => setVentaCita(null)}
-@@ -382,6 +384,7 @@ export default function App() {
+@@ -382,6 +387,7 @@ export default function App() {
              {vista === 'herramientas' && tipoNegocio === 'taller' && <Herramientas usuario={usuario} modulos={modulos} />}
            </React.Suspense>
            {vista === 'fichaje' && modulos.modulo_fichaje && <Fichaje />}
@@ -4649,7 +4746,7 @@ index 9ab7746..279082f 100644
            {modalSalir && <ModalSalir info={modalSalir} onCerrar={() => setModalSalir(null)} />}
            {finHorario.length > 0 && usuario && (
              <div style={{ position: 'fixed', bottom: 14, right: 14, zIndex: 80, background: '#0d3352',
-@@ -485,21 +488,22 @@ function PantallaActivacion({ licencia, onActivada }) {
+@@ -485,21 +491,22 @@ function PantallaActivacion({ licencia, onActivada }) {
        <div className="modal" style={{ width: 'min(520px, 94vw)' }}>
          <h3>🔑 Activar Doel Taller</h3>
          <p style={{ color: '#e0a852', fontSize: 14 }}>
@@ -4682,6 +4779,20 @@ index 9ab7746..279082f 100644
          <div className="pie">
            <button className="btn-fantasma" onClick={async () => { const c = await api.config.all(); api.sistema.abrirUrl((c.url_contacto || 'https://doelitcard.netlify.app/').trim()); }}>📞 Contacto</button>
            <button className="btn-verde" disabled={!codigo.trim()} onClick={activar}>✓ Activar</button>
+diff --git a/src/api.js b/src/api.js
+index 7c75ade..0baecbe 100644
+--- a/src/api.js
++++ b/src/api.js
+@@ -9,7 +9,8 @@ async function unwrap(promise) {
+ 
+ function wrapGroup(group) {
+   const out = {};
+-  for (const k of Object.keys(group)) out[k] = (...args) => unwrap(group[k](...args));
++  // v0.1.82 · los avisos (onX) no son llamadas: devuelven la BAJA del oyente, no { ok, data }. Envueltos dejaban una promesa rechazada en cada arranque.
++  for (const k of Object.keys(group)) out[k] = /^on[A-Z]/.test(k) ? group[k] : (...args) => unwrap(group[k](...args));
+   return out;
+ }
+ 
 diff --git a/src/components/LimiteVista.jsx b/src/components/LimiteVista.jsx
 new file mode 100644
 index 0000000..87e8f84
@@ -5378,10 +5489,10 @@ index 0000000..314a5dd
 +}
 diff --git a/tools/puente-generar.cjs b/tools/puente-generar.cjs
 new file mode 100644
-index 0000000..a7f2366
+index 0000000..e314c13
 --- /dev/null
 +++ b/tools/puente-generar.cjs
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,61 @@
 +#!/usr/bin/env node
 +/* v0.1.77 · Genera electron/preload.cjs desde electron/canales.cjs (punto 4). El preload corre en el renderer
 +   con sandbox, donde `require` solo da 'electron': no puede leer la tabla en caliente, así que se escribe
@@ -5402,7 +5513,7 @@ index 0000000..a7f2366
 +  for (const canal of Object.keys(canales.EVENTOS)) {
 +    const d = canales.EVENTOS[canal]; const [g, m] = d.api.split('.');
 +    if (!grupos.has(g)) grupos.set(g, []);
-+    grupos.get(g).push(d.forma === 'dato' ? `${m}: (cb) => ipcRenderer.on('${canal}', (_e, n) => cb(n))` : `${m}: (cb) => ipcRenderer.on('${canal}', cb)`);
++    grupos.get(g).push(d.forma === 'dato' ? `${m}: (cb) => on('${canal}', cb, true)` : `${m}: (cb) => on('${canal}', cb)`); // v0.1.82 · con baja
 +  }
 +  const lineas = [];
 +  for (const [g, items] of grupos) {
@@ -5422,6 +5533,8 @@ index 0000000..a7f2366
 +const { contextBridge, ipcRenderer } = require('electron');
 +
 +const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
++/* v0.1.82 · avisos del escritorio hacia la pantalla: devuelven la BAJA (removeListener) para que la pantalla la use al desmontar */
++const on = (canal, cb, dato) => { const h = dato ? (_e, n) => cb(n) : cb; ipcRenderer.on(canal, h); return () => ipcRenderer.removeListener(canal, h); };
 +
 +contextBridge.exposeInMainWorld('doel', {
 +${lineas.join('\n')}
@@ -5454,9 +5567,80 @@ index 0b35c40..b308260 100644
    t('8h. el botón de importar está en el panel 🔬 de la orden',
      /Importar JSON del agente/.test(panel) && /api\.py\.agenteImportar/.test(panel));
    t('8i. y se recarga el panel al importar, para ver el resultado sin recargar la ficha',
+diff --git a/tools/test-arranque.cjs b/tools/test-arranque.cjs
+new file mode 100644
+index 0000000..6832c2c
+--- /dev/null
++++ b/tools/test-arranque.cjs
+@@ -0,0 +1,65 @@
++/* v0.1.82 · punto 9 del plan · arranque y puente sin ruido.
++   1 · el cuerpo de la LAN se lee en BYTES y concatenando búferes (un carácter UTF‑8 partido entre dos trozos llegaba roto;
++       el tope contaba caracteres, no bytes)   2 · los avisos del puente (ipcRenderer.on) no pasan por unwrap: ya no dejan una
++   promesa rechazada en cada arranque, y devuelven la baja   3 · el preload generado y el puente remoto van a juego
++   4 · App.jsx lee la configuración UNA vez por arranque y da de baja los avisos   5 · usb.ids no va en el bundle: se lee en main, bajo demanda */
++const fs = require('fs'); const os = require('os'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const S = require('../electron/seguridad-lan.cjs');
++const rio = (trozos) => ({ async *[Symbol.asyncIterator]() { for (const x of trozos) yield x; } });
++let rechazos = 0; process.on('unhandledRejection', () => { rechazos++; });
++
++(async () => {
++  console.log('1 · El cuerpo de la LAN, en bytes');
++  const b = Buffer.from('{"averia":"no enciende la ñ"}', 'utf8'); const corte = b.indexOf(Buffer.from('ñ')) + 1; // parte la ñ (2 bytes) por la mitad
++  t('1a. un carácter UTF‑8 partido entre dos trozos llega entero', (await S.leerCuerpo(rio([b.subarray(0, corte), b.subarray(corte)]))) === '{"averia":"no enciende la ñ"}');
++  t('1b. mezclar trozos en texto y en búfer da lo mismo', (await S.leerCuerpo(rio(['{"a":"', Buffer.from('ñ"}')]))) === '{"a":"ñ"}');
++  let e1 = null; try { await S.leerCuerpo(rio([Buffer.from('ñ'.repeat(200 * 1024), 'utf8')])); } catch (e) { e1 = e; }
++  t('1c. el tope cuenta BYTES: 200 K «ñ» son 400 KB y se rechazan (antes pasaban: 200 K caracteres < 256 K)', e1 && e1.codigo === 'CUERPO_GRANDE', e1 && e1.message);
++  t('1d. 250 KB en ASCII siguen pasando', (await S.leerCuerpo(rio(Array(250).fill('x'.repeat(1024))))).length === 250 * 1024);
++
++  console.log('\n2 · Los avisos del puente');
++  const esbuild = require('esbuild');
++  fs.mkdirSync('.tmp-pantallas', { recursive: true });
++  const salida = path.resolve('.tmp-pantallas', 'api-prueba.cjs');
++  await esbuild.build({ entryPoints: ['src/api.js'], bundle: true, format: 'cjs', platform: 'node', outfile: salida, logLevel: 'silent' });
++  let bajas = 0;
++  global.window = { doel: { app: { onCierreSolicitado: (cb) => { cb.__ok = true; return () => { bajas++; }; }, estadoSalida: async () => ({ ok: true, data: { cajaAbierta: false } }), salir: async () => ({ ok: false, error: 'PIN incorrecto' }) } } };
++  const { api } = require(salida);
++  const baja = api.app.onCierreSolicitado(() => {});
++  await new Promise((r) => setTimeout(r, 30));
++  t('2a. onCierreSolicitado no se envuelve: devuelve la baja tal cual y no deja ninguna promesa rechazada', typeof baja === 'function' && rechazos === 0, 'rechazos=' + rechazos);
++  baja();
++  t('2b. llamar a la baja quita el oyente', bajas === 1);
++  t('2c. los canales normales siguen desenvueltos: data a la vuelta y error como excepción', JSON.stringify(await api.app.estadoSalida()) === '{"cajaAbierta":false}' && await api.app.salir().then(() => false, (e) => /PIN incorrecto/.test(e.message)));
++
++  console.log('\n3 · Preload generado y puente remoto a juego');
++  const preload = fs.readFileSync('electron/preload.cjs', 'utf8');
++  t('3a. el preload lleva el ayudante `on()` que devuelve la baja (removeListener), y lo usa para los dos avisos', /const on = \(canal, cb, dato\) => \{/.test(preload) && /ipcRenderer\.removeListener\(canal, h\)/.test(preload) && /onNuevas: \(cb\) => on\('reserva:nuevas', cb, true\)/.test(preload) && /onCierreSolicitado: \(cb\) => on\('app:cierre-solicitado', cb\)/.test(preload));
++  t('3b. el preload sigue siendo exactamente lo que genera tools/puente-generar.cjs', require('./puente-generar.cjs').texto() === preload);
++  const puesto = require('../electron/puesto-red.cjs');
++  const js = puesto.shim(puesto.leerPuente());
++  const caja = { window: {}, sessionStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }, fetch: async () => ({ headers: { get: () => null }, status: 200, json: async () => ({ ok: true }) }) };
++  require('vm').createContext(caja); require('vm').runInContext(js, caja);
++  const bajaRemota = caja.window.doel.app.onCierreSolicitado(() => {});
++  t('3c. en el puesto en red el aviso también devuelve una baja (función), no una promesa', typeof bajaRemota === 'function' && typeof caja.window.doel.reserva.onNuevas(() => {}) === 'function');
++
++  console.log('\n4 · App.jsx');
++  const app = fs.readFileSync('src/App.jsx', 'utf8');
++  const efecto = app.slice(app.indexOf('const cargarModulos = (c) =>'), app.indexOf("window.addEventListener('doel:cfg'"));
++  t('4a. una sola lectura de config por arranque: cargarModulos y aplicarEscala reciben el mismo objeto', (efecto.match(/api\.config\.all\(\)/g) || []).length === 1 && /cargarModulos\(c\); aplicarEscala\(c\);/.test(efecto), String((efecto.match(/api\.config\.all\(\)/g) || []).length));
++  t('4b. el aviso de cierre y el de reservas nuevas se dan de baja al desmontar', /const baja = api\.app\.onCierreSolicitado\(/.test(app) && /return typeof baja === 'function' \? baja : undefined;/.test(app) && /const baja = window\.doel\.reserva\.onNuevas\(/.test(app));
++
++  console.log('\n5 · usb.ids');
++  const u = fs.readFileSync('electron/usb-ids.cjs', 'utf8');
++  t('5a. la base se lee en el proceso principal, una vez y solo cuando se pide (no en el bundle de la pantalla)', /readFileSync\(path\.join\(__dirname, 'data', 'usb\.ids'\)/.test(u) && /let BASE/.test(u) && !fs.readdirSync('src').some((f) => /usb\.ids|usb-ids/.test(f)));
++  if (fs.existsSync('dist/assets')) {
++    const conBase = fs.readdirSync('dist/assets').filter((f) => f.endsWith('.js')).filter((f) => /1d6b  Linux Foundation/.test(fs.readFileSync(path.join('dist/assets', f), 'utf8')));
++    t('5b. ningún trozo del bundle lleva la base usb.ids dentro', conBase.length === 0, conBase.join(', '));
++  } else console.log('  (sin dist/: compila con `npx vite build` para comprobar el bundle)');
++
++  console.log(`\n${ko === 0 ? '✅' : '❌'}  Arranque y puente: ${ok} OK · ${ko} fallos`);
++  process.exit(ko === 0 ? 0 : 1);
++})().catch((e) => { process.stdout.write('  ✗ batería rota: ' + (e && e.stack) + '\n'); process.exit(1); });
 diff --git a/tools/test-canales.cjs b/tools/test-canales.cjs
 new file mode 100644
-index 0000000..f5b4ede
+index 0000000..80ecd42
 --- /dev/null
 +++ b/tools/test-canales.cjs
 @@ -0,0 +1,96 @@
@@ -5486,7 +5670,7 @@ index 0000000..f5b4ede
 +const enPreload = new Set([...preload.matchAll(/call\('([^']+)'\)/g)].map((m) => m[1]));
 +const conApi = filas.filter((c) => C.CANALES[c].api);
 +t('1e. el preload lleva todos los canales con método y ninguno más', conApi.every((c) => enPreload.has(c)) && [...enPreload].every((c) => C.CANALES[c] && C.CANALES[c].api), String(enPreload.size) + ' vs ' + conApi.length);
-+const avisos = [...preload.matchAll(/ipcRenderer\.on\('([^']+)'/g)].map((m) => m[1]);
++const avisos = [...preload.matchAll(/\bon\('([^']+)', cb/g)].map((m) => m[1]); // v0.1.82 · on() con baja
 +t('1f. los avisos del escritorio (ipcRenderer.on) salen de EVENTOS', avisos.length === Object.keys(C.EVENTOS).length && avisos.every((c) => C.EVENTOS[c]), avisos.join(', '));
 +const internos = filas.filter((c) => !C.CANALES[c].api);
 +t('1g. los handlers internos (api: null) van marcados red: local y no llegan ni a /rpc ni a window.doel', internos.length >= 1 && internos.every((c) => C.CANALES[c].red === 'local' && !C.enRed(c)), internos.join(', '));
@@ -6116,6 +6300,19 @@ index 0000000..d9df5b5
 +
 +console.log(`\n${ko === 0 ? '✅' : '❌'}  Licencia v2 (DL2 + semilla por instalación): ${ok} OK · ${ko} fallos`);
 +process.exit(ko === 0 ? 0 : 1);
+diff --git a/tools/test-menu-taller.cjs b/tools/test-menu-taller.cjs
+index 5350031..fa16c85 100644
+--- a/tools/test-menu-taller.cjs
++++ b/tools/test-menu-taller.cjs
+@@ -42,7 +42,7 @@ t('el hub adapta onGuardar a prueba libre (sin orden no guarda, avisa)',
+ /* v5.0.31 · blindaje: TODO módulo que una VISTA declare debe existir en el mapa setModulos
+    (el bug que dejó Herramientas y antes el CRM invisibles: el mapa no conocía la clave) */
+ const modulosDeVistas = [...appSrc.matchAll(/modulo: '(modulo_[a-z_]+)'/g)].map((m) => m[1]);
+-const bloqueSetModulos = appSrc.slice(appSrc.indexOf('const cargarModulos'), appSrc.indexOf('cargarModulos();'));
++const bloqueSetModulos = appSrc.slice(appSrc.indexOf('const cargarModulos'), appSrc.indexOf('const aplicarEscala'));
+ const faltan = modulosDeVistas.filter((m) => !bloqueSetModulos.includes(m + ':'));
+ t('todos los módulos que piden las VISTAS existen en el mapa setModulos (' + modulosDeVistas.length + ' módulos)',
+   faltan.length === 0);
 diff --git a/tools/test-multitienda.cjs b/tools/test-multitienda.cjs
 index 671ed49..bbf456b 100644
 --- a/tools/test-multitienda.cjs
@@ -6417,9 +6614,18 @@ index 42b4ef2..33b9a5c 100644
    const shim = puesto.shim(puesto.leerPuente());
    t('9. el puente remoto avisa a la aplicación de cada error (evento doel:rpc-error con canal y motivo)', /doel:rpc-error/.test(shim) && /detail: \{ canal: canal, error/.test(shim));
 diff --git a/tools/test-puesto-red.cjs b/tools/test-puesto-red.cjs
-index 69cf829..d70a659 100644
+index 69cf829..da4b52a 100644
 --- a/tools/test-puesto-red.cjs
 +++ b/tools/test-puesto-red.cjs
+@@ -50,7 +50,7 @@ t('1d. incluido el login, que es la puerta de entrada', typeof caja.window.doel.
+ /* Los avisos que en el escritorio vienen de Electron (cierre de la aplicación, reservas
+    nuevas) no existen en un navegador. Si faltan, la pantalla que los llama se cae entera:
+    pasó de verdad con «app.onCierreSolicitado is not a function». */
+-const eventos = [...preload.matchAll(/([A-Za-z_$][\w$]*)\s*:\s*\([^)]*\)\s*=>\s*ipcRenderer\.on\(/g)].map((x) => x[1]);
++const eventos = [...preload.matchAll(/([A-Za-z_$][\w$]*)\s*:\s*\(cb\)\s*=>\s*on\(/g)].map((x) => x[1]); // v0.1.82 · on() con baja
+ t('1e. los avisos del escritorio existen y responden, aunque no hagan nada',
+   eventos.length > 0 && eventos.every((n) => {
+     for (const g of Object.keys(caja.window.doel)) if (typeof caja.window.doel[g][n] === 'function') return true;
 @@ -81,7 +81,7 @@ registrar('auth:login', (pin) => db.login(String(pin || '')));
  registrar('config:all', () => db.configAll());
  registrar('outlet:resumen', () => db.outletResumen());

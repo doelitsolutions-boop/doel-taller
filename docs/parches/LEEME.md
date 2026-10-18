@@ -1,4 +1,4 @@
-# Parches de endurecimiento
+# Parches de endurecimiento y del plan de mejoras (0.1.73 → 0.1.83)
 
 | Fichero | Sobre | Qué lleva |
 |---|---|---|
@@ -11,7 +11,9 @@
 | `0.1.79-robustez.patch` | 0.1.78 | **Punto 6**: límite de error por vista (`LimiteVista.jsx`), errores globales del renderer y caídas de la ventana al registro (`sistema:error-pantalla`, `electron/robustez.cjs`), recarga automática si el proceso de render muere; batería `test-robustez.cjs` (26) |
 | `0.1.80-esquema.patch` | 0.1.79 | **Punto 7**: contador atómico y número único de orden, FK declaradas (`ON DELETE SET NULL`) con reconstrucción de tabla, diez índices, `tickets.nif_emisor` en la cadena de hash, fila nueva en Salud; batería `test-esquema.cjs` (26) |
 | `0.1.81-nube.patch` | 0.1.80 | **Punto 8**: `modificar()` con escrituras condicionales (etag) en todos los leer‑modificar‑escribir de `api.mjs`, mismo hueco solo una vez, tope por teléfono antes de gastar el hueco, `negocio-borrar` completo; stub compartido `_blobs-falso.cjs` y batería `test-nube-concurrencia.cjs` (21). **Redesplegar** `reserva-online/` (ZIP `doel-reservas-v0.1.81-netlify-drop.zip`) |
-| `0.1.81-acumulado-sobre-0.1.72.patch` | 0.1.72 | todos los anteriores juntos (sin `package-lock.json`) |
+| `0.1.82-arranque.patch` | 0.1.81 | **Punto 9**: cuerpo LAN en bytes (UTF‑8 partido), avisos del puente sin `unwrap` y con baja, una lectura de config por arranque; `usb.ids` ya estaba fuera del bundle (constatado); batería `test-arranque.cjs` (14) |
+| `0.1.83-higiene.patch` | 0.1.82 | **Punto 10**: código muerto fuera (6 exportaciones; limpiadores corregidos para no borrar lo que ejercitan las baterías ni funciones internas vivas), `version-subir` sella `HUELLAS.json` y `check-puente` lo exige, servidores LAN sin duplicados (`esLocal`/`hostPermitido`/`ipLocal`/JSON y la fábrica de sesiones en `seguridad-lan.cjs`); batería `test-higiene.cjs` (16) |
+| `0.1.83-acumulado-sobre-0.1.72.patch` | 0.1.72 | **todos los anteriores juntos** (sin `package-lock.json`): el plan completo 0.1.73 → 0.1.83 |
 
 Tras aplicar el de la 0.1.76 hay que **probar en Windows** lo que toca a Electron: WebHID y mando, visor PDF de diagramas, impresión silenciosa, safeStorage e instalador NSIS. El contenedor no puede arrancar Electron.
 
