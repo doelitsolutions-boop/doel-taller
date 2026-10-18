@@ -1,0 +1,962 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index f6bffdc..a13525f 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.84 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.85 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -102,7 +102,7 @@ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, s
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador; 0.1.84: Electron 44 → 42 y better-sqlite3 13 → 12.11 porque sin precompilado no salía el instalador) · 4 `canales.cjs` único + deny‑by‑default en
+ `/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
+ numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 arranque y puente ✅ 0.1.82 (`usb.ids` ya estaba fuera del bundle; cuerpo LAN en bytes, avisos con baja, una lectura de config) ·
+-10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados) ✅ 0.1.83. **Los diez puntos están hechos** (0.1.74 → 0.1.83); queda probar en Windows lo que el contenedor no puede (Electron 44: WebHID, mando, PDF, impresión, instalador) y redesplegar la nube.
++10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados) ✅ 0.1.83. **Los diez puntos están hechos** (0.1.74 → 0.1.83; 0.1.84 arregla el instalador); 0.1.85 añade los **avisos automáticos por correo** (lo primero de la lista de «qué le falta a un taller de electrónica»); queda probar en Windows lo que el contenedor no puede (Electron 44: WebHID, mando, PDF, impresión, instalador) y redesplegar la nube.
+ 
+ ### Herramientas de verificación (el «ritual de entrega»)
+ 
+diff --git a/MANUAL.md b/MANUAL.md
+index f96482d..eeb8b08 100644
+--- a/MANUAL.md
++++ b/MANUAL.md
+@@ -281,6 +281,16 @@ equipo, orden, lo que queda por pagar. Se envía por WhatsApp o correo con un to
+ se marca «le he llamado». El aviso queda registrado y **arranca el plazo del almacenaje**.
+ Nunca se envía solo: siempre lo confirma una persona.
+ 
++**Avisos automáticos por correo** (desde la 0.1.85, Ajustes → Taller → ✉️ Avisos automáticos): con el
++interruptor activado el programa manda él mismo un correo al cliente al recibir el equipo, al emitir
++el presupuesto, al pasar a listo y como recordatorio de recogida (los días los marcan los plazos del
++tablero). Solo a clientes con email; quien tiene «📞 Llamada» como contacto preferido no recibe correos
++automáticos. Cada envío queda como aviso en la orden. Las plantillas se editan ahí mismo con campos
++como `{nombre}`, `{equipo}`, `{orden}`, `{total}` o `{portal}`. El correo sale por la nube de Doel con el
++mismo token del portal; el buzón que envía se configura en Netlify (Gmail por SMTP con contraseña de
++aplicación, Brevo o Resend). Si la nube falla, el correo espera en cola y se reintenta; la cola y los
++errores se ven en el mismo apartado, con un botón de correo de prueba.
++
+ ### 6 · Recogida y cobro
+ 
+ En la ficha, **→ Mostrador**: la orden pasa como venta aparcada con el presupuesto, el
+diff --git a/VERSION.md b/VERSION.md
+index c450302..a35bcfa 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.85 | ✉️ **Avisos automáticos al cliente por correo.** Con el interruptor de Ajustes → Taller → «✉️ Avisos automáticos» el programa **encola** un correo al recibir el equipo, al emitir el presupuesto, al pasar a LISTO y como recordatorio de recogida (según los plazos del tablero), y el proceso principal lo **manda por la nube de Doel** (`/api/aviso-enviar`, mismo token y slug que el portal) cada minuto, con reintentos (5, espera creciente) y sin contar como intento la falta de internet. Solo a clientes con email; quien tiene «📞 Llamada» como contacto preferido no recibe correos automáticos; modo «solo a quien prefiere Email» opcional. Cada envío queda como aviso de la orden (vía `email`: prueba documental del almacenaje) y en el log. Plantillas editables por tipo con campos `{nombre} {equipo} {orden} {total} {lineas} {portal}…` (vacías = fábrica), correo de prueba, «enviar la cola ahora», y la cola con sus errores en el mismo apartado. La ventana de aviso manual al pasar a LISTO dice si ya va el correo automático. **La nube es la única que tiene el buzón**: variables en Netlify `DOEL_CORREO` (`smtp` \| `brevo` \| `resend`), para Gmail `DOEL_SMTP_HOST=smtp.gmail.com`, `DOEL_SMTP_PORT=465`, `DOEL_SMTP_USER`, `DOEL_SMTP_PASS` (contraseña de aplicación), opcional `DOEL_CORREO_DESDE` y `DOEL_CORREO_TOPE_DIA` (200). Tope diario por negocio y registro de los últimos 100 envíos con el correo enmascarado. Nuevos `electron/db/avisos.cjs`, `electron/avisos.cjs`, `electron/main/avisos.cjs`, tabla `avisos_cola`, canales `avisos:*`, `nodemailer` en la nube (se carga solo con SMTP). Batería `test-avisos.cjs` (35). **Hay que redesplegar `reserva-online/`** (ZIP `doel-reservas-v0.1.85-netlify-drop.zip`). |
+ | 0.1.84 | 🩹 **Vuelven el instalador y el portable de Windows.** Desde la 0.1.76 `npm run dist` moría antes de generar `DoelTaller-Setup-*.exe` y `DoelTaller-Portable-*.exe`: better-sqlite3 **13.x no publica binarios precompilados** para Electron y **Electron 44 no tiene precompilado en ninguna versión** de better-sqlite3, así que electron-builder intentaba compilar el módulo nativo desde el código fuente (Visual Studio Build Tools, Python…) y fallaba. Se vuelve a **better-sqlite3 12.11.1** y se baja a **Electron 42.11** (la última con precompilado para Windows x64; sigue con soporte oficial, Electron mantiene las tres últimas mayores). Sin herramientas de compilación: `npm install` descarga el binario. El resto de la 0.1.76 (electron-builder 26, Vite 8, selfsigned 5, auditoría a cero) se queda. **Regla para subir Electron en el futuro**: antes, comprobar que exista `better-sqlite3-vX-electron-vABI-win32-x64.tar.gz` en las releases de WiseLibs/better-sqlite3 (`node tools/comprobar-prebuild.cjs` lo mira). |
+ | 0.1.83 | 🧹 **Higiene (punto 10 del plan · CAL‑01/CAL‑04).** Fuera el código muerto que veían los limpiadores: 6 exportaciones en `src/` (`limpiar-muertos --aplicar`; el limpiador ahora respeta lo que ejercita una batería de `tools/`, que no está muerto para el proyecto, y lo lista aparte) y **ninguna** en `electron/db/`: las seis que `limpiar-datos-muertos` daba por muertas (`ubicacionBonita`, `modeloParaOrden`, `taxonomia`…) estaban vivas (su regla «declaración + registro = 2 usos» fallaba con funciones internas); ahora cuenta usos reales fuera de la declaración y de las líneas de registro. El limpiador de `src/` tampoco se lleva ya la cabecera del módulo cuando borra su primera declaración. La batería nueva falla si vuelve a aparecer código muerto. **Versión en un solo sitio**: `version-subir` sella también `electron/scripts/HUELLAS.json` (decía 0.1.46 con la app en 0.1.72) y `check-puente` lo exige; avisa si la nube (`HUELLAS-NUBE.json`) está empaquetada en otra versión. **Los dos servidores de la LAN sin duplicados**: `ipLocal`, `ipsLocales`, `esLocal`, `hostPermitido` y la respuesta JSON viven en `seguridad-lan.cjs` (el comandero ya no importa `puesto-red.cjs` solo para eso), y el puesto en red usa la misma fábrica de sesiones que el comandero (`crearSesiones(vida, tope)`, ahora con tope absoluto opcional) en vez de un `Map` y un `limpiarSesiones` propios. Nueva batería `test-higiene.cjs` (14). |
+ | 0.1.82 | 🚦 **Arranque y puente sin ruido (punto 9 del plan).** Lo previsto era sacar `usb.ids` del bundle; **ya estaba fuera**: se lee en el proceso principal, una vez y solo cuando se pide (`electron/usb-ids.cjs`), y la batería nueva lo deja comprobado. Lo que sí había (CAL‑02): **el cuerpo de las peticiones LAN** se leía trozo a trozo como texto (un carácter UTF‑8 partido entre dos trozos llegaba como «�») y el tope contaba caracteres, no bytes (200 K «ñ» son 400 KB y pasaban por 256 KB) → ahora búferes y bytes. **Los avisos del puente** (`onCierreSolicitado`, `onNuevas`) pasaban por `unwrap()` como si fueran llamadas: cada arranque dejaba una promesa rechazada («Error desconocido») que desde la 0.1.79 habría ido al registro; ahora `api.js` no los envuelve, el preload generado los sirve con un ayudante `on()` que **devuelve la baja** (`removeListener`) y `App.jsx` la usa al desmontar (en el puesto en red la baja es una función vacía). **Una sola lectura de config por arranque**: `cargarModulos` y `aplicarEscala` reciben el mismo objeto (antes dos lecturas, y dos más por cada `doel:cfg`). Nueva batería `test-arranque.cjs` (14). |
+diff --git a/electron/avisos.cjs b/electron/avisos.cjs
+new file mode 100644
+index 0000000..6112786
+--- /dev/null
++++ b/electron/avisos.cjs
+@@ -0,0 +1,74 @@
++/* v0.1.85 · ✉️ Envío de los avisos por correo que la capa de datos deja en cola (avisos_cola).
++   Patrón portal.cjs: el TPV habla con la nube de Doel cuando hay internet; sin red, la cola espera. La nube
++   (/api/aviso-enviar, mismo token y slug que el portal) es la que tiene el proveedor de correo (SMTP de Gmail,
++   Brevo o Resend: variables de entorno en Netlify, nunca en el TPV ni en la base). */
++let timer = null;
++
++function destino(db) {
++  const cfg = db.configAll();
++  let url = String(cfg.portal_url || '').trim();
++  const clave = String(cfg.portal_token || '').trim();
++  if (!url || !clave) throw new Error('Configura la dirección de la nube y su token en Ajustes → 🔧 Taller (infraestructura)');
++  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
++  let base;
++  try { base = new URL(url).origin; } catch (e) { throw new Error('La dirección de la nube no es válida (debe ser https://tu-sitio.netlify.app)'); }
++  const slug = String(cfg.reserva_slug || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
++  return { base, clave, slug, cfg };
++}
++
++async function llamar(db, avisos) {
++  const d = destino(db);
++  const emp = db.getEmpresa() || {};
++  const res = await fetch(d.base + '/api/aviso-enviar' + (d.slug ? '?n=' + encodeURIComponent(d.slug) : ''), {
++    method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + d.clave },
++    body: JSON.stringify({ negocio: { nombre: emp.nombre || 'Taller', telefono: emp.telefono || '', responder: String(d.cfg.avisos_email_responder || '').trim() }, avisos }),
++  });
++  if (res.status === 401) throw new Error('La nube rechazó el token del portal (revisa Ajustes → Taller → infraestructura)');
++  let data = null; try { data = await res.json(); } catch (e) { data = null; }
++  if (!res.ok) throw new Error('Nube de avisos: HTTP ' + res.status + (data && data.error ? ' — ' + data.error : ''));
++  return data || {};
++}
++
++/* Manda hasta `max` correos pendientes. Si la nube no contesta (sin internet, 5xx), nada cuenta como intento. */
++async function enviarPendientes(db, max = 10) {
++  db.avisosRecordatoriosBarrer();
++  const pend = db.avisosPendientes(max);
++  if (!pend.length) return { enviados: 0, fallos: 0, reintentos: 0, pendientes: 0 };
++  const data = await llamar(db, pend.map((a) => ({ id: a.id, para: a.para, asunto: a.asunto, texto: a.texto })));
++  let enviados = 0, fallos = 0, reintentos = 0;
++  for (const r of data.resultados || []) {
++    const que = db.avisoResultado(r.id, !!r.ok, r.error || null, !!r.definitivo);
++    if (que === 'enviado') enviados++; else if (que === 'fallo') fallos++; else if (que === 'reintento') reintentos++;
++  }
++  const resumen = { ok: true, cuando: new Date().toISOString(), enviados, fallos, reintentos, proveedor: data.proveedor || null, pendientes: db.avisosPendientes(50).length };
++  db.configSet('avisos_ultimo', JSON.stringify(resumen));
++  return resumen;
++}
++
++/* Un correo de prueba a la dirección que se indique (Ajustes): comprueba nube, token y proveedor de una vez. */
++async function probar(db, para) {
++  const dir = String(para || '').trim().toLowerCase();
++  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dir)) throw new Error('Escribe una dirección de correo válida');
++  const emp = db.getEmpresa() || {};
++  const data = await llamar(db, [{ id: 0, para: dir, asunto: 'Prueba de avisos de ' + (emp.nombre || 'Doel Taller'), texto: 'Este es un correo de prueba de los avisos automáticos de ' + (emp.nombre || 'Doel Taller') + '.\nSi lo lees, la nube y el proveedor de correo están bien configurados.\n\n— ' + (emp.nombre || 'Doel Taller') + (emp.telefono ? ' · ' + emp.telefono : '') }]);
++  const r = (data.resultados || [])[0] || {};
++  if (!r.ok) throw new Error(r.error || 'La nube no pudo enviar la prueba');
++  return { ok: true, proveedor: data.proveedor || null, para: dir };
++}
++
++function iniciar(db, intervaloMs = 60000) {
++  const tick = async () => {
++    try {
++      const c = db.configAll();
++      if (c.avisos_email_auto === '1' && c.portal_url && c.portal_token) await enviarPendientes(db);
++    } catch (e) {
++      try { db.configSet('avisos_ultimo', JSON.stringify({ ok: false, cuando: new Date().toISOString(), error: e.message })); } catch (x) { /* sin db */ }
++    }
++  };
++  clearInterval(timer);
++  timer = setInterval(tick, intervaloMs);
++  setTimeout(tick, 20000);
++}
++function detener() { clearInterval(timer); timer = null; }
++
++module.exports = { enviarPendientes, probar, iniciar, detener, destino };
+diff --git a/electron/canales.cjs b/electron/canales.cjs
+index adacae8..4810163 100644
+--- a/electron/canales.cjs
++++ b/electron/canales.cjs
+@@ -476,6 +476,14 @@ const CANALES = {
+   /* ── app ── */
+   'app:salir': { api: 'app.salir', pin: true },
+   'app:estado-salida': { api: 'app.estadoSalida' },
++  /* ── avisos (v0.1.85 · ✉️ correo automático al cliente) ── */
++  'avisos:plantillas': { api: 'avisos.plantillas' },
++  'avisos:cola': { api: 'avisos.cola' },
++  'avisos:encolar': { api: 'avisos.encolar' },
++  'avisos:enviar-ahora': { api: 'avisos.enviarAhora' },
++  'avisos:probar': { api: 'avisos.probar', permiso: 'ajustes' },
++  'avisos:reintentar': { api: 'avisos.reintentar' },
++  'avisos:descartar': { api: 'avisos.descartar' },
+   /* ── (internos: sin método en window.doel) ── */
+   'dev:cerrar': { api: null, permiso: 'ajustes', red: 'local' },
+ };
+diff --git a/electron/db.cjs b/electron/db.cjs
+index 12ec649..364fab4 100644
+--- a/electron/db.cjs
++++ b/electron/db.cjs
+@@ -26,7 +26,8 @@ require('./db/taller-conocimiento.cjs');
+ require('./db/hotel.cjs');            // v0.0.93 · 🏨 modo hotel: teles, pasos, notas y fotos
+ require('./db/taller-ubicaciones.cjs');
+ require('./db/outlet.cjs');
+-require('./db/dispositivos.cjs');       // v0.1.16 · 🔌 lo que hay enchufado: modelo y serie para la orden
++require('./db/dispositivos.cjs');
++require('./db/avisos.cjs');            // v0.1.85 · ✉️ avisos automáticos por correo       // v0.1.16 · 🔌 lo que hay enchufado: modelo y serie para la orden
+ 
+ /* Superficie pública: lo que de verdad llaman main.cjs, el resto de electron/ y las
+    herramientas de tools/. Se recalcula con:
+@@ -327,6 +328,16 @@ const PUBLICAS = [
+   "portalClaveVer",
+   "portalImportar",
+   "portalSnapshot",
++  "avisosPlantillas",
++  "avisoRender",
++  "avisoEncolar",
++  "avisosPendientes",
++  "avisoResultado",
++  "avisosCola",
++  "avisoReintentar",
++  "avisoDescartar",
++  "avisosResumen",
++  "avisosRecordatoriosBarrer",
+   "preciosMasivos",
+   "productoDistribuidor",
+   "productoImagen",
+diff --git a/electron/db/avisos.cjs b/electron/db/avisos.cjs
+new file mode 100644
+index 0000000..6e1d0fa
+--- /dev/null
++++ b/electron/db/avisos.cjs
+@@ -0,0 +1,169 @@
++/* v0.1.85 · ✉️ Avisos automáticos al cliente por correo.
++
++   Hasta ahora avisar era siempre a mano: al pasar a LISTO saltaba la ventana con el texto y alguien pulsaba WhatsApp
++   o correo. Ahora, con «Avisos automáticos por correo» activado en Ajustes → Taller, el programa ENCOLA un correo en
++   los momentos que se elijan (recibido, presupuesto emitido, listo, recordatorio de recogida) y el proceso principal
++   lo manda por la nube de Doel (electron/avisos.cjs → /api/aviso-enviar), que es quien tiene el proveedor de correo.
++   La ventana de aviso manual sigue existiendo (WhatsApp, llamada): lo automático es el correo.
++
++   Reglas:
++   · solo clientes con email; un cliente con «📞 Llamada» como contacto preferido no recibe correos automáticos;
++     en modo «preferencia» solo los que tienen «✉️ Email» como preferido;
++   · nunca dos correos iguales seguidos: misma orden y tipo pendiente → no se repite; el mismo tipo enviado hace
++     menos de 10 minutos → tampoco (el recordatorio se controla por días);
++   · cada envío queda como aviso de la orden (ordenes_avisos, vía «email»): es la prueba documental que arranca el
++     plazo de almacenaje, igual que el aviso manual;
++   · si la nube falla, el correo se queda en cola y se reintenta (5 veces con espera creciente); sin internet no
++     cuenta como intento. Plantillas editables en config (avisos_asunto_<tipo>, avisos_texto_<tipo>), vacías = las
++     de fábrica. */
++const N = require('./_nucleo.cjs');
++
++const TIPOS = ['recibido', 'presupuesto', 'listo', 'recordatorio'];
++const PLANTILLAS = {
++  recibido: {
++    asunto: 'Hemos recibido {equipo} · orden {orden}',
++    texto: 'Hola {nombre} 👋\n\nHemos recibido {equipo} en {taller} con el número de orden {orden}.\nLe avisaremos por este medio en cuanto tengamos el diagnóstico o el presupuesto.{portal_linea}\n\nGracias por confiar en nosotros.\n— {taller}{telefono_linea}',
++  },
++  presupuesto: {
++    asunto: 'Presupuesto de {equipo} · orden {orden} · {total}',
++    texto: 'Hola {nombre} 👋\n\nYa tenemos el presupuesto de {equipo} (orden {orden}):\n{lineas}\nTOTAL: {total} (IGIC incluido){anticipo_linea}\n\nResponda a este correo con ACEPTO para que empecemos, o díganos si tiene dudas.{portal_linea}\n— {taller}{telefono_linea}',
++  },
++  listo: {
++    asunto: '{equipo} está listo para recoger · orden {orden}',
++    texto: 'Hola {nombre} 👋\n\n{equipo} (orden {orden}) ya está listo para recoger en {taller}.{pendiente_linea}\n\nHorario y dirección, en su resguardo. Si no puede pasar en los próximos días, díganoslo respondiendo a este correo.\n— {taller}{telefono_linea}',
++  },
++  recordatorio: {
++    asunto: 'Recordatorio: {equipo} sigue esperándole · orden {orden}',
++    texto: 'Hola {nombre} 👋\n\nLe recordamos que {equipo} (orden {orden}) está listo para recoger en {taller} desde hace {dias} días.{pendiente_linea}\nPasados {almacenaje_dias} días desde el aviso puede aplicarse el coste de almacenaje que figura en el resguardo.\n— {taller}{telefono_linea}',
++  },
++};
++const CAMPOS = ['{nombre}', '{equipo}', '{orden}', '{taller}', '{telefono_taller}', '{telefono_linea}', '{total}', '{lineas}', '{anticipo_linea}', '{pendiente_linea}', '{portal}', '{portal_linea}', '{dias}', '{almacenaje_dias}'];
++
++const eurTxt = (n) => (Number(n) || 0).toFixed(2).replace('.', ',') + ' €';
++
++function avisosConfig() {
++  const c = N.API.configAll();
++  return {
++    auto: c.avisos_email_auto === '1',
++    modo: c.avisos_email_modo === 'preferencia' ? 'preferencia' : 'todos',
++    responder: String(c.avisos_email_responder || '').trim(),
++    tipos: Object.fromEntries(TIPOS.map((t) => [t, (c['avisos_email_' + t] ?? '1') !== '0'])),
++  };
++}
++
++/* Plantilla vigente por tipo: la de config si no está vacía, si no la de fábrica. */
++function avisosPlantillas() {
++  const c = N.API.configAll();
++  const out = {};
++  for (const t of TIPOS) {
++    const asunto = String(c['avisos_asunto_' + t] || '').trim(), texto = String(c['avisos_texto_' + t] || '').trim();
++    out[t] = { asunto: asunto || PLANTILLAS[t].asunto, texto: texto || PLANTILLAS[t].texto, porDefecto: PLANTILLAS[t], personalizada: !!(asunto || texto) };
++  }
++  return { tipos: TIPOS, plantillas: out, campos: CAMPOS };
++}
++
++/* Los datos de la orden que rellenan la plantilla. `o` es ordenGet (cliente, equipo, líneas, totales). */
++function datosDeOrden(o, extra = {}) {
++  const emp = N.db.prepare('SELECT nombre, telefono FROM empresa WHERE id = 1').get() || {};
++  const cfg = N.API.configAll();
++  const cli = o.cliente || {};
++  const eq = o.equipo ? `${o.equipo.marca || ''} ${o.equipo.modelo || ''}`.trim() || 'su equipo' : 'su equipo';
++  const total = Number(o.total_presupuesto) || 0, anticipo = Number(o.total_anticipado) || 0;
++  const lineas = (o.lineas || []).map((l) => { const c = Number(l.cantidad) || 1; return `• ${l.descripcion}${c !== 1 ? ' ×' + c : ''}: ${eurTxt(c * (Number(l.precio) || 0))}`; }).join('\n');
++  const portal = cfg.portal_url ? String(cfg.portal_url).trim().replace(/\/+$/, '') + '/portal.html' + (cfg.reserva_slug ? '?n=' + encodeURIComponent(cfg.reserva_slug) : '') : '';
++  const resto = Math.max(0, total - anticipo);
++  const tiempos = N.API.tallerTiempos ? N.API.tallerTiempos() : {};
++  return {
++    '{nombre}': String(cli.nombre || '').split(' ')[0] || '',
++    '{equipo}': eq, '{orden}': o.numero || '', '{taller}': emp.nombre || 'Doel Taller',
++    '{telefono_taller}': emp.telefono || '', '{telefono_linea}': emp.telefono ? ' · ' + emp.telefono : '',
++    '{total}': eurTxt(total), '{lineas}': lineas,
++    '{anticipo_linea}': anticipo > 0 ? `\nA cuenta ya entregado: ${eurTxt(anticipo)} · resto: ${eurTxt(resto)}` : '',
++    '{pendiente_linea}': resto > 0 && total > 0 ? `\nQueda por abonar: ${eurTxt(resto)}.` : '',
++    '{portal}': portal, '{portal_linea}': portal ? `\nTambién puede seguirlo o aceptarlo desde su portal: ${portal} (entre con su teléfono y la clave del resguardo).` : '',
++    '{dias}': String(extra.dias != null ? extra.dias : ''), '{almacenaje_dias}': String(tiempos.almacenaje_dias || cfg.taller_almacenaje_dias || 30),
++  };
++}
++const rellenar = (plantilla, datos) => String(plantilla || '').replace(/\{[a-z_]+\}/g, (k) => (k in datos ? datos[k] : k));
++
++/* Correo listo para mandar (sin encolar): { para, asunto, texto }. */
++function avisoRender(tipo, ordenId, extra = {}) {
++  if (!TIPOS.includes(tipo)) throw new Error('Tipo de aviso desconocido: ' + tipo);
++  const o = N.API.ordenGet(ordenId);
++  if (!o) throw new Error('Orden no encontrada');
++  const pl = avisosPlantillas().plantillas[tipo];
++  const datos = datosDeOrden(o, extra);
++  const cli = N.db.prepare('SELECT email, contacto_pref FROM clientes WHERE id = ?').get(o.cliente_id) || {};
++  return { para: String(cli.email || '').trim().toLowerCase() || null, preferencia: cli.contacto_pref || null,
++    asunto: rellenar(pl.asunto, datos).replace(/\s+/g, ' ').trim().slice(0, 150), texto: rellenar(pl.texto, datos).trim().slice(0, 6000), orden: o };
++}
++
++/* Encola el correo si procede. opts.forzar salta los interruptores (botón manual «enviar por correo»), nunca la
++   falta de email. Devuelve { encolado, motivo | id, para, asunto }. */
++function avisoEncolar(ordenId, tipo, opts = {}) {
++  const cfg = avisosConfig();
++  if (!TIPOS.includes(tipo)) throw new Error('Tipo de aviso desconocido: ' + tipo);
++  if (!opts.forzar && (!cfg.auto || !cfg.tipos[tipo])) return { encolado: false, motivo: 'desactivado' };
++  const r = avisoRender(tipo, ordenId, opts);
++  if (!r.para) return { encolado: false, motivo: 'sin_email' };
++  if (!opts.forzar && r.preferencia === 'llamada') return { encolado: false, motivo: 'prefiere_llamada' };
++  if (!opts.forzar && cfg.modo === 'preferencia' && r.preferencia !== 'email') return { encolado: false, motivo: 'preferencia' };
++  if (N.db.prepare("SELECT 1 FROM avisos_cola WHERE orden_id = ? AND tipo = ? AND estado = 'pendiente'").get(ordenId, tipo)) return { encolado: false, motivo: 'repetido' };
++  if (tipo !== 'recordatorio' && N.db.prepare("SELECT 1 FROM avisos_cola WHERE orden_id = ? AND tipo = ? AND estado = 'enviado' AND enviado_en >= datetime('now','localtime','-10 minutes')").get(ordenId, tipo)) return { encolado: false, motivo: 'reciente' };
++  const id = N.db.prepare('INSERT INTO avisos_cola (orden_id, tipo, via, para, asunto, texto) VALUES (?,?,?,?,?,?)').run(ordenId, tipo, 'email', r.para, r.asunto, r.texto).lastInsertRowid;
++  try { N.API.ordenLog(ordenId, opts.usuarioId || null, 'aviso', 'Correo «' + tipo + '» en cola para ' + r.para); } catch (e) { /* el rastro es lo de menos */ }
++  return { encolado: true, id, para: r.para, asunto: r.asunto };
++}
++
++const avisosPendientes = (n = 10) => N.db.prepare(`SELECT * FROM avisos_cola WHERE estado = 'pendiente' AND (proximo_intento IS NULL OR proximo_intento <= ?) ORDER BY id LIMIT ?`).all(N.nowISO(), Math.max(1, Math.min(50, Number(n) || 10)));
++
++const REINTENTOS_MAX = 5;
++/* Lo que dice la nube de cada correo. `definitivo` = no vale la pena reintentar (destinatario mal formado). */
++function avisoResultado(id, ok, error = null, definitivo = false) {
++  const a = N.db.prepare('SELECT * FROM avisos_cola WHERE id = ?').get(id);
++  if (!a || a.estado !== 'pendiente') return null;
++  if (ok) {
++    N.db.prepare("UPDATE avisos_cola SET estado = 'enviado', enviado_en = ?, ultimo_error = NULL WHERE id = ?").run(N.nowISO(), id);
++    try { N.API.ordenAvisoAdd(a.orden_id, a.tipo, 'email'); } catch (e) { /* sin rastro: el correo salió igual */ }
++    try { N.API.ordenLog(a.orden_id, null, 'aviso', 'Correo «' + a.tipo + '» enviado a ' + a.para); } catch (e) { /* nada */ }
++    return 'enviado';
++  }
++  const intentos = (a.intentos || 0) + 1;
++  const msg = String(error || 'error desconocido').slice(0, 300);
++  if (definitivo || intentos >= REINTENTOS_MAX) {
++    N.db.prepare("UPDATE avisos_cola SET estado = 'fallo', intentos = ?, ultimo_error = ? WHERE id = ?").run(intentos, msg, id);
++    try { N.API.ordenLog(a.orden_id, null, 'aviso', 'Correo «' + a.tipo + '» NO enviado a ' + a.para + ': ' + msg); } catch (e) { /* nada */ }
++    return 'fallo';
++  }
++  const esperaMs = Math.min(3600000, 60000 * Math.pow(2, intentos - 1)); // 1, 2, 4, 8 min
++  N.db.prepare("UPDATE avisos_cola SET intentos = ?, ultimo_error = ?, proximo_intento = ? WHERE id = ?").run(intentos, msg, N.dentroDe(esperaMs), id);
++  return 'reintento';
++}
++
++const avisosCola = (n = 50) => N.db.prepare(`SELECT a.*, o.numero orden_numero, c.nombre cliente FROM avisos_cola a
++  JOIN ordenes o ON o.id = a.orden_id LEFT JOIN clientes c ON c.id = o.cliente_id ORDER BY a.id DESC LIMIT ?`).all(Math.max(1, Math.min(200, Number(n) || 50)));
++function avisoReintentar(id) { N.db.prepare("UPDATE avisos_cola SET estado = 'pendiente', intentos = 0, proximo_intento = NULL WHERE id = ? AND estado IN ('fallo','descartado')").run(id); return avisosCola(50); }
++function avisoDescartar(id) { N.db.prepare("UPDATE avisos_cola SET estado = 'descartado' WHERE id = ? AND estado IN ('pendiente','fallo')").run(id); return avisosCola(50); }
++function avisosResumen() {
++  const por = Object.fromEntries(N.db.prepare('SELECT estado, COUNT(*) n FROM avisos_cola GROUP BY estado').all().map((r) => [r.estado, r.n]));
++  let ultimo = null; try { ultimo = JSON.parse(N.API.configAll().avisos_ultimo || 'null'); } catch (e) { ultimo = null; }
++  return { pendientes: por.pendiente || 0, enviados: por.enviado || 0, fallos: por.fallo || 0, descartados: por.descartado || 0, ultimo, config: avisosConfig() };
++}
++
++/* Recordatorios de recogida: LISTO desde hace ≥ recordatorio_dias, sin recordatorio (de ninguna vía) en ese plazo. */
++function avisosRecordatoriosBarrer() {
++  const cfg = avisosConfig();
++  if (!cfg.auto || !cfg.tipos.recordatorio) return { encolados: 0 };
++  const tiempos = N.API.tallerTiempos ? N.API.tallerTiempos() : {};
++  const dias = Number(tiempos.recordatorio_dias || N.API.configAll().taller_recordatorio_dias) || 7;
++  const filas = N.db.prepare(`SELECT o.id, CAST(julianday('now','localtime') - julianday(o.almacenaje_desde) AS INTEGER) dias FROM ordenes o
++    WHERE o.estado = 'listo' AND o.almacenaje_desde IS NOT NULL AND julianday('now','localtime') - julianday(o.almacenaje_desde) >= ?
++    AND NOT EXISTS (SELECT 1 FROM ordenes_avisos v WHERE v.orden_id = o.id AND v.tipo = 'recordatorio' AND julianday('now','localtime') - julianday(v.enviado) < ?)
++    AND NOT EXISTS (SELECT 1 FROM avisos_cola q WHERE q.orden_id = o.id AND q.tipo = 'recordatorio' AND q.estado = 'pendiente')`).all(dias, dias);
++  let encolados = 0;
++  for (const f of filas) { try { if (avisoEncolar(f.id, 'recordatorio', { dias: f.dias }).encolado) encolados++; } catch (e) { /* una orden rara no para a las demás */ } }
++  return { encolados, revisadas: filas.length };
++}
++
++Object.assign(N.API, { avisosPlantillas, avisoRender, avisoEncolar, avisosPendientes, avisoResultado, avisosCola, avisoReintentar, avisoDescartar, avisosResumen, avisosRecordatoriosBarrer, AVISOS_TIPOS: TIPOS });
++module.exports = { TIPOS, PLANTILLAS, rellenar };
+diff --git a/electron/db/esquema.cjs b/electron/db/esquema.cjs
+index 72b0707..2110127 100644
+--- a/electron/db/esquema.cjs
++++ b/electron/db/esquema.cjs
+@@ -491,6 +491,13 @@ function init(userDataPath) {
+       if (nif) N.db.prepare('UPDATE tickets SET nif_emisor = ? WHERE nif_emisor IS NULL').run(nif);
+     }
+   }
++  /* v0.1.85 · ✉️ cola de avisos por correo (la manda electron/avisos.cjs por la nube) */
++  N.db.exec(`CREATE TABLE IF NOT EXISTS avisos_cola (
++    id INTEGER PRIMARY KEY, orden_id INTEGER NOT NULL REFERENCES ordenes(id), tipo TEXT NOT NULL, via TEXT NOT NULL DEFAULT 'email',
++    para TEXT NOT NULL, asunto TEXT NOT NULL, texto TEXT NOT NULL, estado TEXT NOT NULL DEFAULT 'pendiente',
++    intentos INTEGER NOT NULL DEFAULT 0, ultimo_error TEXT, proximo_intento TEXT,
++    creado TEXT DEFAULT (datetime('now','localtime')), enviado_en TEXT)`);
++  N.db.exec('CREATE INDEX IF NOT EXISTS ix_avisos_cola_estado ON avisos_cola(estado, proximo_intento)');
+   N.db.exec(`CREATE TABLE IF NOT EXISTS rma_proveedor (
+     id INTEGER PRIMARY KEY, orden_id INTEGER REFERENCES ordenes(id),
+     distribuidor_id INTEGER, producto_id INTEGER, num_serie TEXT, motivo TEXT,
+@@ -732,6 +739,7 @@ function init(userDataPath) {
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('taller_urgencia_plus','20')");
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('portal_url','')"); // v4.0.13 · dirección del portal del cliente (nube)
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('portal_token','')");
++  N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('avisos_email_auto','0')"); // v0.1.85 · ✉️ avisos automáticos por correo (apagados hasta que se active en Ajustes)
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('taller_abandono_dias','60')"); // aviso legal del dossier: 60/90 días
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('ia_url','')");    // v4.0.18 · motor IA externo (opcional)
+   N.db.exec("INSERT OR IGNORE INTO config (clave, valor) VALUES ('ia_clave','')");
+@@ -1306,6 +1314,7 @@ function resetOperativa({ incluirEmpleadosFichaje = false } = {}) {
+     DELETE FROM ordenes_lineas;
+     DELETE FROM informes_tecnicos;
+     DELETE FROM rma_proveedor;
++    DELETE FROM avisos_cola;            -- v0.1.85
+     DELETE FROM ordenes;
+     DELETE FROM contadores WHERE clave LIKE 'ordenes:%'; -- v0.1.80 · el contador de OT-año-N vuelve al 1 con la tabla
+     DELETE FROM equipos;                -- marcas/modelos (autocompletado aprendido) se CONSERVAN
+diff --git a/electron/db/taller-ordenes.cjs b/electron/db/taller-ordenes.cjs
+index 7b32cb9..b53647b 100644
+--- a/electron/db/taller-ordenes.cjs
++++ b/electron/db/taller-ordenes.cjs
+@@ -217,6 +217,7 @@ function ordenCrearTx(o, numero) {
+       o.tecnico_id || null, o.recibido_por || null,
+       crypto.randomBytes(12).toString('hex'), o.fecha_compromiso || null).lastInsertRowid;
+   ordenLog(id, o.tecnico_id, 'crear', 'Orden ' + numero + ' registrada');
++  try { if (N.API.avisoEncolar) N.API.avisoEncolar(id, 'recibido', { usuarioId: o.recibido_por || null }); } catch (e) { /* v0.1.85 · el aviso nunca bloquea la recepción */ }
+   return ordenGet(id);
+ }
+ 
+@@ -266,6 +267,7 @@ function ordenEstado(id, estado, usuarioId) {
+   // almacenaje y el abandono, dossier §G-bis) y arranca el contador de carencia
+   if (estado === 'listo' && o.estado !== 'listo') {
+     ordenAvisoAdd(id, 'listo', 'tpv');
++    try { if (N.API.avisoEncolar) N.API.avisoEncolar(id, 'listo', { usuarioId }); } catch (e) { /* v0.1.85 · correo automático si está activado */ }
+     if (!o.almacenaje_desde) N.db.prepare("UPDATE ordenes SET almacenaje_desde = datetime('now','localtime') WHERE id = ?").run(id);
+   }
+   ordenLog(id, usuarioId, 'estado', 'Pasa a ' + estado);
+@@ -386,6 +388,7 @@ function ordenPresupuestoEmitir(ordenId, usuarioId = null, extra = {}) {
+     return id;
+   });
+   const id = tx();
++  try { if (N.API.avisoEncolar) N.API.avisoEncolar(ordenId, 'presupuesto', { usuarioId }); } catch (e) { /* v0.1.85 · correo automático si está activado */ }
+   return { orden: ordenGet(ordenId), presupuesto: ordenPresupuestoGet(id) };
+ }
+ 
+@@ -927,6 +930,7 @@ function ordenAvisoTexto(ordenId) {
+     mailto: cli.email ? `mailto:${cli.email}?subject=${encodeURIComponent(`${eq} listo para recoger · orden ${o.numero}`)}&body=${encodeURIComponent(texto)}` : null,
+     pendiente: Math.round(pend * 100) / 100,
+     yaAvisado: (o.avisos || []).some((a) => a.via !== 'tpv'),
++    correoAuto: (() => { try { return !!N.db.prepare("SELECT 1 FROM avisos_cola WHERE orden_id = ? AND tipo = 'listo' AND estado IN ('pendiente','enviado') AND creado >= datetime('now','localtime','-10 minutes')").get(o.id); } catch (e) { return false; } })(), // v0.1.85 · la ventana de aviso dice si ya va un correo automático
+   };
+ }
+ 
+diff --git a/electron/main.cjs b/electron/main.cjs
+index bc96c95..c04c5ba 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -70,8 +70,7 @@ function createWindow() {
+       callback(d ? d.deviceId : null);
+     });
+   } catch (e) { /* sesiones antiguas: no crítico */ }
+-  // Candado de salida: cerrar la ventana requiere PIN con permiso de Ajustes.
+-  // El renderer muestra el modal (con avisos de caja abierta / backup pendiente).
++  // Candado de salida: cerrar la ventana requiere PIN con permiso de Ajustes. El renderer muestra el modal (con avisos de caja abierta / backup pendiente).
+   win.on('close', (e) => {
+     if (!permitirSalir) {
+       e.preventDefault();
+@@ -1331,6 +1330,7 @@ El técnico (Edmundo) te consulta desde el Panel de Desarrollador del propio TPV
+   handle('caja:cajonRegistro', (dias) => db.cajonRegistro(dias || 90));
+   handle('caja:cajon', (motivo, uid) => db.cajonAbrir(motivo, uid)); // legado (compat)
+   require('./main/agenda.cjs')(ctx); // v0.1.68 · AUD-04
++  require('./main/avisos.cjs')(ctx); // v0.1.85 · ✉️ avisos automáticos por correo (encola la capa de datos, envía la nube)
+   // v3.0.31 · la reserva que entra sola avisa en un lateral, sin cortar el cobro
+   reserva.alEntrarReservas((n) => {
+     try { if (win && !win.isDestroyed()) win.webContents.send('reserva:nuevas', n); } catch { /* ventana cerrada */ }
+diff --git a/electron/main/avisos.cjs b/electron/main/avisos.cjs
+new file mode 100644
+index 0000000..79d6665
+--- /dev/null
++++ b/electron/main/avisos.cjs
+@@ -0,0 +1,14 @@
++/* v0.1.85 · ✉️ Avisos automáticos por correo: canales del puente y el envío periódico. Dominio de main (AUD-04). */
++module.exports = (ctx) => {
++  const { handle, db } = ctx;
++  const avisos = require('../avisos.cjs');
++  handle('avisos:plantillas', () => db.avisosPlantillas());
++  handle('avisos:cola', (n) => ({ cola: db.avisosCola(n), resumen: db.avisosResumen() }));
++  handle('avisos:encolar', (ordenId, tipo, usuarioId) => db.avisoEncolar(ordenId, tipo, { forzar: true, usuarioId })); // botón manual: salta los interruptores, no la falta de email
++  handle('avisos:enviar-ahora', () => avisos.enviarPendientes(db));
++  handle('avisos:probar', (para) => avisos.probar(db, para));
++  handle('avisos:reintentar', (id) => db.avisoReintentar(id));
++  handle('avisos:descartar', (id) => db.avisoDescartar(id));
++  avisos.iniciar(db); // cada minuto, solo con el interruptor activado y la nube configurada
++  return avisos;
++};
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index 0a12b04..42007eb 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -147,4 +147,6 @@ contextBridge.exposeInMainWorld('doel', {
+     abrirUrl: call('sistema:abrir-url'), tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar'),
+     errorPantalla: call('sistema:error-pantalla') },
+   app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => on('app:cierre-solicitado', cb) },
++  avisos: { plantillas: call('avisos:plantillas'), cola: call('avisos:cola'), encolar: call('avisos:encolar'), enviarAhora: call('avisos:enviar-ahora'),
++    probar: call('avisos:probar'), reintentar: call('avisos:reintentar'), descartar: call('avisos:descartar') },
+ });
+diff --git a/electron/scripts/HUELLAS.json b/electron/scripts/HUELLAS.json
+index 57fcc27..8501b61 100644
+--- a/electron/scripts/HUELLAS.json
++++ b/electron/scripts/HUELLAS.json
+@@ -1,5 +1,5 @@
+ {
+-  "version": "0.1.84",
++  "version": "0.1.85",
+   "huellas": {
+     "agente_diag.py": "3268bef5c64db37ac4537f50ece5a8537fb2af9fa8ccc19a102d750957bf3b75",
+     "doel_tm_core.py": "ea6a00eb083ea9d306f85691fa2935da1d33baf21998b71490a826706ac7b88c",
+diff --git a/package.json b/package.json
+index 65fd56d..7ceeab4 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.84",
++  "version": "0.1.85",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/reserva-online/HUELLAS-NUBE.json b/reserva-online/HUELLAS-NUBE.json
+index af1148a..eb79c0f 100644
+--- a/reserva-online/HUELLAS-NUBE.json
++++ b/reserva-online/HUELLAS-NUBE.json
+@@ -1,14 +1,14 @@
+ {
+- "version": "0.1.81",
+- "fecha": "2026-10-18T10:37:33.166Z",
++ "version": "0.1.85",
++ "fecha": "2026-10-18T22:38:08.645Z",
+  "ficheros": {
+   "reserva-online/CARACTERISTICAS.txt": "7d7b2a593cffdccd2c3677e744172e106d9ff45e9912815f7d732ee837036d10",
+   "reserva-online/netlify.toml": "89a1bc38bac47f5193c2b76ac3e9024537544fd50cc81e7c4282ad39fae7bddc",
+-  "reserva-online/netlify/functions/api.mjs": "2500c1b67efa3604ff92b950ed9929d00a34e4e1386e944d4bf29f9c6c602833",
++  "reserva-online/netlify/functions/api.mjs": "e2457ae94f25bc7a33e05ebd0ae91bfcb1114d073162e5d0ba7354e38ca83b25",
+   "reserva-online/netlify/functions/crm-productos.mjs": "2d8ee16c80b99edcf9d786d1d68242d5e9d894bdc1afb0d2f1d707f55093de7f",
+   "reserva-online/netlify/functions/crm-proforma.mjs": "3541c1674932a683fbd408d38d973e183a12e08c95f25b191500fe58dbb5a65b",
+   "reserva-online/netlify/functions/doelprod.mjs": "bb56d1db787895238a60456e012028c4646073c2861cf670755c024a2377249d",
+-  "reserva-online/package.json": "9b6eb7f82b374a80a0a4e86cc42de01e80438d140c46b5a061cc43bbd24b21e8",
++  "reserva-online/package.json": "5d581d66390cbfb3c9ff0abd4fc38754f3df678fb7e33d76921e8f2c1a8bb537",
+   "reserva-online/public/demos/acceso.html": "6029207c180c2bf13551d62805d084da9fbbe49f5534d519bf5937cec1b16575",
+   "reserva-online/public/demos/comunes/alta-articulo.html": "c5ba1a4d00c22203b2606241f1b1df4867a738a96bb5bf31de7a310ca21ed9d4",
+   "reserva-online/public/demos/comunes/carta-qr.html": "1cce0090cb7cec96103e3fac603f06a5c51b0f421c6ceacf370d8faef593c30d",
+diff --git a/reserva-online/netlify/functions/api.mjs b/reserva-online/netlify/functions/api.mjs
+index cb0ff87..d4ce958 100644
+--- a/reserva-online/netlify/functions/api.mjs
++++ b/reserva-online/netlify/functions/api.mjs
+@@ -143,6 +143,59 @@ export const estadoDeCodigo = (c, ahora = Date.now()) => {
+   if (c.primera_actividad) return 'usado';
+   return 'sin_usar';
+ };
++/* ══════ v0.1.85 · ✉️ AVISOS AL CLIENTE POR CORREO ══════
++   El TPV deja los correos en cola y los manda aquí (Bearer del sync, mismo slug). La nube es la ÚNICA que tiene
++   el proveedor: variables de entorno en Netlify, nunca en el TPV.
++     DOEL_CORREO = smtp | brevo | resend        (si falta, se deduce de las claves presentes)
++     smtp:   DOEL_SMTP_HOST, DOEL_SMTP_PORT (465), DOEL_SMTP_USER, DOEL_SMTP_PASS   (Gmail: contraseña de aplicación)
++     brevo:  BREVO_API_KEY     resend: RESEND_API_KEY
++     DOEL_CORREO_DESDE = "Doel Taller <buzon@dominio>"  (opcional; por defecto el usuario SMTP)
++     DOEL_CORREO_TOPE_DIA = 200                           (tope de correos por negocio y día)
++   Tope por día en un blob (contador atómico), registro de los últimos 100 envíos con el correo enmascarado. */
++const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
++const aHtml = (t) => '<div style="font:15px/1.5 system-ui,Segoe UI,Arial,sans-serif;color:#111;white-space:pre-wrap">' + escHtml(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>') + '</div>';
++const enmascarar = (e) => (/@/.test(String(e || '')) ? String(e).replace(/^(.)[^@]*(@.*)$/, '$1***$2') : '***');
++const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,120}\.[^\s@]{2,}$/;
++function correoProveedor(env = process.env) {
++  const desde = String(env.DOEL_CORREO_DESDE || env.DOEL_SMTP_USER || '').trim();
++  const tipo = String(env.DOEL_CORREO || (env.DOEL_SMTP_HOST ? 'smtp' : env.BREVO_API_KEY ? 'brevo' : env.RESEND_API_KEY ? 'resend' : '')).trim().toLowerCase();
++  if (tipo === 'falso') return { tipo, desde: desde || 'pruebas@doel.local' };
++  if (tipo === 'smtp' && env.DOEL_SMTP_HOST && env.DOEL_SMTP_USER && env.DOEL_SMTP_PASS) return { tipo, host: env.DOEL_SMTP_HOST, port: Number(env.DOEL_SMTP_PORT) || 465, user: env.DOEL_SMTP_USER, pass: env.DOEL_SMTP_PASS, desde: desde || env.DOEL_SMTP_USER };
++  if (tipo === 'brevo' && env.BREVO_API_KEY && desde) return { tipo, clave: env.BREVO_API_KEY, desde };
++  if (tipo === 'resend' && env.RESEND_API_KEY && desde) return { tipo, clave: env.RESEND_API_KEY, desde };
++  return null;
++}
++const remitente = (p, negocio) => {
++  const nombre = String((negocio && negocio.nombre) || 'Doel Taller').replace(/["<>]/g, '').trim().slice(0, 60) || 'Doel Taller';
++  const m = /^(?:"?([^"<]*)"?\s*)?<([^>]+)>$/.exec(p.desde);
++  return m ? { nombre: (m[1] || '').trim() || nombre, email: m[2].trim() } : { nombre, email: p.desde };
++};
++async function correoEnviar(p, { para, asunto, texto, negocio }) {
++  const de = remitente(p, negocio);
++  const from = `"${de.nombre}" <${de.email}>`;
++  const responder = negocio && EMAIL_RE.test(String(negocio.responder || '')) ? String(negocio.responder).toLowerCase() : undefined;
++  if (p.tipo === 'falso') { await modificar(getStore('doel-avisos-falso'), 'enviados', (l) => [...l, { para, asunto, texto, from, responder: responder || null }], []); return; }
++  if (p.tipo === 'smtp') {
++    const nodemailer = (await import('nodemailer')).default; // import dinámico: solo se carga con SMTP (las baterías no lo necesitan)
++    const tr = nodemailer.createTransport({ host: p.host, port: p.port, secure: p.port === 465, auth: { user: p.user, pass: p.pass } });
++    await tr.sendMail({ from, to: para, subject: asunto, text: texto, html: aHtml(texto), replyTo: responder });
++    return;
++  }
++  if (p.tipo === 'brevo') {
++    const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': p.clave, 'content-type': 'application/json', accept: 'application/json' },
++      body: JSON.stringify({ sender: { name: de.nombre, email: de.email }, to: [{ email: para }], subject: asunto, textContent: texto, htmlContent: aHtml(texto), replyTo: responder ? { email: responder } : undefined }) });
++    if (!r.ok) throw new Error('Brevo HTTP ' + r.status + ': ' + (await r.text().catch(() => '')).slice(0, 200));
++    return;
++  }
++  if (p.tipo === 'resend') {
++    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: 'Bearer ' + p.clave, 'content-type': 'application/json' },
++      body: JSON.stringify({ from, to: [para], subject: asunto, text: texto, html: aHtml(texto), reply_to: responder }) });
++    if (!r.ok) throw new Error('Resend HTTP ' + r.status + ': ' + (await r.text().catch(() => '')).slice(0, 200));
++    return;
++  }
++  throw new Error('proveedor de correo desconocido: ' + p.tipo);
++}
++
+ const idxTocar = async (clave, fn) => {
+   try {
+     await modificar(getStore(IDX), 'negocios', (m) => { // v0.1.81 · dos locales sincronizando a la vez no se borran la ficha
+@@ -816,6 +869,36 @@ export default async (req) => {
+     return json({ ok: true, grupo: g, locales: Object.entries(locales).map(([sl, l]) => ({ slug: sl, resumen: l.resumen, subido: l.subido })) });
+   }
+ 
++  /* v0.1.85 · ✉️ el TPV manda los correos en cola (ver correoProveedor arriba) */
++  if (ruta === 'aviso-enviar' && req.method === 'POST') {
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401);
++    const body = await req.json().catch(() => ({}));
++    const lista = Array.isArray(body.avisos) ? body.avisos.slice(0, 20) : [];
++    if (!lista.length) return json({ error: 'sin avisos que enviar' }, 400);
++    const proveedor = correoProveedor();
++    if (!proveedor) return json({ error: 'La nube no tiene buzón configurado: variables DOEL_CORREO (smtp | brevo | resend) y sus claves en Netlify' }, 503);
++    const aStore = getStore('doel-avisos-' + (slug || 'defecto'));
++    const hoy = new Date().toISOString().slice(0, 10);
++    const TOPE_DIA = Number(process.env.DOEL_CORREO_TOPE_DIA) || 200;
++    const resultados = [];
++    for (const a of lista) {
++      const para = String(a.para || '').trim().toLowerCase();
++      const asunto = String(a.asunto || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 150);
++      const texto = String(a.texto || '').trim().slice(0, 6000);
++      if (!EMAIL_RE.test(para) || !asunto || !texto) { resultados.push({ id: a.id, ok: false, error: 'destinatario, asunto o texto no válidos', definitivo: true }); continue; }
++      let pasa = true;
++      await modificar(aStore, 'dia:' + hoy, (c) => { if ((c.n || 0) >= TOPE_DIA) { pasa = false; return undefined; } return { n: (c.n || 0) + 1 }; }, { n: 0 });
++      if (!pasa) { resultados.push({ id: a.id, ok: false, error: 'tope diario de correos alcanzado (' + TOPE_DIA + '): se reintenta mañana' }); continue; }
++      try { await correoEnviar(proveedor, { para, asunto, texto, negocio: body.negocio || {} }); resultados.push({ id: a.id, ok: true }); }
++      catch (e) { resultados.push({ id: a.id, ok: false, error: String((e && e.message) || e).slice(0, 300) }); }
++    }
++    try {
++      const ahora = new Date().toISOString();
++      await modificar(aStore, 'registro', (r) => [...resultados.map((x, i) => ({ cuando: ahora, para: enmascarar(lista[i].para), asunto: String(lista[i].asunto || '').slice(0, 80), ok: x.ok, error: x.error || null })), ...r].slice(0, 100), []);
++    } catch (e) { /* el registro nunca tumba el envío */ }
++    return json({ ok: true, proveedor: proveedor.tipo, resultados });
++  }
++
+   return json({ error: 'ruta desconocida' }, 404);
+ };
+ 
+diff --git a/reserva-online/package.json b/reserva-online/package.json
+index 3ffafc4..c61fc45 100644
+--- a/reserva-online/package.json
++++ b/reserva-online/package.json
+@@ -2,5 +2,5 @@
+   "name": "doel-reserva-online",
+   "private": true,
+   "description": "Micro-servicio de reserva online — Doel TPV Edición Barbería",
+-  "dependencies": { "@netlify/blobs": "^11.1.4" }
++  "dependencies": { "@netlify/blobs": "^11.1.4", "nodemailer": "^10.1.7" }
+ }
+diff --git a/reserva-online/public/version.txt b/reserva-online/public/version.txt
+index f2af436..73d7e3c 100644
+--- a/reserva-online/public/version.txt
++++ b/reserva-online/public/version.txt
+@@ -1,6 +1,6 @@
+ Doel TPV — nube de reservas
+-version: 0.1.81
+-empaquetado: 2026-10-18T10:37:33.102Z
++version: 0.1.85
++empaquetado: 2026-10-18T22:38:02.310Z
+ 
+ Si esta URL no muestra la version que esperas, el sitio esta desplegado
+ con un paquete anterior: vuelve a arrastrar la carpeta reserva-online/.
+diff --git a/src/components/Ajustes.jsx b/src/components/Ajustes.jsx
+index edabb52..0514055 100644
+--- a/src/components/Ajustes.jsx
++++ b/src/components/Ajustes.jsx
+@@ -8,7 +8,7 @@ import { Cobros } from './ajustes/cobros.jsx';
+ import { Empresa, HorarioEstablecimiento, VeriFactuAjustes } from './ajustes/empresa.jsx';
+ import { Usuarios } from './ajustes/usuarios.jsx';
+ import { EnlaceCrm, Sistema } from './ajustes/sistema.jsx';
+-import { MovilTecnico, PuestoRed, TallerCfg, TiemposCfg } from './ajustes/taller.jsx';
++import { MovilTecnico, PuestoRed, TallerCfg, TiemposCfg, AvisosCorreoCfg } from './ajustes/taller.jsx';
+ 
+ export default function Ajustes({ usuario, tabInicial = null, onTabUsada = null }) {
+   const [tab, setTab] = useState(tabInicial || 'cobros'); // v0.1.51 · Artículos ya no está aquí: Inventario → Productos
+@@ -28,7 +28,7 @@ export default function Ajustes({ usuario, tabInicial = null, onTabUsada = null
+         ))}
+       </div>
+       {tab === 'cobros' && <Cobros />}
+-      {tab === 'taller' && <><TallerCfg /><MovilTecnico /><PuestoRed /></>}
++      {tab === 'taller' && <><TallerCfg /><AvisosCorreoCfg />{/* v0.1.85 */}<MovilTecnico /><PuestoRed /></>}
+       {tab === 'tiempos' && <TiemposCfg usuario={usuario} />}
+       {tab === 'impresoras' && <Impresoras />}
+       {tab === 'empresa' && <><Empresa /><HorarioEstablecimiento /><VeriFactuAjustes /></>}
+diff --git a/src/components/Taller.jsx b/src/components/Taller.jsx
+index 445127d..91a07b7 100644
+--- a/src/components/Taller.jsx
++++ b/src/components/Taller.jsx
+@@ -1387,6 +1387,7 @@ function AvisoListo({ a, onHecho }) {
+         <p style={{ color: '#9db4c6', fontSize: 13, marginTop: -6 }}>
+           El aviso queda registrado en la orden y arranca la carencia del almacenaje. Puedes retocar el texto antes de enviarlo.
+         </p>
++        {a.correoAuto && <p style={{ color: '#62E70E', fontSize: 12.5, marginTop: -4 }}>✉️ Ya va un correo automático a {a.email} (Ajustes → Avisos por correo). WhatsApp o llamada, si además quieres.</p>}
+         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} style={{ width: '100%', minHeight: 96, fontSize: 13.5 }} />
+         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+           {wa
+diff --git a/src/components/ajustes/taller.jsx b/src/components/ajustes/taller.jsx
+index 804dd09..647eb17 100644
+--- a/src/components/ajustes/taller.jsx
++++ b/src/components/ajustes/taller.jsx
+@@ -502,3 +502,118 @@ export function HotelWebCfg() {
+     </Plegable>
+   );
+ }
++
++/* ============ v0.1.85 · ✉️ Avisos automáticos al cliente por correo ============
++   El TPV encola el correo (recibido, presupuesto, listo, recordatorio) y lo manda por la nube de Doel con el
++   mismo token del portal. El proveedor de correo (Gmail por SMTP, Brevo o Resend) se configura en Netlify, no aquí. */
++const AVISOS_TIPOS = [['recibido', 'Al recibir el equipo'], ['presupuesto', 'Al emitir el presupuesto'], ['listo', 'Al pasar a LISTO'], ['recordatorio', 'Recordatorio de recogida (según los plazos del tablero)']];
++export function AvisosCorreoCfg() {
++  const [cfg, setCfg] = useState(null);
++  const [pl, setPl] = useState(null);
++  const [cola, setCola] = useState(null);
++  const [editando, setEditando] = useState(null);
++  const [prueba, setPrueba] = useState('');
++  const [aviso, setAviso] = useState('');
++  const [ocupado, setOcupado] = useState(false);
++  const cargar = async () => {
++    try { setCfg(await api.config.all()); } catch (e) { /* sin config: nada */ }
++    try { setPl(await api.avisos.plantillas()); } catch (e) { setPl(null); }
++    try { setCola(await api.avisos.cola(20)); } catch (e) { setCola(null); }
++  };
++  useEffect(() => { cargar(); }, []);
++  if (!cfg) return null;
++  const on = (k, def = '1') => (cfg[k] ?? def) !== '0';
++  const set = (k, v) => setCfg({ ...cfg, [k]: v });
++  const plantillas = (pl && pl.plantillas) || {};
++  const resumen = cola && cola.resumen;
++  const guardar = async () => {
++    setAviso('');
++    try {
++      await api.config.set('avisos_email_auto', on('avisos_email_auto', '0') ? '1' : '0');
++      await api.config.set('avisos_email_modo', cfg.avisos_email_modo === 'preferencia' ? 'preferencia' : 'todos');
++      await api.config.set('avisos_email_responder', String(cfg.avisos_email_responder ?? '').trim());
++      for (const [t] of AVISOS_TIPOS) {
++        await api.config.set('avisos_email_' + t, on('avisos_email_' + t) ? '1' : '0');
++        await api.config.set('avisos_asunto_' + t, String(cfg['avisos_asunto_' + t] ?? '').trim());
++        await api.config.set('avisos_texto_' + t, String(cfg['avisos_texto_' + t] ?? '').trim());
++      }
++      setAviso('Guardado. El envío corre solo cada minuto con el interruptor activado y la nube configurada.');
++      cargar();
++    } catch (e) { setAviso('✗ ' + (e.message || e)); }
++  };
++  const accion = async (fn, okTexto) => { setOcupado(true); setAviso(''); try { const r = await fn(); setAviso(okTexto(r)); } catch (e) { setAviso('✗ ' + (e.message || e)); } finally { setOcupado(false); cargar(); } };
++  const nubeOk = !!(String(cfg.portal_url || '').trim() && String(cfg.portal_token || '').trim());
++  const ESTADO = { pendiente: ['#FFC24D', 'en cola'], enviado: ['#62E70E', 'enviado'], fallo: ['#FF7A7A', 'fallo'], descartado: ['#5d7e99', 'descartado'] };
++  return (
++    <Plegable titulo="✉️ Avisos automáticos al cliente por correo" maxWidth={820}>
++      <p style={{ color: '#9db4c6', fontSize: 13, marginBottom: 10 }}>
++        El programa manda un correo al cliente en los momentos que elijas, con el texto de la plantilla y los datos de la orden.
++        Solo a clientes con email; quien tiene «📞 Llamada» como contacto preferido no recibe correos automáticos. Cada envío queda
++        registrado en la orden como aviso (vale como prueba para el plazo de almacenaje). Sale por la nube de Doel con el mismo
++        token del portal; el buzón que envía se configura en Netlify.
++      </p>
++      {!nubeOk && <p style={{ color: '#FFC24D', fontSize: 12.5, marginBottom: 6 }}>⚠ Falta la dirección o el token de la nube (🔧 Taller — infraestructura, más abajo). Sin eso los correos se quedan en cola.</p>}
++      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, marginBottom: 8 }}>
++        <input type="checkbox" checked={on('avisos_email_auto', '0')} onChange={(e) => set('avisos_email_auto', e.target.checked ? '1' : '0')} />
++        <b>Enviar avisos automáticos por correo</b>
++      </label>
++      <div className="fila"><label>A quién</label>
++        <select value={cfg.avisos_email_modo === 'preferencia' ? 'preferencia' : 'todos'} onChange={(e) => set('avisos_email_modo', e.target.value)}>
++          <option value="todos">A todo cliente con email (salvo contacto preferido «Llamada»)</option>
++          <option value="preferencia">Solo a quien tenga «✉️ Email» como contacto preferido</option>
++        </select></div>
++      <div className="fila"><label>Responder a (opcional)</label>
++        <input style={{ width: 300 }} inputMode="email" placeholder="taller@tu-dominio.es" value={cfg.avisos_email_responder ?? ''}
++          onChange={(e) => set('avisos_email_responder', e.target.value)} /></div>
++      <p style={{ color: '#62E70E', fontSize: 12, letterSpacing: 2, margin: '12px 0 6px' }}>CUÁNDO SE AVISA</p>
++      {AVISOS_TIPOS.map(([t, titulo]) => (
++        <div key={t} style={{ border: '1px solid #1d3a55', borderRadius: 10, padding: '8px 10px', marginBottom: 6 }}>
++          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
++            <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, flex: 1 }}>
++              <input type="checkbox" checked={on('avisos_email_' + t)} onChange={(e) => set('avisos_email_' + t, e.target.checked ? '1' : '0')} /> {titulo}
++            </label>
++            {plantillas[t] && plantillas[t].personalizada && <span style={{ color: '#FFC24D', fontSize: 11.5 }}>plantilla propia</span>}
++            <button className="btn-fantasma" style={{ fontSize: 12 }} onClick={() => setEditando(editando === t ? null : t)}>{editando === t ? 'Cerrar' : '✏️ Plantilla'}</button>
++          </div>
++          {editando === t && plantillas[t] && (
++            <div style={{ marginTop: 8 }}>
++              <div className="fila"><label>Asunto</label>
++                <input style={{ width: '100%' }} value={cfg['avisos_asunto_' + t] ?? ''} placeholder={plantillas[t].porDefecto.asunto}
++                  onChange={(e) => set('avisos_asunto_' + t, e.target.value)} /></div>
++              <textarea style={{ width: '100%', minHeight: 150, fontSize: 13 }} value={cfg['avisos_texto_' + t] ?? ''} placeholder={plantillas[t].porDefecto.texto}
++                onChange={(e) => set('avisos_texto_' + t, e.target.value)} />
++              <p style={{ color: '#5d7e99', fontSize: 11.5, margin: '4px 0' }}>Vacío = plantilla de fábrica (la que se ve en gris). Campos: {(pl.campos || []).join(' ')}</p>
++              <button className="btn-fantasma" style={{ fontSize: 12 }} onClick={() => setCfg({ ...cfg, ['avisos_asunto_' + t]: '', ['avisos_texto_' + t]: '' })}>↺ Restaurar la de fábrica</button>
++            </div>
++          )}
++        </div>
++      ))}
++      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
++        <button className="btn-verde" onClick={guardar}>Guardar</button>
++        <input style={{ width: 240 }} inputMode="email" placeholder="tu@correo.es" value={prueba} onChange={(e) => setPrueba(e.target.value)} />
++        <button className="btn-fantasma" disabled={ocupado || !nubeOk || !prueba} onClick={() => accion(() => api.avisos.probar(prueba), (r) => `✓ Prueba enviada a ${r.para} (${r.proveedor || 'nube'}). Mira la bandeja de entrada y el spam.`)}>📨 Enviar correo de prueba</button>
++        <button className="btn-fantasma" disabled={ocupado || !nubeOk} onClick={() => accion(() => api.avisos.enviarAhora(), (r) => `✓ Enviados ${r.enviados} · reintentos ${r.reintentos} · fallos ${r.fallos} · quedan ${r.pendientes}`)}>🚀 Enviar la cola ahora</button>
++      </div>
++      {aviso && <p style={{ color: aviso.startsWith('✗') ? '#FF7A7A' : '#62E70E', fontSize: 12, marginTop: 6 }}>{aviso}</p>}
++      {resumen && resumen.ultimo && <p style={{ color: resumen.ultimo.ok ? '#62E70E' : '#FF7A7A', fontSize: 12, marginTop: 6 }}>
++        Último envío: {resumen.ultimo.cuando ? resumen.ultimo.cuando.slice(0, 19).replace('T', ' ') : ''} — {resumen.ultimo.ok ? `OK (${resumen.ultimo.enviados} enviados, ${resumen.ultimo.fallos} fallos)` : resumen.ultimo.error}</p>}
++      {cola && cola.cola && cola.cola.length > 0 && (
++        <div style={{ marginTop: 10 }}>
++          <p style={{ color: '#62E70E', fontSize: 12, letterSpacing: 2, margin: '8px 0 6px' }}>ÚLTIMOS CORREOS · en cola {resumen.pendientes} · enviados {resumen.enviados} · fallos {resumen.fallos}</p>
++          <div style={{ maxHeight: 260, overflow: 'auto', fontSize: 12.5 }}>
++            {cola.cola.map((a) => (
++              <div key={a.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #112a3f' }}>
++                <span style={{ color: (ESTADO[a.estado] || ESTADO.pendiente)[0], minWidth: 72 }}>● {(ESTADO[a.estado] || ESTADO.pendiente)[1]}</span>
++                <span style={{ minWidth: 110 }}><b>{a.orden_numero}</b> · {a.tipo}</span>
++                <span style={{ flex: 1, color: '#9db4c6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.asunto}>{a.para} — {a.asunto}</span>
++                {a.ultimo_error && <span style={{ color: '#FF7A7A', fontSize: 11.5, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.ultimo_error}>{a.ultimo_error}</span>}
++                {(a.estado === 'fallo' || a.estado === 'descartado') && <button className="btn-fantasma" style={{ fontSize: 11.5 }} onClick={() => accion(() => api.avisos.reintentar(a.id), () => 'De vuelta a la cola')}>↻</button>}
++                {(a.estado === 'pendiente' || a.estado === 'fallo') && <button className="btn-fantasma" style={{ fontSize: 11.5 }} onClick={() => accion(() => api.avisos.descartar(a.id), () => 'Descartado')}>✕</button>}
++              </div>
++            ))}
++          </div>
++        </div>
++      )}
++    </Plegable>
++  );
++}
+diff --git a/tools/empaquetar-nube.cjs b/tools/empaquetar-nube.cjs
+index 9de56f1..9b69cb0 100644
+--- a/tools/empaquetar-nube.cjs
++++ b/tools/empaquetar-nube.cjs
+@@ -40,6 +40,10 @@ fs.writeFileSync('reserva-online/public/version.txt', sello + (extra ? extra + '
+ // 2 · zip limpio (se rehace entero para que no arrastre restos)
+ const tmp = fs.mkdtempSync('/tmp/doel-nube-');
+ execFileSync('cp', ['-r', 'reserva-online', tmp]);
++/* v0.1.85 · las funciones llevan dependencias (nodemailer, @netlify/blobs): el ZIP de arrastrar no pasa por `npm install`
++   en Netlify, así que van DENTRO del zip (node_modules de producción); el bundler esbuild de Netlify las empaqueta. */
++try { execFileSync('npm', ['install', '--omit=dev', '--no-audit', '--no-fund', '--ignore-scripts', '--no-package-lock'], { cwd: path.join(tmp, 'reserva-online'), stdio: 'pipe' }); }
++catch (e) { console.error('No se pudieron instalar las dependencias de la nube: ' + (e.stderr || e.message)); process.exit(1); }
+ // v5.0.64 · sustituir {{VERSION}} en la COPIA temporal (el fuente conserva el marcador)
+ try {
+   const mvTmp = path.join(tmp, 'reserva-online/public/movil.html');
+diff --git a/tools/test-avisos.cjs b/tools/test-avisos.cjs
+new file mode 100644
+index 0000000..d3c0488
+--- /dev/null
++++ b/tools/test-avisos.cjs
+@@ -0,0 +1,130 @@
++/* v0.1.85 · ✉️ Avisos automáticos al cliente por correo.
++   1 · la capa de datos encola (reglas: interruptores, email, preferencia, repetidos, plantillas, recordatorios)
++   2 · el proceso principal envía por la nube (resultados, reintentos, sin red, prueba)
++   3 · la nube (api.mjs) manda con el proveedor configurado (validación, tope diario, registro)   4 · el cableado */
++const fs = require('fs'); const os = require('os'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const dir = path.join(os.tmpdir(), 'doel-test-avisos'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
++const db = require('../electron/db.cjs'); db.init(dir);
++const raw = () => require('better-sqlite3')(db.rutaBD());
++db.saveEmpresa({ nombre: 'Taller Prueba SL', nif: 'B76333333', telefono: '922 00 00 00' });
++const admin = db.login('1234');
++db.configSet('portal_url', 'https://doel-reservas.netlify.app'); db.configSet('portal_token', 'tok-prueba'); db.configSet('reserva_slug', 'demo');
++const alta = (c) => { const r = db.clienteSave(c); const id = r && typeof r === 'object' ? (r.id || (r.cliente && r.cliente.id)) : r; return { id: Number(id) }; };
++const cli = alta({ nombre: 'Ana Correo', telefono: '699000111', email: 'Ana@Ejemplo.es', contacto_pref: 'whatsapp' });
++const cliSin = alta({ nombre: 'Pepe Sinmail', telefono: '699000222' });
++const cliTel = alta({ nombre: 'Luis Llamada', telefono: '699000333', email: 'luis@ejemplo.es', contacto_pref: 'llamada' });
++const cliPref = alta({ nombre: 'Eva Email', telefono: '699000444', email: 'eva@ejemplo.es', contacto_pref: 'email' });
++const eq = (c, serie) => db.equipoGuardar({ cliente_id: c.id, tipo: 'portatil', marca: 'Lenovo', modelo: 'T14', num_serie: serie });
++const cola = () => raw().prepare('SELECT * FROM avisos_cola ORDER BY id').all();
++
++console.log('1 · La capa de datos encola');
++const o0 = db.ordenCrear({ cliente_id: cli.id, equipo_id: eq(cli, 'S0'), averia_declarada: 'No enciende', recibido_por: admin.id });
++t('1a. con el interruptor apagado (por defecto) no se encola nada', cola().length === 0 && db.avisoEncolar(o0.id, 'listo').motivo === 'desactivado');
++db.configSet('avisos_email_auto', '1');
++const o1 = db.ordenCrear({ cliente_id: cli.id, equipo_id: eq(cli, 'S1'), averia_declarada: 'Pantalla rota', recibido_por: admin.id });
++let c = cola();
++t('1b. al recibir un equipo se encola «recibido» al email del cliente (en minúsculas), con el número de orden en el asunto', c.length === 1 && c[0].tipo === 'recibido' && c[0].para === 'ana@ejemplo.es' && c[0].asunto.includes(o1.numero) && c[0].estado === 'pendiente', JSON.stringify(c.map((x) => [x.tipo, x.para, x.asunto])));
++t('1c. el texto lleva nombre, equipo, taller y el enlace del portal, y no quedan campos sin rellenar', /Hola Ana/.test(c[0].texto) && /Lenovo T14/.test(c[0].texto) && /Taller Prueba SL/.test(c[0].texto) && /portal\.html\?n=demo/.test(c[0].texto) && !/\{[a-z_]+\}/.test(c[0].texto));
++t('1d. queda rastro en el log de la orden', db.ordenGet(o1.id).log.some((l) => /Correo «recibido» en cola/.test(l.detalle)));
++t('1e. sin email → sin_email; contacto preferido «llamada» → prefiere_llamada', db.avisoEncolar(db.ordenCrear({ cliente_id: cliSin.id, equipo_id: eq(cliSin, 'S2') }).id, 'listo').motivo === 'sin_email' && db.avisoEncolar(db.ordenCrear({ cliente_id: cliTel.id, equipo_id: eq(cliTel, 'S3') }).id, 'listo').motivo === 'prefiere_llamada');
++t('1f. la misma orden y tipo pendiente no se repite', db.avisoEncolar(o1.id, 'recibido').motivo === 'repetido');
++db.configSet('avisos_email_modo', 'preferencia');
++const oPref = db.ordenCrear({ cliente_id: cliPref.id, equipo_id: eq(cliPref, 'S4') });
++t('1g. en modo «preferencia» solo quien tiene Email como contacto preferido', cola().some((x) => x.orden_id === oPref.id) && db.avisoEncolar(o1.id, 'listo').motivo === 'preferencia');
++db.configSet('avisos_email_modo', 'todos');
++db.configSet('avisos_email_presupuesto', '0');
++db.ordenLineaAdd(o1.id, { tipo: 'pieza', descripcion: 'Pantalla 14"', cantidad: 1, precio: 120 }, admin.id);
++db.ordenPresupuestoEmitir(o1.id, admin.id);
++t('1h. con «presupuesto» desactivado, emitirlo no encola', !cola().some((x) => x.tipo === 'presupuesto'));
++db.configSet('avisos_email_presupuesto', '1');
++db.ordenPresupuestoEmitir(o1.id, admin.id);
++const pres = cola().find((x) => x.tipo === 'presupuesto');
++t('1i. activado, el presupuesto lleva las líneas y el total', pres && /Pantalla 14"/.test(pres.texto) && /TOTAL: 120,00 €/.test(pres.texto) && /120,00 €/.test(pres.asunto), pres && pres.texto.slice(0, 200));
++db.ordenEstado(o1.id, 'listo', admin.id);
++const listo = cola().find((x) => x.tipo === 'listo' && x.orden_id === o1.id);
++t('1j. al pasar a LISTO se encola «listo» y la ventana de aviso lo sabe (correoAuto)', !!listo && db.ordenAvisoTexto(o1.id).correoAuto === true);
++db.configSet('avisos_asunto_listo', 'Ya puede venir a por {equipo}'); db.configSet('avisos_texto_listo', 'Hola {nombre}: {equipo} listo. {taller}');
++const r2 = db.avisoRender('listo', o1.id);
++t('1k. las plantillas de config mandan sobre las de fábrica; vacías = fábrica', r2.asunto === 'Ya puede venir a por Lenovo T14' && r2.texto === 'Hola Ana: Lenovo T14 listo. Taller Prueba SL' && db.avisosPlantillas().plantillas.listo.personalizada === true && (db.configSet('avisos_asunto_listo', ''), db.configSet('avisos_texto_listo', ''), db.avisosPlantillas().plantillas.listo.personalizada === false));
++raw().prepare("UPDATE ordenes SET almacenaje_desde = datetime('now','localtime','-10 days') WHERE id = ?").run(o1.id);
++db.configSet('taller_recordatorio_dias', '7');
++const b1 = db.avisosRecordatoriosBarrer(); const b2 = db.avisosRecordatoriosBarrer();
++const rec = cola().find((x) => x.tipo === 'recordatorio');
++t('1l. el barrido encola UN recordatorio para lo que lleva listo más de los días del tablero, y no lo repite', b1.encolados === 1 && b2.encolados === 0 && rec && /10 días/.test(rec.texto), JSON.stringify([b1, b2]));
++t('1m. pendientes() respeta proximo_intento y el resumen cuenta por estado', db.avisosPendientes(50).length === cola().filter((x) => x.estado === 'pendiente').length && db.avisosResumen().pendientes === cola().filter((x) => x.estado === 'pendiente').length);
++
++console.log('\n2 · El proceso principal envía por la nube');
++const A = require('../electron/avisos.cjs');
++const llamadas = [];
++let respuesta = null, fallarRed = false;
++global.fetch = async (url, init) => { if (fallarRed) throw new Error('getaddrinfo ENOTFOUND'); llamadas.push({ url, init, body: JSON.parse(init.body) }); return typeof respuesta === 'function' ? respuesta(JSON.parse(init.body)) : respuesta; };
++const okJson = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
++(async () => {
++  const pend = db.avisosPendientes(50);
++  respuesta = (body) => okJson({ ok: true, proveedor: 'falso', resultados: body.avisos.map((a, i) => (i === 0 ? { id: a.id, ok: true } : i === 1 ? { id: a.id, ok: false, error: 'buzón caído' } : { id: a.id, ok: false, error: 'destinatario no válido', definitivo: true })) });
++  const r = await A.enviarPendientes(db);
++  const l = llamadas[0];
++  t('2a. llama a /api/aviso-enviar?n=slug con el Bearer del portal y los correos pendientes', /\/api\/aviso-enviar\?n=demo$/.test(l.url) && l.init.headers.authorization === 'Bearer tok-prueba' && l.body.avisos.length === pend.length && l.body.negocio.nombre === 'Taller Prueba SL');
++  const [a0, a1, a2] = pend;
++  const f = (id) => raw().prepare('SELECT * FROM avisos_cola WHERE id = ?').get(id);
++  t('2b. ok → enviado, con aviso «email» en la orden y rastro en el log', f(a0.id).estado === 'enviado' && !!f(a0.id).enviado_en && db.ordenGet(a0.orden_id).avisos.some((v) => v.via === 'email' && v.tipo === a0.tipo) && db.ordenGet(a0.orden_id).log.some((x) => /Correo «.*» enviado a/.test(x.detalle)));
++  t('2c. error temporal → sigue pendiente con intentos=1 y próximo intento dentro de un minuto', f(a1.id).estado === 'pendiente' && f(a1.id).intentos === 1 && f(a1.id).ultimo_error === 'buzón caído' && f(a1.id).proximo_intento > db.avisosPendientes(50).length.toString() && !db.avisosPendientes(50).some((x) => x.id === a1.id));
++  t('2d. error definitivo (destinatario mal) → fallo sin reintentos', a2 ? f(a2.id).estado === 'fallo' : true);
++  t('2e. el resumen queda en config (avisos_ultimo)', r.enviados === 1 && r.reintentos === 1 && JSON.parse(db.configAll().avisos_ultimo).ok === true);
++  raw().prepare("UPDATE avisos_cola SET proximo_intento = NULL, intentos = 4 WHERE id = ?").run(a1.id);
++  respuesta = (body) => okJson({ ok: true, proveedor: 'falso', resultados: body.avisos.map((a) => ({ id: a.id, ok: false, error: 'buzón caído' })) });
++  await A.enviarPendientes(db);
++  t('2f. al quinto fallo pasa a «fallo»; reintentar() lo devuelve a la cola a cero', f(a1.id).estado === 'fallo' && (db.avisoReintentar(a1.id), f(a1.id).estado === 'pendiente' && f(a1.id).intentos === 0));
++  fallarRed = true; const antes = f(a1.id).intentos; let err = null;
++  try { await A.enviarPendientes(db); } catch (e) { err = e; }
++  t('2g. sin internet la llamada falla pero NO cuenta como intento', err && /ENOTFOUND/.test(err.message) && f(a1.id).intentos === antes && f(a1.id).estado === 'pendiente');
++  fallarRed = false; respuesta = okJson({ error: 'no autorizado' }, 401); err = null;
++  try { await A.enviarPendientes(db); } catch (e) { err = e; }
++  t('2h. un 401 lo explica en castellano (token del portal)', err && /token del portal/.test(err.message));
++  respuesta = (body) => okJson({ ok: true, proveedor: 'smtp', resultados: [{ id: 0, ok: true }] });
++  const pr = await A.probar(db, 'Yo@Ejemplo.es');
++  t('2i. probar() manda un único correo de prueba a la dirección indicada', pr.ok && pr.para === 'yo@ejemplo.es' && pr.proveedor === 'smtp' && llamadas[llamadas.length - 1].body.avisos[0].asunto.includes('Prueba de avisos'));
++  let e2 = null; try { await A.probar(db, 'nada'); } catch (e) { e2 = e; }
++  t('2j. una dirección mal formada no llega a la nube', e2 && /dirección de correo válida/.test(e2.message));
++  t('2k. descartar() saca un correo de la cola', (db.avisoDescartar(a1.id), f(a1.id).estado === 'descartado'));
++
++  console.log('\n3 · La nube manda con el proveedor configurado');
++  const RAIZ = path.join(os.tmpdir(), 'doel-nube-avisos'); fs.rmSync(RAIZ, { recursive: true, force: true }); fs.mkdirSync(RAIZ, { recursive: true });
++  require('./_blobs-falso.cjs').escribir(RAIZ);
++  fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
++  fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
++  process.env.DOEL_SYNC_TOKEN = 'clave-sync'; process.env.DOEL_ADMIN_TOKEN = 'clave-panel'; process.env.DOEL_CORREO = 'falso'; process.env.DOEL_CORREO_DESDE = 'Taller Prueba <avisos@doel.local>'; process.env.DOEL_CORREO_TOPE_DIA = '3';
++  delete global.fetch; // la función usa el fetch real de Node (no lo llama con el proveedor falso)
++  const { default: handler } = await import('file://' + path.join(RAIZ, 'api.mjs'));
++  const { __stores } = await import('file://' + path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'));
++  const call = (body, bearer = 'clave-sync') => handler(new Request('http://nube.local/api/aviso-enviar?n=demo', { method: 'POST', headers: { 'content-type': 'application/json', 'x-nf-client-connection-ip': '1.2.3.4', ...(bearer ? { authorization: 'Bearer ' + bearer } : {}) }, body: JSON.stringify(body) }));
++  const j = async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) });
++  const leer = (store, k) => { const m = __stores.get(store); const e = m && m.get(k); return e ? JSON.parse(e.v) : null; };
++  t('3a. sin el Bearer del sync → 401; sin avisos → 400', (await call({ avisos: [{ para: 'a@b.es' }] }, null)).status === 401 && (await call({ avisos: [] })).status === 400);
++  const r3 = await j(await call({ negocio: { nombre: 'Taller "Prueba" SL', responder: 'taller@ejemplo.es' }, avisos: [{ id: 1, para: 'Ana@Ejemplo.es', asunto: 'Hola\r\nInyectado', texto: 'Texto con enlace https://doel-reservas.netlify.app/portal.html' }, { id: 2, para: 'sin-arroba', asunto: 'x', texto: 'y' }] }));
++  const env = leer('doel-avisos-falso', 'enviados') || [];
++  t('3b. manda el válido y marca el inválido como definitivo', r3.status === 200 && r3.proveedor === 'falso' && r3.resultados.length === 2 && r3.resultados[0].ok === true && r3.resultados[1].ok === false && r3.resultados[1].definitivo === true, JSON.stringify(r3));
++  t('3c. remitente con el nombre del negocio sin comillas raras, destinatario en minúsculas, asunto sin saltos de línea y responder-a', env.length === 1 && env[0].from === '"Taller Prueba" <avisos@doel.local>' && env[0].para === 'ana@ejemplo.es' && env[0].asunto === 'Hola Inyectado' && env[0].responder === 'taller@ejemplo.es', JSON.stringify(env[0]));
++  await call({ avisos: [{ id: 3, para: 'b@ejemplo.es', asunto: 'a', texto: 'b' }, { id: 4, para: 'c@ejemplo.es', asunto: 'a', texto: 'b' }] });
++  const r4 = await j(await call({ avisos: [{ id: 5, para: 'd@ejemplo.es', asunto: 'a', texto: 'b' }] }));
++  t('3d. tope diario por negocio (DOEL_CORREO_TOPE_DIA=3): el cuarto no sale y lo dice, sin marcarlo definitivo', r4.resultados[0].ok === false && /tope diario/.test(r4.resultados[0].error) && !r4.resultados[0].definitivo && (leer('doel-avisos-falso', 'enviados') || []).length === 3);
++  const reg = leer('doel-avisos-demo', 'registro') || [];
++  t('3e. registro de envíos con el correo enmascarado (para el panel)', reg.length === 5 && reg.every((x) => /\*\*\*/.test(x.para)) && reg.filter((x) => x.ok).every((x) => /\*\*\*@/.test(x.para)) && reg.some((x) => x.ok) && reg.some((x) => !x.ok));
++  process.env.DOEL_CORREO = ''; delete process.env.DOEL_SMTP_HOST;
++  const r5 = await j(await call({ avisos: [{ id: 6, para: 'e@ejemplo.es', asunto: 'a', texto: 'b' }] }));
++  t('3f. sin buzón configurado en Netlify → 503 con la lista de variables', r5.status === 503 && /DOEL_CORREO/.test(r5.error));
++  const api = fs.readFileSync('reserva-online/netlify/functions/api.mjs', 'utf8');
++  t('3g. nodemailer solo se carga con SMTP (import dinámico) y está en package.json de la nube', /await import\('nodemailer'\)/.test(api) && !/^import .*nodemailer/m.test(api) && /"nodemailer"/.test(fs.readFileSync('reserva-online/package.json', 'utf8')));
++
++  console.log('\n4 · El cableado');
++  const C = require('../electron/canales.cjs'); const main = require('./_main-fuente.cjs')();
++  t('4a. canales avisos:* en la tabla (probar exige «ajustes») y con handle() en main/avisos.cjs', ['avisos:plantillas', 'avisos:cola', 'avisos:encolar', 'avisos:enviar-ahora', 'avisos:probar', 'avisos:reintentar', 'avisos:descartar'].every((c) => C.CANALES[c] && new RegExp("handle\\('" + c + "'").test(main)) && C.permisoDeCanal('avisos:probar') === 'ajustes' && fs.existsSync('electron/main/avisos.cjs') && /require\('\.\/main\/avisos\.cjs'\)\(ctx\)/.test(fs.readFileSync('electron/main.cjs', 'utf8')));
++  t('4b. el preload expone api.avisos y la pantalla de Ajustes monta AvisosCorreoCfg en la pestaña Taller', /avisos: \{ plantillas: call\('avisos:plantillas'\)/.test(fs.readFileSync('electron/preload.cjs', 'utf8')) && /<AvisosCorreoCfg \/>/.test(fs.readFileSync('src/components/Ajustes.jsx', 'utf8')) && /export function AvisosCorreoCfg/.test(fs.readFileSync('src/components/ajustes/taller.jsx', 'utf8')));
++  t('4c. la ventana de aviso manual avisa del correo automático; el reset operativo vacía la cola; el manual lo cuenta', /a\.correoAuto &&/.test(fs.readFileSync('src/components/Taller.jsx', 'utf8')) && /DELETE FROM avisos_cola;/.test(fs.readFileSync('electron/db/esquema.cjs', 'utf8')) && /Avisos automáticos por correo/.test(fs.readFileSync('MANUAL.md', 'utf8')));
++  t('4d. el envío automático arranca con el módulo de main y respeta el interruptor y la nube configurada', /avisos\.iniciar\(db\)/.test(fs.readFileSync('electron/main/avisos.cjs', 'utf8')) && /c\.avisos_email_auto === '1' && c\.portal_url && c\.portal_token/.test(fs.readFileSync('electron/avisos.cjs', 'utf8')));
++  console.log(`\n${ko === 0 ? '✅' : '❌'}  Avisos automáticos por correo: ${ok} OK · ${ko} fallos`);
++  process.exit(ko === 0 ? 0 : 1);
++})().catch((e) => { process.stdout.write('  ✗ batería rota: ' + (e && e.stack) + '\n'); process.exit(1); });
