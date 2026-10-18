@@ -1,0 +1,814 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index 2c3c3b1..be67bdd 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.80 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.81 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -101,7 +101,7 @@ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, s
+ 1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
+ `/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
+-numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
++numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) ✅ 0.1.81 (redesplegar `reserva-online/`) · 9 `usb.ids` fuera del bundle ·
+ 10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
+ 
+ ### Herramientas de verificación (el «ritual de entrega»)
+diff --git a/VERSION.md b/VERSION.md
+index 3ad0b42..0805e0b 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.81 | ☁️ **Nube sin escrituras perdidas (punto 8 del plan · CAL‑02).** Nuevo `modificar(store, clave, fn)` en `api.mjs`: todo leer‑modificar‑escribir sobre un blob JSON va con **escritura condicional** (`onlyIfMatch` con el etag leído, `onlyIfNew` si no existía) y se repite si otro escribió entre medias. Hasta ahora dos peticiones a la vez se pisaban en silencio: dos clientes reservando (una reserva desaparecía), el TPV drenando la cola del portal mientras un cliente mandaba un mensaje (mensaje perdido), un latido de diagnóstico borrando el código que el panel acababa de crear, dos locales de multitienda subiendo a la vez. Convertidos: índice de negocios, `sync`/`reservar`/`anular`, cola del portal (drenaje atómico), solicitudes del outlet, frenos por IP y del hotel, usuarios de demo, códigos de diagnóstico, multitienda. De paso: **el mismo hueco pedido dos veces a la vez** ya solo entra una (el otro recibe 409), y el tope de tres reservas por teléfono se mira **antes** de descontar el hueco (antes el hueco se perdía hasta la siguiente sync). **`negocio-borrar` borra todo lo del negocio** (reservas, portal del cliente, outlet y hotel; antes solo las reservas) y devuelve el detalle por almacén (RGPD). `@netlify/blobs` ^11 en `reserva-online/package.json` (las escrituras condicionales lo necesitan). Baterías: nuevo stub compartido `tools/_blobs-falso.cjs` con etags (las cuatro de la nube lo usan) y nueva `test-nube-concurrencia.cjs` (21). **Hay que redesplegar `reserva-online/`** (ZIP `doel-reservas-v0.1.81-netlify-drop.zip`). |
+ | 0.1.80 | 🗄️ **Esquema que dice la verdad (punto 7 del plan · CAL‑03).** Nueva tabla `contadores` y **número de orden por contador atómico** (`OT-AAAA-NNNN`): el `COUNT(*)+1` de antes repetía número en cuanto se borraba una orden del año (y dos puestos a la vez podían sacar el mismo); ahora además es **único** (`ux_ordenes_numero`; si una instalación trae repetidos heredados no se crea el índice, se apunta en config y Salud lo enseña en rojo). **FK declaradas** donde faltaban (`ordenes.tecnico_id/recibido_por/reparado_por → usuarios`, `ticket_id → tickets`, `orden_origen_id → ordenes`, `ordenes_lineas.producto_id → productos` y `tecnico_id → usuarios`, `ordenes_firmas.usuario_id/anulada_por → usuarios`), todas `ON DELETE SET NULL`: dar de baja un producto o un usuario no se bloquea, y un id inventado ya no entra (`foreign_keys` estaba en ON desde siempre); la migración reconstruye la tabla copiando también las columnas que esa instalación tenga de más. **Diez índices** nuevos (hijas de la orden por `orden_id`, `ordenes(cliente_id/equipo_id)`, `tickets(fecha_hora)`, `ticket_lineas(ticket_id)`). **`tickets.nif_emisor`**: el hash de la cadena usaba el NIF leído en vivo, así que corregir una letra del NIF en Ajustes invalidaba todos los tickets; ahora cada ticket guarda con qué NIF se emitió y se verifica con él (los anteriores se rellenan con el actual). Salud: nueva fila «Numeración de órdenes». El reset operativo pone el contador a cero. Nueva batería `test-esquema.cjs` (26: instalación nueva, numeración, migración desde una base vieja fabricada a propósito, Salud). |
+ | 0.1.79 | 🧱 **Robustez del quiosco (punto 6 del plan).** Cada vista va dentro de un **límite de error propio** (`src/components/LimiteVista.jsx`, montado en `App.jsx` con `key={vista}`): un `.map` sobre undefined en Informes ya no tira la barra lateral, el TPV ni la orden a medio escribir; la pantalla enseña «Esta pantalla ha fallado» con el mensaje y tres salidas (↻ Reintentar, 🏠 Volver al inicio, Reiniciar). El fallo, con vista, mensaje, pila y componente, se apunta en el **registro de eventos del mostrador** (tipo «pantalla», canal nuevo `sistema:error-pantalla`, `electron/robustez.cjs`: sin repetidos en un minuto y con tope de 40 por diez minutos). `src/errores.js` engancha `window.onerror` y las promesas sin `catch` (lo que no pasa por ningún límite: manejadores de botones, `setTimeout`) al mismo registro, una vez por fallo y minuto y 30 por sesión de pantalla; el límite raíz de `main.jsx` también informa. En el proceso principal, si la ventana **muere** (`render-process-gone`: GPU, memoria, driver) se apunta y se recarga sola; tres caídas en cinco minutos → se deja de recargar y se avisa; `unresponsive`/`responsive` quedan en el registro. Nueva batería `test-robustez.cjs` (26: monta el límite con jsdom, pulsa los botones, fuerza caídas con una ventana falsa). |
+ | 0.1.78 | 🔐 **Permiso por canal también en el mostrador (punto 5 del plan).** Nuevo `electron/sesion-local.cjs`: `auth:login` desde la pantalla de Electron abre una **sesión local** en el proceso principal (quién entró con PIN) y `auth:logout` la cierra; `handle()` pregunta en **cada llamada IPC** si el perfil de esa sesión puede con el canal, con la misma tabla (`canales.cjs`) y la misma regla (`permisos-canal.autorizado`) que el puesto en red. Lo que no exige permiso pasa siempre (lo que la pantalla lee antes de entrar); lo que lo exige, sin nadie dentro, no (salvo `licencia:activar`, que se hace con la app bloqueada); el perfil se relee de la base en cada llamada (baja o cambio de permisos → efecto inmediato). Las negativas quedan en el registro (`Denegado canal a usuario: motivo`) y llegan a la pantalla como error legible. Hasta ahora lo tapaba solo la barra: cualquier cosa que hablara con el puente podía llamar a `config:set` o `usuarios:save` con un técnico dentro. Nuevo canal **`auth:verificar`** (comprueba un PIN sin cambiar de usuario) para «quién abre la caja» en el TPV: antes pasaba por `auth:login` y **en el puesto en red cambiaba la sesión al encargado para el resto del día**. Nueva batería `test-permisos-ipc.cjs` (19). `@babel/parser`, `eslint`, `jsdom`, `esbuild` y `@netlify/blobs` pasan a `devDependencies`: las baterías y `limpiar-muertos` los necesitan y un `npm install` los borraba (Vite 8 ya no arrastra el parser). Los arneses de `test-permisos-canal` y `test-puesto-catalogo` solo evalúan la primera función de cada `handle()` (la variante IPC usa la sesión local). |
+diff --git a/package.json b/package.json
+index 102ecce..b3b7b4a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.80",
++  "version": "0.1.81",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/reserva-online/HUELLAS-NUBE.json b/reserva-online/HUELLAS-NUBE.json
+index 9522454..af1148a 100644
+--- a/reserva-online/HUELLAS-NUBE.json
++++ b/reserva-online/HUELLAS-NUBE.json
+@@ -1,14 +1,14 @@
+ {
+- "version": "0.1.73",
+- "fecha": "2026-10-17T15:37:58.508Z",
++ "version": "0.1.81",
++ "fecha": "2026-10-18T10:37:33.166Z",
+  "ficheros": {
+   "reserva-online/CARACTERISTICAS.txt": "7d7b2a593cffdccd2c3677e744172e106d9ff45e9912815f7d732ee837036d10",
+   "reserva-online/netlify.toml": "89a1bc38bac47f5193c2b76ac3e9024537544fd50cc81e7c4282ad39fae7bddc",
+-  "reserva-online/netlify/functions/api.mjs": "df32f457364535e30130268ce4714de6de824f4f58642d8a651e6f84e66b5f3d",
++  "reserva-online/netlify/functions/api.mjs": "2500c1b67efa3604ff92b950ed9929d00a34e4e1386e944d4bf29f9c6c602833",
+   "reserva-online/netlify/functions/crm-productos.mjs": "2d8ee16c80b99edcf9d786d1d68242d5e9d894bdc1afb0d2f1d707f55093de7f",
+   "reserva-online/netlify/functions/crm-proforma.mjs": "3541c1674932a683fbd408d38d973e183a12e08c95f25b191500fe58dbb5a65b",
+   "reserva-online/netlify/functions/doelprod.mjs": "bb56d1db787895238a60456e012028c4646073c2861cf670755c024a2377249d",
+-  "reserva-online/package.json": "87359b95058fece0ba5deecbe8233cbf4c0099633556029ee522ec292a67230b",
++  "reserva-online/package.json": "9b6eb7f82b374a80a0a4e86cc42de01e80438d140c46b5a061cc43bbd24b21e8",
+   "reserva-online/public/demos/acceso.html": "6029207c180c2bf13551d62805d084da9fbbe49f5534d519bf5937cec1b16575",
+   "reserva-online/public/demos/comunes/alta-articulo.html": "c5ba1a4d00c22203b2606241f1b1df4867a738a96bb5bf31de7a310ca21ed9d4",
+   "reserva-online/public/demos/comunes/carta-qr.html": "1cce0090cb7cec96103e3fac603f06a5c51b0f421c6ceacf370d8faef593c30d",
+diff --git a/reserva-online/netlify/functions/api.mjs b/reserva-online/netlify/functions/api.mjs
+index 126d783..cb0ff87 100644
+--- a/reserva-online/netlify/functions/api.mjs
++++ b/reserva-online/netlify/functions/api.mjs
+@@ -19,7 +19,7 @@ const frenoStore = () => getStore('doel-freno');
+ const frenoClave = (ambito, req) => ambito + ':' + ipDe(req).replace(/[^0-9a-zA-Z.:]/g, '').slice(0, 64);
+ const frenoLeer = async (k) => { try { const f = (await frenoStore().get(k, { type: 'json' })) || { n: 0, desde: 0 }; return (Date.now() - f.desde > F_VENTANA) ? { n: 0, desde: 0 } : f; } catch (e) { return { n: 0, desde: 0 }; } };
+ const frenoBloqueado = async (ambito, req, tope = 10) => (await frenoLeer(frenoClave(ambito, req))).n >= tope;
+-const frenoApuntar = async (ambito, req) => { try { const k = frenoClave(ambito, req); const f = await frenoLeer(k); await frenoStore().setJSON(k, { n: f.n + 1, desde: f.desde || Date.now() }); } catch (e) { /* el freno nunca tumba el servicio */ } };
++const frenoApuntar = async (ambito, req) => { try { await modificar(frenoStore(), frenoClave(ambito, req), (f) => { const v = (Date.now() - f.desde > F_VENTANA) ? { n: 0, desde: 0 } : f; return { n: v.n + 1, desde: v.desde || Date.now() }; }, { n: 0, desde: 0 }); } catch (e) { /* el freno nunca tumba el servicio */ } }; // v0.1.81 · atómico
+ const frenoLimpiar = async (ambito, req) => { try { await frenoStore().setJSON(frenoClave(ambito, req), { n: 0, desde: 0 }); } catch (e) { /* nada */ } };
+ const RESP_FRENO = () => json({ error: 'Demasiados intentos desde esta conexión: espera diez minutos' }, 429);
+ /* v0.1.73 · SEC-19 · SESIONES FIRMADAS CON CADUCIDAD (12 h). Antes la sesión era un sha256 determinista de
+@@ -115,6 +115,25 @@ const CLAVE_MOVIL = 'DoelTPV-Movil-2026-LosRealejos-AccesoTemporal';
+ const IDX = 'doel-reserva-index';
+ const idxLeer = async () => (await getStore(IDX).get('negocios', { type: 'json' })) || {};
+ 
++/* v0.1.81 · punto 8 del plan · leer-modificar-escribir ATÓMICO sobre un blob JSON.
++   Hasta ahora dos peticiones a la vez (dos clientes reservando, el TPV drenando la cola del portal mientras un
++   cliente manda un mensaje, un latido de diagnóstico y el panel creando un código) se pisaban: la última escritura
++   ganaba y la otra se perdía sin ruido. Netlify Blobs admite escrituras condicionales: onlyIfMatch con el etag que
++   se leyó (u onlyIfNew si no existía). Si otro escribió entre medias, `modified` viene a false y se repite con lo
++   recién leído, hasta cinco veces. `fn(actual)` devuelve lo que hay que guardar, o undefined para no escribir. */
++async function modificar(store, clave, fn, defecto) {
++  for (let intento = 0; intento < 5; intento++) {
++    const leido = await store.getWithMetadata(clave, { type: 'json' });
++    const actual = leido && leido.data != null ? leido.data : (typeof defecto === 'function' ? defecto() : structuredClone(defecto));
++    const nuevo = await fn(actual);
++    if (nuevo === undefined) return actual;
++    const r = await store.setJSON(clave, nuevo, leido && leido.etag ? { onlyIfMatch: leido.etag } : { onlyIfNew: true });
++    if (!r || r.modified !== false) return nuevo;
++    await new Promise((res) => setTimeout(res, 15 + Math.random() * 60));
++  }
++  throw new Error('No se pudo guardar «' + clave + '»: demasiadas escrituras a la vez');
++}
++
+ // v5.0.77 · códigos de diagnóstico con seguimiento — función PURA y exportada a propósito,
+ // igual que estadisticas()/accionSugerida(): así la batería la prueba sin tocar Blobs.
+ const MS_EN_USO = 45000; // sin latido en los últimos 45s, se considera que ya no está dentro
+@@ -126,12 +145,12 @@ export const estadoDeCodigo = (c, ahora = Date.now()) => {
+ };
+ const idxTocar = async (clave, fn) => {
+   try {
+-    const st = getStore(IDX);
+-    const m = (await st.get('negocios', { type: 'json' })) || {};
+-    const n = m[clave] || { slug: clave, alta: new Date().toISOString(), reservas_total: 0, anuladas_total: 0 };
+-    fn(n);
+-    m[clave] = n;
+-    await st.setJSON('negocios', m);
++    await modificar(getStore(IDX), 'negocios', (m) => { // v0.1.81 · dos locales sincronizando a la vez no se borran la ficha
++      const n = m[clave] || { slug: clave, alta: new Date().toISOString(), reservas_total: 0, anuladas_total: 0 };
++      fn(n);
++      m[clave] = n;
++      return m;
++    }, {});
+   } catch (e) { /* silencio */ }
+ };
+ 
+@@ -151,18 +170,20 @@ export default async (req) => {
+     if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const body = await req.json().catch(() => ({}));
+     if (body.snapshot) await store.setJSON('snapshot', body.snapshot);
+-    const reservas = (await store.get('reservas', { type: 'json' })) || [];
+     const importadas = new Set(body.importadas || []);
+     const confirmadas = new Set(body.confirmadas || []); // v3.0.18 · estado visible
+-    let cambio = false;
+-    for (const r of reservas) {
+-      if (r.estado === 'nueva' && importadas.has(r.token)) { r.estado = 'importada'; r.importada_en = r.importada_en || new Date().toISOString(); cambio = true; }
+-      if (r.estado === 'importada' && confirmadas.has(r.token) && r.estado_salon !== 'confirmada') { r.estado_salon = 'confirmada'; r.confirmada_en = r.confirmada_en || new Date().toISOString(); cambio = true; }
+-    }
+-    // limpieza: reservas de hace más de 90 días fuera
+-    const corte = new Date(Date.now() - 90 * 86400000).toISOString();
+-    const vivas = reservas.filter((r) => (r.creada || '') > corte);
+-    if (cambio || vivas.length !== reservas.length) await store.setJSON('reservas', vivas);
++    let vivas = [];
++    await modificar(store, 'reservas', (reservas) => { // v0.1.81 · punto 8 · una reserva que entre mientras el TPV sincroniza ya no se pierde
++      let cambio = false;
++      for (const r of reservas) {
++        if (r.estado === 'nueva' && importadas.has(r.token)) { r.estado = 'importada'; r.importada_en = r.importada_en || new Date().toISOString(); cambio = true; }
++        if (r.estado === 'importada' && confirmadas.has(r.token) && r.estado_salon !== 'confirmada') { r.estado_salon = 'confirmada'; r.confirmada_en = r.confirmada_en || new Date().toISOString(); cambio = true; }
++      }
++      // limpieza: reservas de hace más de 90 días fuera
++      const corte = new Date(Date.now() - 90 * 86400000).toISOString();
++      vivas = reservas.filter((r) => (r.creada || '') > corte);
++      return (cambio || vivas.length !== reservas.length) ? vivas : undefined;
++    }, []);
+     const snapR = body.snapshot || null;
+     await idxTocar(slug || '(dedicado)', (n) => {
+       n.ultima_sync = new Date().toISOString();
+@@ -200,62 +221,70 @@ export default async (req) => {
+     if (await frenoBloqueado('reservar', req, 20)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 20 reservas / 10 min por IP
+     await frenoApuntar('reservar', req);
+     const b = await req.json().catch(() => ({}));
+-    const snap = (await store.get('snapshot', { type: 'json' })) || {};
+-    let recursoId = Number(b.recursoId) || null;
++    /* v0.1.81 · punto 8 · el tope por teléfono se mira ANTES de tocar el hueco (hasta ahora el hueco se descontaba
++       primero y la reserva se rechazaba después: hueco perdido hasta la siguiente sync) */
++    const telNuevo = String(b.telefono || '').replace(/\D/g, '').slice(0, 15);
++    if (telNuevo && ((await store.get('reservas', { type: 'json' })) || []).filter((r) => r.estado === 'nueva' && r.telefono === telNuevo).length >= 3) {
++      return json({ error: 'Ya tienes varias reservas pendientes con ese teléfono: espera a que el local las confirme' }, 429);
++    }
+     const hora = String(b.hora || ''), fecha = String(b.fecha || '');
+-    // v3.0.24 · uno o varios servicios: la cita debe CABER entera en huecos seguidos
+-    const ids = Array.isArray(b.servicioIds) && b.servicioIds.length
+-      ? b.servicioIds.map(Number) : (b.servicioId ? [Number(b.servicioId)] : []);
+-    const paso = Number(snap.paso) || 15;
+-    const dur = ids.reduce((a, id) => {
+-      const s = (snap.servicios || []).find((x) => x.id === id);
+-      return a + ((s && Number(s.duracion)) || 20);
+-    }, 0) || 20;
+-    const tramosNec = Math.ceil(dur / paso);
+     const sumaMin = (hhmm, n) => {
+       const t = Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)) + n;
+       return String(Math.floor(t / 60) % 24).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+     };
+-    if (!recursoId) { // "El primero que haya": el primer barbero con ese hueco libre
+-      const h = (snap.huecos || []).find((x) => x.fecha === fecha && x.huecos.includes(hora));
+-      recursoId = h ? h.recurso_id : null;
+-    }
+-    const dia = (snap.huecos || []).find((x) => x.fecha === fecha && x.recurso_id === recursoId);
+-    if (!dia || !dia.huecos.includes(hora)) return json({ error: 'Ese hueco acaba de ocuparse — elige otro, por favor' }, 409);
+-    // todos los tramos que ocupa la cita tienen que estar libres y seguidos
+-    const ocupa = [];
+-    for (let i = 0; i < tramosNec; i++) ocupa.push(sumaMin(hora, i * paso));
+-    if (!ocupa.every((h) => dia.huecos.includes(h))) {
+-      return json({ error: 'No hay tiempo suficiente a esa hora para lo que has elegido — prueba otra hora o menos servicios' }, 409);
+-    }
+-    dia.huecos = dia.huecos.filter((x) => !ocupa.includes(x)); // descuento optimista hasta la próxima sync
+-    await store.setJSON('snapshot', snap);
++    let recursoId = null, ids = [], dur = 20, rechazo = null;
++    /* el hueco se comprueba y se descuenta en UNA escritura condicional: dos clientes a la vez sobre el mismo
++       hueco → el segundo relee el snapshot y ve que ya no está (antes los dos se lo quedaban) */
++    await modificar(store, 'snapshot', (snap) => {
++      rechazo = null;
++      // v3.0.24 · uno o varios servicios: la cita debe CABER entera en huecos seguidos
++      ids = Array.isArray(b.servicioIds) && b.servicioIds.length ? b.servicioIds.map(Number) : (b.servicioId ? [Number(b.servicioId)] : []);
++      const paso = Number(snap.paso) || 15;
++      dur = ids.reduce((a, id) => { const s = (snap.servicios || []).find((x) => x.id === id); return a + ((s && Number(s.duracion)) || 20); }, 0) || 20;
++      const tramosNec = Math.ceil(dur / paso);
++      let rec = Number(b.recursoId) || null;
++      if (!rec) { // "El primero que haya": el primer barbero con ese hueco libre
++        const h = (snap.huecos || []).find((x) => x.fecha === fecha && x.huecos.includes(hora));
++        rec = h ? h.recurso_id : null;
++      }
++      const dia = (snap.huecos || []).find((x) => x.fecha === fecha && x.recurso_id === rec);
++      if (!dia || !dia.huecos.includes(hora)) { rechazo = json({ error: 'Ese hueco acaba de ocuparse — elige otro, por favor' }, 409); return undefined; }
++      // todos los tramos que ocupa la cita tienen que estar libres y seguidos
++      const ocupa = [];
++      for (let i = 0; i < tramosNec; i++) ocupa.push(sumaMin(hora, i * paso));
++      if (!ocupa.every((h) => dia.huecos.includes(h))) {
++        rechazo = json({ error: 'No hay tiempo suficiente a esa hora para lo que has elegido — prueba otra hora o menos servicios' }, 409); return undefined;
++      }
++      dia.huecos = dia.huecos.filter((x) => !ocupa.includes(x)); // descuento optimista hasta la próxima sync
++      recursoId = rec;
++      return snap;
++    }, {});
++    if (rechazo) return rechazo;
+     const token = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+-    const reservas = (await store.get('reservas', { type: 'json' })) || [];
+-    /* v0.1.73 · SEC-19 · un mismo teléfono no acumula más de 3 reservas vivas sin que el local las vea */
+-    const telNuevo = String(b.telefono || '').replace(/\D/g, '').slice(0, 15);
+-    if (telNuevo && reservas.filter((r) => r.estado === 'nueva' && r.telefono === telNuevo).length >= 3) {
+-      return json({ error: 'Ya tienes varias reservas pendientes con ese teléfono: espera a que el local las confirme' }, 429);
+-    }
+-    reservas.push({
+-      token, estado: 'nueva', creada: new Date().toISOString(),
+-      fecha, hora, recursoId, servicioId: ids[0] || null, servicioIds: ids, duracion: dur,
+-      nombre: String(b.nombre || '').trim().slice(0, 80),
+-      telefono: String(b.telefono || '').replace(/\D/g, '').slice(0, 15)
+-    });
+-    await store.setJSON('reservas', reservas);
++    await modificar(store, 'reservas', (reservas) => {
++      reservas.push({
++        token, estado: 'nueva', creada: new Date().toISOString(),
++        fecha, hora, recursoId, servicioId: ids[0] || null, servicioIds: ids, duracion: dur,
++        nombre: String(b.nombre || '').trim().slice(0, 80), telefono: telNuevo
++      });
++      return reservas;
++    }, []);
+     await idxTocar(slug || '(dedicado)', (n) => { n.reservas_total = (n.reservas_total || 0) + 1; n.ultima_reserva = new Date().toISOString(); });
+     return json({ ok: true, token });
+   }
+ 
+   if (ruta === 'anular' && req.method === 'POST') {
+     const { token } = await req.json().catch(() => ({}));
+-    const reservas = (await store.get('reservas', { type: 'json' })) || [];
+-    const r = reservas.find((x) => x.token === token);
+-    if (!r) return json({ error: 'Reserva no encontrada' }, 404);
+-    if (r.estado === 'nueva') r.estado = 'anulada';          // aún no llegó al TPV: muere aquí
+-    else if (r.estado === 'importada') r.estado = 'anulada_cliente'; // ya está en la agenda: la sync la anulará
+-    await store.setJSON('reservas', reservas);
++    let habia = false;
++    await modificar(store, 'reservas', (reservas) => { // v0.1.81 · atómico
++      const r = reservas.find((x) => x.token === token);
++      if (!r) return undefined;
++      habia = true;
++      if (r.estado === 'nueva') r.estado = 'anulada';          // aún no llegó al TPV: muere aquí
++      else if (r.estado === 'importada') r.estado = 'anulada_cliente'; // ya está en la agenda: la sync la anulará
++      return reservas;
++    }, []);
++    if (!habia) return json({ error: 'Reserva no encontrada' }, 404);
+     await idxTocar(slug || '(dedicado)', (n) => { n.anuladas_total = (n.anuladas_total || 0) + 1; });
+     return json({ ok: true });
+   }
+@@ -313,8 +342,8 @@ export default async (req) => {
+     if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const body = await req.json().catch(() => ({}));
+     await pStore().setJSON('datos', { negocio: body.negocio || {}, ordenes: body.ordenes || [], generado: body.generado || new Date().toISOString() });
+-    const cola = await pCola();
+-    await pStore().setJSON('cola', { aceptaciones: [], mensajes: [] }); // drenada: el TPV se la lleva
++    let cola = { aceptaciones: [], mensajes: [] };
++    await modificar(pStore(), 'cola', (c) => { cola = { aceptaciones: c.aceptaciones || [], mensajes: c.mensajes || [] }; return { aceptaciones: [], mensajes: [] }; }, { aceptaciones: [], mensajes: [] }); // v0.1.81 · drenaje atómico: un mensaje que entre mientras el TPV se lleva la cola no se pierde
+     return json({ aceptaciones: cola.aceptaciones, mensajes: cola.mensajes });
+   }
+   // login del CLIENTE: teléfono + clave de 8 dígitos (solo se compara el hash)
+@@ -359,16 +388,15 @@ export default async (req) => {
+     const d = await pDatos();
+     const mia = (d.ordenes || []).find((o) => String(o.telefono || '').replace(/\D/g, '') === tel && o.token === String(orden || ''));
+     if (!mia || !pSesionOk(sesion, tel, mia.pass_hash)) return json({ error: 'Sesión no válida' }, 401);
+-    const cola = await pCola();
+-    if (ruta === 'portal-aceptar') {
+-      if (mia.estado !== 'esp_aceptacion') return json({ error: 'Este presupuesto ya no espera aceptación' }, 409);
+-      if (!cola.aceptaciones.some((x) => x.token === mia.token)) cola.aceptaciones.push({ token: mia.token, cuando: new Date().toISOString() });
+-    } else {
+-      const t2 = String(texto || '').trim().slice(0, 500);
+-      if (!t2) return json({ error: 'El mensaje está vacío' }, 400);
+-      cola.mensajes.push({ token: mia.token, texto: t2, cuando: new Date().toISOString() });
+-    }
+-    await pStore().setJSON('cola', cola);
++    if (ruta === 'portal-aceptar' && mia.estado !== 'esp_aceptacion') return json({ error: 'Este presupuesto ya no espera aceptación' }, 409);
++    const t2 = ruta === 'portal-mensaje' ? String(texto || '').trim().slice(0, 500) : null;
++    if (ruta === 'portal-mensaje' && !t2) return json({ error: 'El mensaje está vacío' }, 400);
++    await modificar(pStore(), 'cola', (cola) => { // v0.1.81 · punto 8 · dos clientes a la vez no se pisan
++      cola.aceptaciones = cola.aceptaciones || []; cola.mensajes = cola.mensajes || [];
++      if (ruta === 'portal-aceptar') { if (!cola.aceptaciones.some((x) => x.token === mia.token)) cola.aceptaciones.push({ token: mia.token, cuando: new Date().toISOString() }); }
++      else cola.mensajes.push({ token: mia.token, texto: t2, cuando: new Date().toISOString() });
++      return cola;
++    }, { aceptaciones: [], mensajes: [] });
+     return json({ ok: true, aviso: 'Recibido: el taller lo verá en su próxima sincronización (como mucho en un par de minutos)' });
+   }
+ 
+@@ -410,17 +438,19 @@ export default async (req) => {
+     /* v0.0.72 · solicitudes de reserva hechas desde el escaparate. La nube NO decide
+        nada: solo las guarda para que el taller se las lleve. Quien confirma, cobra la
+        señal y dice que sí es el taller, con la base delante. */
+-    const sol = (await st.get('solicitudes', { type: 'json' })) || [];
+     const vistas = new Set(body.importadas || []);
+     const estados = body.reservas || {}; // token → estado, para que el cliente lo consulte
+-    let toco = false;
+-    for (const x of sol) {
+-      if (x.estado === 'nueva' && vistas.has(x.token)) { x.estado = 'recogida_taller'; toco = true; }
+-      if (estados[x.token] && x.estado_taller !== estados[x.token]) { x.estado_taller = estados[x.token]; toco = true; }
+-    }
+-    const corte = new Date(Date.now() - 60 * 86400000).toISOString();
+-    const vivas = sol.filter((x) => (x.creada || '') > corte);
+-    if (toco || vivas.length !== sol.length) await st.setJSON('solicitudes', vivas);
++    let vivas = [];
++    await modificar(st, 'solicitudes', (sol) => { // v0.1.81 · atómico frente a una solicitud que entre durante la sync
++      let toco = false;
++      for (const x of sol) {
++        if (x.estado === 'nueva' && vistas.has(x.token)) { x.estado = 'recogida_taller'; toco = true; }
++        if (estados[x.token] && x.estado_taller !== estados[x.token]) { x.estado_taller = estados[x.token]; toco = true; }
++      }
++      const corte = new Date(Date.now() - 60 * 86400000).toISOString();
++      vivas = sol.filter((x) => (x.creada || '') > corte);
++      return (toco || vivas.length !== sol.length) ? vivas : undefined;
++    }, []);
+     return json({ ok: true, articulos: articulos.length, faltan,
+       solicitudes: vivas.filter((x) => x.estado === 'nueva') });
+   }
+@@ -458,19 +488,22 @@ export default async (req) => {
+     if (nombre.length < 2) return json({ error: 'Falta el nombre' }, 400);
+     if (telefono.length < 6) return json({ error: 'Falta un teléfono al que llamarle' }, 400);
+     const st = oStore();
+-    const sol = (await st.get('solicitudes', { type: 'json' })) || [];
+-    const vivas = sol.filter((x) => x.estado === 'nueva');
+-    if (vivas.length >= 500) return json({ error: 'El escaparate tiene demasiadas solicitudes pendientes: llame al taller' }, 429);
+-    if (vivas.filter((x) => x.telefono === telefono).length >= 5) return json({ error: 'Ya tiene varias solicitudes pendientes: le llamamos enseguida' }, 429);
+-    await frenoApuntar('outlet', req);
+-    if (sol.some((x) => x.outlet_id === art.id && x.estado === 'nueva' && x.telefono === telefono)) {
+-      return json({ error: 'Ya nos llegó su solicitud: le llamamos enseguida' }, 409);
+-    }
+     const token = (globalThis.crypto?.randomUUID?.() || String(Date.now() + Math.random())).replace(/-/g, '').slice(0, 16);
+-    sol.push({ token, outlet_id: art.id, titulo: art.titulo, senal: art.senal, nombre, telefono,
+-      email, nota: String(b.nota || '').trim().slice(0, 300) || null,
+-      estado: 'nueva', creada: new Date().toISOString() });
+-    await st.setJSON('solicitudes', sol);
++    let rechazo = null, apuntarFreno = false;
++    await modificar(st, 'solicitudes', (sol) => { // v0.1.81 · punto 8 · topes y alta en UNA escritura condicional
++      rechazo = null;
++      const vivas = sol.filter((x) => x.estado === 'nueva');
++      if (vivas.length >= 500) { rechazo = json({ error: 'El escaparate tiene demasiadas solicitudes pendientes: llame al taller' }, 429); return undefined; }
++      if (vivas.filter((x) => x.telefono === telefono).length >= 5) { rechazo = json({ error: 'Ya tiene varias solicitudes pendientes: le llamamos enseguida' }, 429); return undefined; }
++      apuntarFreno = true;
++      if (sol.some((x) => x.outlet_id === art.id && x.estado === 'nueva' && x.telefono === telefono)) { rechazo = json({ error: 'Ya nos llegó su solicitud: le llamamos enseguida' }, 409); return undefined; }
++      sol.push({ token, outlet_id: art.id, titulo: art.titulo, senal: art.senal, nombre, telefono,
++        email, nota: String(b.nota || '').trim().slice(0, 300) || null,
++        estado: 'nueva', creada: new Date().toISOString() });
++      return sol;
++    }, []);
++    if (apuntarFreno) await frenoApuntar('outlet', req);
++    if (rechazo) return rechazo;
+     return json({ ok: true, token, senal: art.senal });
+   }
+ 
+@@ -511,7 +544,7 @@ export default async (req) => {
+     if (await frenoBloqueado('hotel', req)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 10 fallos / 10 min por IP
+     const ok = /^[0-9a-f]{64}$/.test(String(k || '')) && iguales(String(k), d.clave_hash);
+     if (!ok) {
+-      await hStore().setJSON('freno', { n: f.n + 1, desde: f.desde || Date.now() });
++      await modificar(hStore(), 'freno', (g) => { const v = (Date.now() - g.desde > H_VENTANA) ? { n: 0, desde: 0 } : g; return { n: v.n + 1, desde: v.desde || Date.now() }; }, { n: 0, desde: 0 }); // v0.1.81 · atómico
+       await frenoApuntar('hotel', req);
+       return json({ error: 'Clave de acceso incorrecta' }, 401);
+     }
+@@ -580,17 +613,18 @@ export default async (req) => {
+     const mal = esAdmin(); if (mal) return mal;
+     const { slug: s2 } = await req.json().catch(() => ({}));
+     if (!s2 || !/^[a-z0-9-]{2,40}$/.test(s2)) return json({ error: 'slug inválido' }, 400);
+-    const idx = await idxLeer();
+-    if (!idx[s2]) return json({ error: 'ese negocio no está en el índice' }, 404);
+-    delete idx[s2];
+-    await getStore(IDX).setJSON('negocios', idx);
+-    const st = getStore('doel-reserva-' + s2);
+-    let borrados = 0;
+-    try {
+-      const { blobs } = await st.list();
+-      for (const b of blobs || []) { await st.delete(b.key); borrados++; }
+-    } catch (e) { /* store vacío o inexistente: nada que borrar */ }
+-    return json({ ok: true, slug: s2, blobs_borrados: borrados });
++    let estaba = false;
++    await modificar(getStore(IDX), 'negocios', (idx) => { if (!idx[s2]) return undefined; estaba = true; delete idx[s2]; return idx; }, {}); // v0.1.81 · atómico
++    if (!estaba) return json({ error: 'ese negocio no está en el índice' }, 404);
++    /* v0.1.81 · punto 8 · se borra TODO lo del negocio, no solo las reservas: portal del cliente (órdenes y teléfonos),
++       outlet (solicitudes con nombre y teléfono) y modo hotel (fotos). Es lo que exige la baja de un cliente (RGPD). */
++    const borrados = {}; let total = 0;
++    for (const pref of ['doel-reserva-', 'doel-portal-', 'doel-outlet-', 'doel-hotel-']) {
++      const st = getStore(pref + s2); let n = 0;
++      try { const { blobs } = await st.list(); for (const b of blobs || []) { await st.delete(b.key); n++; } } catch (e) { /* store vacío o inexistente: nada que borrar */ }
++      borrados[pref + s2] = n; total += n;
++    }
++    return json({ ok: true, slug: s2, blobs_borrados: total, borrados });
+   }
+ 
+   // 🎬 accesos a demo: alta / lista / borrado (admin) + login público con caducidad
+@@ -605,24 +639,24 @@ export default async (req) => {
+     const u = String(usuario || '').trim().toLowerCase();
+     if (!/^[a-z0-9._-]{2,30}$/.test(u)) return json({ error: 'usuario inválido (2-30: minúsculas, números, . _ -)' }, 400);
+     if (String(clave || '').length < 6) return json({ error: 'la clave necesita 6 caracteres como poco' }, 400);
+-    const todos = await accLeer();
+-    todos[u] = {
+-      hash: sha(u + '|' + clave),
+-      minutos: Math.min(480, Math.max(10, Number(minutos) || 60)),
+-      caduca: Number(dias) > 0 ? new Date(Date.now() + Number(dias) * 86400000).toISOString() : null,
+-      creado: todos[u] ? todos[u].creado : new Date().toISOString(),
+-      usos: todos[u] ? todos[u].usos || 0 : 0,
+-    };
+-    await accStore().setJSON('usuarios', todos);
++    await modificar(accStore(), 'usuarios', (todos) => { // v0.1.81 · atómico
++      todos[u] = {
++        hash: sha(u + '|' + clave),
++        minutos: Math.min(480, Math.max(10, Number(minutos) || 60)),
++        caduca: Number(dias) > 0 ? new Date(Date.now() + Number(dias) * 86400000).toISOString() : null,
++        creado: todos[u] ? todos[u].creado : new Date().toISOString(),
++        usos: todos[u] ? todos[u].usos || 0 : 0,
++      };
++      return todos;
++    }, {});
+     return json({ ok: true, usuario: u });
+   }
+   if (ruta === 'demo-usuario-borrar' && req.method === 'POST') {
+     const mal = esAdmin(); if (mal) return mal;
+     const { usuario } = await req.json().catch(() => ({}));
+-    const todos = await accLeer();
+-    if (!todos[usuario]) return json({ error: 'ese usuario no existe' }, 404);
+-    delete todos[usuario];
+-    await accStore().setJSON('usuarios', todos);
++    let habia = false;
++    await modificar(accStore(), 'usuarios', (todos) => { if (!todos[usuario]) return undefined; habia = true; delete todos[usuario]; return todos; }, {}); // v0.1.81
++    if (!habia) return json({ error: 'ese usuario no existe' }, 404);
+     return json({ ok: true });
+   }
+   // 🔑 códigos de acceso temporal al diagnóstico (móvil/taller), generados desde el panel.
+@@ -647,11 +681,12 @@ export default async (req) => {
+       minutos: mins, creado: new Date().toISOString(), expira,
+       primera_actividad: null, ultima_actividad: null, usos: 0,
+     };
+-    const lista = await diagLeer();
+-    // limpieza: fuera lo caducado hace más de 48h, para que el blob no crezca sin fin
+-    const viva = lista.filter((c) => (Date.now() - c.expira) < 48 * 3600 * 1000);
+-    viva.unshift(registro);
+-    await diagStore().setJSON('lista', viva);
++    await modificar(diagStore(), 'lista', (lista) => { // v0.1.81 · atómico frente a los latidos de diag-actividad
++      // limpieza: fuera lo caducado hace más de 48h, para que el blob no crezca sin fin
++      const viva = lista.filter((c) => (Date.now() - c.expira) < 48 * 3600 * 1000);
++      viva.unshift(registro);
++      return viva;
++    }, []);
+     return json({ ...registro, expira_texto: new Date(expira).toLocaleString('es-ES') });
+   }
+ 
+@@ -667,10 +702,9 @@ export default async (req) => {
+   if (ruta === 'diag-codigo-borrar' && req.method === 'POST') {
+     const mal = esAdmin(); if (mal) return mal;
+     const { id } = await req.json().catch(() => ({}));
+-    const lista = await diagLeer();
+-    const filtrada = lista.filter((c) => c.id !== id);
+-    await diagStore().setJSON('lista', filtrada);
+-    return json({ ok: true, borrado: filtrada.length !== lista.length });
++    let borrado = false;
++    await modificar(diagStore(), 'lista', (lista) => { const filtrada = lista.filter((c) => c.id !== id); borrado = filtrada.length !== lista.length; return borrado ? filtrada : undefined; }, []); // v0.1.81
++    return json({ ok: true, borrado });
+   }
+ 
+   // PÚBLICA a propósito: la llama el propio movil.html/taller.html tras validar el código
+@@ -698,18 +732,21 @@ export default async (req) => {
+     const { codigo } = await req.json().catch(() => ({}));
+     const cod = String(codigo || '').trim().toUpperCase();
+     if (!cod) return json({ ok: false }, 400);
+-    const lista = await diagLeer();
+-    const c = lista.find((x) => x.codigo === cod);
+-    if (!c) return json({ ok: true, seguido: false }); // código local (TPV), no está en la nube: normal
+-    const ahora = new Date().toISOString();
+-    // "usos" cuenta SESIONES distintas, como el login de las demos — no cada latido de 25s
+-    // (si no, un solo diagnóstico de 20 min inflaría "usos" a ~48). Hueco > MS_EN_USO = sesión nueva.
+-    const esSesionNueva = !c.ultima_actividad || (Date.now() - Date.parse(c.ultima_actividad)) > MS_EN_USO;
+-    if (esSesionNueva) c.usos = (c.usos || 0) + 1;
+-    if (!c.primera_actividad) c.primera_actividad = ahora;
+-    c.ultima_actividad = ahora;
+-    await diagStore().setJSON('lista', lista);
+-    return json({ ok: true, seguido: true });
++    let seguido = false;
++    await modificar(diagStore(), 'lista', (lista) => { // v0.1.81 · atómico: un latido no borra el código que el panel acaba de crear
++      const c = lista.find((x) => x.codigo === cod);
++      if (!c) return undefined; // código local (TPV), no está en la nube: normal
++      seguido = true;
++      const ahora = new Date().toISOString();
++      // "usos" cuenta SESIONES distintas, como el login de las demos — no cada latido de 25s
++      // (si no, un solo diagnóstico de 20 min inflaría "usos" a ~48). Hueco > MS_EN_USO = sesión nueva.
++      const esSesionNueva = !c.ultima_actividad || (Date.now() - Date.parse(c.ultima_actividad)) > MS_EN_USO;
++      if (esSesionNueva) c.usos = (c.usos || 0) + 1;
++      if (!c.primera_actividad) c.primera_actividad = ahora;
++      c.ultima_actividad = ahora;
++      return lista;
++    }, []);
++    return json({ ok: true, seguido });
+   }
+ 
+   if (ruta === 'demo-login' && req.method === 'POST') {
+@@ -723,8 +760,7 @@ export default async (req) => {
+     if (!d || !iguales(sha(u + '|' + String(clave || '')), d.hash)) { await frenoApuntar('demo', req); return json({ error: 'usuario o clave incorrectos' }, 401); }
+     await frenoLimpiar('demo', req);
+     if (d.caduca && Date.now() > Date.parse(d.caduca)) return json({ error: 'este acceso ha caducado: pide uno nuevo a Doel' }, 403);
+-    d.usos = (d.usos || 0) + 1; d.ultimo_uso = new Date().toISOString();
+-    await accStore().setJSON('usuarios', todos);
++    await modificar(accStore(), 'usuarios', (t2) => { const x = t2[u]; if (!x) return undefined; x.usos = (x.usos || 0) + 1; x.ultimo_uso = new Date().toISOString(); return t2; }, {}); // v0.1.81 · atómico
+     return json({ ok: true, exp: Date.now() + d.minutos * 60000, minutos: d.minutos });
+   }
+ 
+@@ -746,13 +782,14 @@ export default async (req) => {
+     const body = await req.json().catch(() => ({}));
+     const grupo = String(body.grupo || '').trim().toLowerCase();
+     if (!mtSlugOk(grupo)) return json({ error: 'grupo no válido' }, 400);
+-    const locales = await mtLeer(grupo);
+-    locales[slug] = {
+-      resumen: body.resumen || null,
+-      clave_hash: String(body.clave_hash || '') || (locales[slug] && locales[slug].clave_hash) || '',
+-      subido: new Date().toISOString(),
+-    };
+-    await mtStore(grupo).setJSON('locales', locales);
++    const locales = await modificar(mtStore(grupo), 'locales', (loc) => { // v0.1.81 · dos locales subiendo a la vez no se borran
++      loc[slug] = {
++        resumen: body.resumen || null,
++        clave_hash: String(body.clave_hash || '') || (loc[slug] && loc[slug].clave_hash) || '',
++        subido: new Date().toISOString(),
++      };
++      return loc;
++    }, {});
+     return json({ ok: true, locales: Object.keys(locales).length });
+   }
+   // login del DUEÑO: grupo + clave (solo se compara la huella; vale la de cualquier local del grupo)
+diff --git a/reserva-online/package.json b/reserva-online/package.json
+index eb53c05..3ffafc4 100644
+--- a/reserva-online/package.json
++++ b/reserva-online/package.json
+@@ -2,5 +2,5 @@
+   "name": "doel-reserva-online",
+   "private": true,
+   "description": "Micro-servicio de reserva online — Doel TPV Edición Barbería",
+-  "dependencies": { "@netlify/blobs": "^8.1.0" }
++  "dependencies": { "@netlify/blobs": "^11.1.4" }
+ }
+diff --git a/reserva-online/public/version.txt b/reserva-online/public/version.txt
+index 3c3bb37..f2af436 100644
+--- a/reserva-online/public/version.txt
++++ b/reserva-online/public/version.txt
+@@ -1,6 +1,6 @@
+ Doel TPV — nube de reservas
+-version: 0.1.73
+-empaquetado: 2026-10-17T15:37:58.427Z
++version: 0.1.81
++empaquetado: 2026-10-18T10:37:33.102Z
+ 
+ Si esta URL no muestra la version que esperas, el sitio esta desplegado
+ con un paquete anterior: vuelve a arrastrar la carpeta reserva-online/.
+diff --git a/tools/_blobs-falso.cjs b/tools/_blobs-falso.cjs
+new file mode 100644
+index 0000000..40e8ca5
+--- /dev/null
++++ b/tools/_blobs-falso.cjs
+@@ -0,0 +1,37 @@
++/* v0.1.81 · punto 8 · stub de @netlify/blobs EN MEMORIA para las baterías de la nube, compartido (antes cada batería
++   llevaba el suyo). Imita lo que api.mjs usa de verdad: get / getWithMetadata (con etag), set / setJSON con las
++   escrituras condicionales onlyIfMatch / onlyIfNew (devuelven { modified, etag }), list y delete. Sin el etag las
++   baterías no podrían demostrar que dos peticiones a la vez ya no se pisan. */
++const fs = require('fs');
++const path = require('path');
++const FUENTE = `
++const stores = new Map(); let seq = 0;
++export function getStore(nombre) {
++  if (!stores.has(nombre)) stores.set(nombre, new Map()); // clave → { v: texto, etag }
++  const m = stores.get(nombre);
++  const guardar = (k, texto, o) => {
++    const hay = m.get(k);
++    if (o && o.onlyIfNew && hay) return { modified: false };
++    if (o && o.onlyIfMatch && (!hay || hay.etag !== o.onlyIfMatch)) return { modified: false };
++    const etag = '"' + (++seq) + '"'; m.set(k, { v: texto, etag }); return { modified: true, etag };
++  };
++  const leer = (k, o) => { const e = m.get(k); if (!e) return null; return (o && o.type === 'json') ? JSON.parse(e.v) : e.v; };
++  return {
++    async get(k, o) { return leer(k, o); },
++    async getWithMetadata(k, o) { const e = m.get(k); if (!e) return null; return { data: leer(k, o), etag: e.etag, metadata: {} }; },
++    async setJSON(k, v, o) { return guardar(k, JSON.stringify(v), o); },
++    async set(k, v, o) { return guardar(k, String(v), o); },
++    async delete(k) { m.delete(k); },
++    async list() { return { blobs: [...m.keys()].map((key) => ({ key, etag: m.get(key).etag })), directories: [] }; },
++  };
++}
++export const __stores = stores;
++`;
++function escribir(RAIZ) {
++  const dir = path.join(RAIZ, 'node_modules', '@netlify', 'blobs');
++  fs.mkdirSync(dir, { recursive: true });
++  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.mjs' }));
++  fs.writeFileSync(path.join(dir, 'index.mjs'), FUENTE);
++  return dir;
++}
++module.exports = { FUENTE, escribir };
+diff --git a/tools/test-hotel-nube.cjs b/tools/test-hotel-nube.cjs
+index 31e2b5d..264b37f 100644
+--- a/tools/test-hotel-nube.cjs
++++ b/tools/test-hotel-nube.cjs
+@@ -26,20 +26,7 @@ const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } els
+ 
+ const RAIZ = path.join(os.tmpdir(), 'doel-hotel-api');
+ fs.rmSync(RAIZ, { recursive: true, force: true });
+-fs.mkdirSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs'), { recursive: true });
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'package.json'),
+-  JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.mjs' }));
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'), `
+-const stores = new Map();
+-export function getStore(nombre) {
+-  if (!stores.has(nombre)) stores.set(nombre, new Map());
+-  const m = stores.get(nombre);
+-  return {
+-    async get(k, o) { if (!m.has(k)) return null; return (o && o.type === 'json') ? JSON.parse(m.get(k)) : m.get(k); },
+-    async setJSON(k, v) { m.set(k, JSON.stringify(v)); },
+-    async set(k, v) { m.set(k, String(v)); }
+-  };
+-}`);
++require('./_blobs-falso.cjs').escribir(RAIZ); // v0.1.81 · stub compartido de @netlify/blobs (con etags y escrituras condicionales)
+ fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
+ fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
+ process.env.DOEL_SYNC_TOKEN = 'clave-sync';
+diff --git a/tools/test-nube-api.cjs b/tools/test-nube-api.cjs
+index 6678339..a1f1207 100644
+--- a/tools/test-nube-api.cjs
++++ b/tools/test-nube-api.cjs
+@@ -16,24 +16,7 @@ process.chdir(path.join(__dirname, '..'));
+ 
+ const RAIZ = path.join(os.tmpdir(), 'doel-api-test');
+ fs.rmSync(RAIZ, { recursive: true, force: true });
+-fs.mkdirSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs'), { recursive: true });
+-
+-// stub de @netlify/blobs: un Map por nombre de store
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'package.json'),
+-  JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.mjs' }));
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'), `
+-const stores = new Map();
+-export function getStore(nombre) {
+-  if (!stores.has(nombre)) stores.set(nombre, new Map());
+-  const m = stores.get(nombre);
+-  return {
+-    async get(k) { return m.has(k) ? JSON.parse(m.get(k)) : null; },
+-    async setJSON(k, v) { m.set(k, JSON.stringify(v)); },
+-    async set(k, v) { m.set(k, v); }
+-  };
+-}
+-export const __stores = stores;
+-`);
++require('./_blobs-falso.cjs').escribir(RAIZ); // v0.1.81 · stub compartido de @netlify/blobs (con etags y escrituras condicionales)
+ fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
+ fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
+ 
+diff --git a/tools/test-nube-concurrencia.cjs b/tools/test-nube-concurrencia.cjs
+new file mode 100644
+index 0000000..3881d88
+--- /dev/null
++++ b/tools/test-nube-concurrencia.cjs
+@@ -0,0 +1,89 @@
++/* v0.1.81 · punto 8 del plan · la nube no pierde escrituras cuando llegan dos a la vez.
++   0 · el stub de Blobs se comporta como el real (etag, onlyIfMatch, onlyIfNew)   1 · reservas a la vez   2 · el mismo hueco dos veces
++   3 · el tope por teléfono no gasta el hueco   4 · portal: mensajes a la vez y drenaje sin pérdidas   5 · diagnóstico, demo y multitienda
++   6 · negocio-borrar borra TODO lo del negocio */
++const fs = require('fs'); const os = require('os'); const path = require('path'); const { createHash } = require('crypto');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const RAIZ = path.join(os.tmpdir(), 'doel-nube-concurrencia'); fs.rmSync(RAIZ, { recursive: true, force: true }); fs.mkdirSync(RAIZ, { recursive: true });
++require('./_blobs-falso.cjs').escribir(RAIZ);
++fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
++fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
++process.env.DOEL_SYNC_TOKEN = 'clave-sync'; process.env.DOEL_ADMIN_TOKEN = 'clave-panel';
++
++(async () => {
++  const { default: handler } = await import('file://' + path.join(RAIZ, 'api.mjs'));
++  const { __stores, getStore } = await import('file://' + path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'));
++  const call = (ruta, body, o = {}) => handler(new Request('http://nube.local/api/' + ruta + (o.slug === null ? '' : '?n=' + (o.slug || 'demo')), {
++    method: o.method || 'POST', headers: { 'content-type': 'application/json', 'x-nf-client-connection-ip': o.ip || '1.2.3.4', ...(o.bearer ? { authorization: 'Bearer ' + o.bearer } : {}) },
++    body: (o.method || 'POST') === 'POST' ? JSON.stringify(body || {}) : undefined }));
++  const j = async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) });
++  const leer = (store, k) => { const m = __stores.get(store); const e = m && m.get(k); return e ? JSON.parse(e.v) : null; };
++  const SYNC = { bearer: 'clave-sync' }, ADMIN = { bearer: 'clave-panel' };
++
++  console.log('0 · El stub se comporta como Netlify Blobs');
++  const st = getStore('prueba');
++  const a = await st.setJSON('k', { x: 1 }); const meta = await st.getWithMetadata('k', { type: 'json' });
++  const b = await st.setJSON('k', { x: 2 }, { onlyIfMatch: '"otro"' }); const c = await st.setJSON('k', { x: 3 }, { onlyIfMatch: meta.etag }); const d = await st.setJSON('k', { x: 4 }, { onlyIfNew: true });
++  t('0a. etag en cada escritura; onlyIfMatch con otro etag no escribe; con el bueno sí; onlyIfNew sobre algo que existe no', a.modified === true && meta.data.x === 1 && b.modified === false && c.modified === true && d.modified === false && (await st.get('k', { type: 'json' })).x === 3);
++
++  console.log('\n1 · Reservas a la vez');
++  const snap = (huecos) => ({ snapshot: { paso: 15, servicios: [{ id: 1, duracion: 15 }], huecos: [{ fecha: '2026-11-02', recurso_id: 1, huecos }] } });
++  t('1a. el TPV sube el snapshot', (await call('sync', snap(['10:00', '10:15', '10:30', '10:45', '11:00']), SYNC)).status === 200);
++  const rs = await Promise.all([0, 1, 2, 3, 4].map((i) => call('reservar', { fecha: '2026-11-02', hora: ['10:00', '10:15', '10:30', '10:45', '11:00'][i], recursoId: 1, servicioId: 1, nombre: 'Cliente ' + i, telefono: '60011100' + i }, { ip: '10.0.0.' + i }).then(j)));
++  t('1b. cinco clientes a la vez en cinco huecos distintos: las cinco entran', rs.every((r) => r.status === 200 && r.ok), rs.map((r) => r.status).join(','));
++  t('1c. …y las cinco están guardadas (antes la última escritura pisaba a las demás)', (leer('doel-reserva-demo', 'reservas') || []).length === 5 && leer('doel-reserva-demo', 'snapshot').huecos[0].huecos.length === 0, String((leer('doel-reserva-demo', 'reservas') || []).length));
++
++  console.log('\n2 · El mismo hueco dos veces');
++  await call('sync', snap(['12:00']), SYNC);
++  const dos = await Promise.all([call('reservar', { fecha: '2026-11-02', hora: '12:00', recursoId: 1, servicioId: 1, nombre: 'A', telefono: '622000001' }, { ip: '10.0.1.1' }).then(j), call('reservar', { fecha: '2026-11-02', hora: '12:00', recursoId: 1, servicioId: 1, nombre: 'B', telefono: '622000002' }, { ip: '10.0.1.2' }).then(j)]);
++  t('2a. dos clientes sobre el mismo hueco a la vez: uno entra y el otro recibe 409 «acaba de ocuparse»', dos.map((r) => r.status).sort().join() === '200,409' && dos.some((r) => /acaba de ocuparse/.test(r.error || '')), JSON.stringify(dos.map((r) => r.status)));
++  t('2b. solo hay una reserva más', (leer('doel-reserva-demo', 'reservas') || []).length === 6);
++
++  console.log('\n3 · El tope por teléfono');
++  await call('sync', snap(['13:00', '13:15', '13:30', '13:45']), SYNC);
++  for (const h of ['13:00', '13:15', '13:30']) await call('reservar', { fecha: '2026-11-02', hora: h, recursoId: 1, servicioId: 1, nombre: 'Pesado', telefono: '611222333' }, { ip: '10.0.2.1' });
++  const cuarta = await j(await call('reservar', { fecha: '2026-11-02', hora: '13:45', recursoId: 1, servicioId: 1, nombre: 'Pesado', telefono: '611222333' }, { ip: '10.0.2.1' }));
++  t('3a. la cuarta reserva viva del mismo teléfono se rechaza (429)…', cuarta.status === 429);
++  t('3b. …y el hueco NO se gasta (antes se descontaba del snapshot antes de rechazar)', leer('doel-reserva-demo', 'snapshot').huecos[0].huecos.includes('13:45'));
++  const tokens = (leer('doel-reserva-demo', 'reservas') || []).filter((r) => r.telefono === '611222333').map((r) => r.token);
++  const anul = await Promise.all(tokens.slice(0, 2).map((tk) => call('anular', { token: tk }).then(j)));
++  t('3c. dos anulaciones a la vez: las dos quedan', anul.every((r) => r.status === 200) && (leer('doel-reserva-demo', 'reservas') || []).filter((r) => r.estado === 'anulada').length === 2);
++
++  console.log('\n4 · Portal del cliente');
++  const hash = createHash('sha256').update('doel-portal|12345678').digest('hex');
++  const datos = { negocio: { nombre: 'Taller' }, ordenes: [{ numero: 'OT-2026-0001', telefono: '600111222', token: 'tok1', pass_hash: hash, estado: 'esp_aceptacion' }] };
++  t('4a. el TPV sube el portal y el cliente entra', (await call('portal-sync', datos, SYNC)).status === 200 && !!(global.sesion = (await j(await call('portal-login', { telefono: '600111222', clave: '12345678' }))).sesion));
++  const msgs = await Promise.all([1, 2, 3, 4, 5].map((i) => call('portal-mensaje', { telefono: '600111222', sesion: global.sesion, orden: 'tok1', texto: 'mensaje ' + i }, { ip: '10.0.3.' + i }).then(j)));
++  t('4b. cinco mensajes a la vez: los cinco en la cola', msgs.every((r) => r.status === 200) && (leer('doel-portal-demo', 'cola') || {}).mensajes.length === 5, String(((leer('doel-portal-demo', 'cola') || {}).mensajes || []).length));
++  const [drenado, sexto] = await Promise.all([call('portal-sync', datos, SYNC).then(j), call('portal-mensaje', { telefono: '600111222', sesion: global.sesion, orden: 'tok1', texto: 'mensaje 6' }).then(j)]);
++  const quedan = ((leer('doel-portal-demo', 'cola') || {}).mensajes || []).length;
++  t('4c. el TPV drena la cola mientras entra otro mensaje: ninguno se pierde (drenados + en cola = 6)', drenado.status === 200 && sexto.status === 200 && (drenado.mensajes || []).length + quedan === 6, drenado.mensajes.length + '+' + quedan);
++  const acc = await Promise.all([1, 2].map(() => call('portal-aceptar', { telefono: '600111222', sesion: global.sesion, orden: 'tok1' }).then(j)));
++  t('4d. aceptar dos veces a la vez deja UNA aceptación', acc.every((r) => r.status === 200) && (leer('doel-portal-demo', 'cola') || {}).aceptaciones.length === 1);
++
++  console.log('\n5 · Diagnóstico, demo y multitienda');
++  const cod = await j(await call('diag-codigo-crear', { minutos: 30, etiqueta: 'a' }, { ...ADMIN, slug: null }));
++  const mezcla = await Promise.all([...[1, 2, 3, 4, 5].map((i) => call('diag-actividad', { codigo: cod.codigo }, { slug: null, ip: '10.0.4.' + i }).then(j)), call('diag-codigo-crear', { minutos: 30, etiqueta: 'b' }, { ...ADMIN, slug: null }).then(j)]);
++  const lista = leer('doel-diag-codigos', 'lista') || [];
++  t('5a. cinco latidos y un código nuevo a la vez: los dos códigos existen y la actividad del primero está apuntada', mezcla.every((r) => r.status === 200) && lista.length === 2 && lista.find((x) => x.codigo === cod.codigo).primera_actividad && lista.find((x) => x.codigo === cod.codigo).usos === 1, JSON.stringify(lista.map((x) => [x.etiqueta, x.usos])));
++  t('5b. borrar un código que no existe dice borrado:false sin tocar la lista', (await j(await call('diag-codigo-borrar', { id: 'nada' }, { ...ADMIN, slug: null }))).borrado === false && (leer('doel-diag-codigos', 'lista') || []).length === 2);
++  t('5c. alta de usuario de demo', (await call('demo-usuario', { usuario: 'pepe', clave: 'secreto1', minutos: 30 }, { ...ADMIN, slug: null })).status === 200);
++  const logins = await Promise.all([1, 2, 3].map((i) => call('demo-login', { usuario: 'pepe', clave: 'secreto1' }, { slug: null, ip: '10.0.5.' + i }).then(j)));
++  t('5d. tres entradas a la vez cuentan tres usos', logins.every((r) => r.status === 200) && (leer('doel-demo-acc', 'usuarios') || {}).pepe.usos === 3, String(((leer('doel-demo-acc', 'usuarios') || {}).pepe || {}).usos));
++  const mt = await Promise.all(['local-a', 'local-b'].map((s) => call('mt-sync', { grupo: 'grupo1', resumen: { ventas: 1 }, clave_hash: 'h' }, { ...SYNC, slug: s }).then(j)));
++  t('5e. dos locales subiendo al grupo a la vez: los dos quedan', mt.every((r) => r.status === 200) && Object.keys(leer('doel-mt-grupo1', 'locales') || {}).length === 2);
++
++  console.log('\n6 · negocio-borrar');
++  await getStore('doel-outlet-demo').setJSON('solicitudes', [{ nombre: 'x', telefono: '1' }]); await getStore('doel-hotel-demo').set('foto:abc', 'b64');
++  const antes = ['doel-reserva-demo', 'doel-portal-demo', 'doel-outlet-demo', 'doel-hotel-demo'].map((s) => (__stores.get(s) || new Map()).size);
++  const bor = await j(await call('negocio-borrar', { slug: 'demo' }, { ...ADMIN, slug: null }));
++  const despues = ['doel-reserva-demo', 'doel-portal-demo', 'doel-outlet-demo', 'doel-hotel-demo'].map((s) => (__stores.get(s) || new Map()).size);
++  t('6a. borra reservas, portal, outlet y hotel del negocio (antes solo las reservas)', bor.status === 200 && antes.every((n) => n > 0) && despues.every((n) => n === 0) && bor.blobs_borrados === antes.reduce((x, y) => x + y, 0) && Object.keys(bor.borrados || {}).length === 4, JSON.stringify({ antes, despues, bor }));
++  t('6b. sale del índice y la segunda vez es 404', !(leer('doel-reserva-index', 'negocios') || {}).demo && (await call('negocio-borrar', { slug: 'demo' }, { ...ADMIN, slug: null })).status === 404);
++  t('6c. el panel lo pide con la clave de administración: sin ella, 401', (await call('negocio-borrar', { slug: 'otro' }, { slug: null })).status === 401);
++
++  console.log(`\n${ko === 0 ? '✅' : '❌'}  Nube sin escrituras perdidas: ${ok} OK · ${ko} fallos`);
++  process.exit(ko === 0 ? 0 : 1);
++})().catch((e) => { process.stdout.write('  ✗ batería rota: ' + (e && e.stack) + '\n'); process.exit(1); });
+diff --git a/tools/test-outlet-nube.cjs b/tools/test-outlet-nube.cjs
+index 1122b50..0f16643 100644
+--- a/tools/test-outlet-nube.cjs
++++ b/tools/test-outlet-nube.cjs
+@@ -26,20 +26,7 @@ const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } els
+    verdad — las fotos se guardan como base64 en crudo, no como JSON. ── */
+ const RAIZ = path.join(os.tmpdir(), 'doel-outlet-api');
+ fs.rmSync(RAIZ, { recursive: true, force: true });
+-fs.mkdirSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs'), { recursive: true });
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'package.json'),
+-  JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.mjs' }));
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'), `
+-const stores = new Map();
+-export function getStore(nombre) {
+-  if (!stores.has(nombre)) stores.set(nombre, new Map());
+-  const m = stores.get(nombre);
+-  return {
+-    async get(k, o) { if (!m.has(k)) return null; return (o && o.type === 'json') ? JSON.parse(m.get(k)) : m.get(k); },
+-    async setJSON(k, v) { m.set(k, JSON.stringify(v)); },
+-    async set(k, v) { m.set(k, String(v)); }
+-  };
+-}`);
++require('./_blobs-falso.cjs').escribir(RAIZ); // v0.1.81 · stub compartido de @netlify/blobs (con etags y escrituras condicionales)
+ fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
+ fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
+ process.env.DOEL_SYNC_TOKEN = 'clave-sync';
+diff --git a/tools/test-portal-cliente.cjs b/tools/test-portal-cliente.cjs
+index e6c5bdf..719fefd 100644
+--- a/tools/test-portal-cliente.cjs
++++ b/tools/test-portal-cliente.cjs
+@@ -27,15 +27,7 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+ /* ── la función Netlify real, con @netlify/blobs en memoria ── */
+ const RAIZ = path.join(os.tmpdir(), 'doel-portal-api');
+ fs.rmSync(RAIZ, { recursive: true, force: true });
+-fs.mkdirSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs'), { recursive: true });
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'package.json'), JSON.stringify({ name: '@netlify/blobs', version: '0.0.0', type: 'module', main: 'index.mjs' }));
+-fs.writeFileSync(path.join(RAIZ, 'node_modules', '@netlify', 'blobs', 'index.mjs'), `
+-const stores = new Map();
+-export function getStore(nombre) {
+-  if (!stores.has(nombre)) stores.set(nombre, new Map());
+-  const m = stores.get(nombre);
+-  return { async get(k) { return m.has(k) ? JSON.parse(m.get(k)) : null; }, async setJSON(k, v) { m.set(k, JSON.stringify(v)); }, async set(k, v) { m.set(k, v); } };
+-}`);
++require('./_blobs-falso.cjs').escribir(RAIZ); // v0.1.81 · stub compartido de @netlify/blobs (con etags y escrituras condicionales)
+ fs.copyFileSync('reserva-online/netlify/functions/api.mjs', path.join(RAIZ, 'api.mjs'));
+ fs.writeFileSync(path.join(RAIZ, 'package.json'), JSON.stringify({ type: 'module' }));
+ process.env.DOEL_SYNC_TOKEN = 'clave-sync';
