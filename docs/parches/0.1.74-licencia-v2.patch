@@ -1,0 +1,1354 @@
+diff --git a/.gitignore b/.gitignore
+index adb3b45..d02e571 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -11,3 +11,6 @@ doel-tpv-chrome.bat
+ *.db
+ *.db-wal
+ *.db-shm
++# v0.1.74 · claves de licencia de Doel: NUNCA en el repo (viven en ~/.doel)
++licencia-doel.json
++*.pem
+diff --git a/ESTADO.md b/ESTADO.md
+index d133f77..b20a3e8 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.73 · **Fecha:** 17 de octubre de 2026
++**Versión actual:** 0.1.74 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -77,9 +77,17 @@ en el propio código: PIN con scrypt y sal por usuario, freno local y en todos l
+ Panel Dev en el proceso principal, clave por instalación (DPAPI) para lo cifrado en la base, DevTools y
+ `window.open` cerrados, certificado de hoja, `config:all` sin secretos, sesiones del puesto con logout y
+ permisos vivos, y en la nube freno por IP, sesiones con caducidad, códigos de diagnóstico validados en
+-servidor y el XSS reflejado de la web de reservas. **Queda abierto SEC‑01** (el secreto HMAC y la semilla TOTP
+-siguen en el `asar`: firmar licencias con clave asimétrica es un cambio de cómo se emiten los códigos y lo
+-decide Edmundo), la copia DOELBAK1 sin frase propia (ahora la puesta en marcha la pide) y Electron 33 → actual.
++servidor y el XSS reflejado de la web de reservas. **SEC‑01 se cierra en la 0.1.74** con la licencia v2 (códigos DL2 firmados con clave
++asimétrica + semilla TOTP por instalación; ver `MANUAL.md → Licencia`). Quedan abiertos la copia DOELBAK1 sin
++frase propia (ahora la puesta en marcha la pide) y Electron 33 → actual.
++
++### Licencia v2 (0.1.74)
++
++Antes de entregar un instalador a un taller: `node tools/licencia-v2.cjs claves` en el PC de Doel (una vez; guarda
++`~/.doel/licencia-doel.json` fuera del PC), que escribe la clave pública en `electron/licencia.cjs`; después
++`npm run dist`. Por cada taller: `emitir --equipo <ID> --cliente "…" --modulos …` y el cliente pega el DL2 una vez.
++Las instalaciones activadas antes de la 0.1.74 siguen funcionando y piden su DL2 solo para volver a renovar o
++cambiar módulos por teléfono.
+ 
+ **Efectos al instalar la 0.1.73**: el certificado del puesto en red se regenera (reinstalar el `.crt` en los PCs
+ técnicos); `/rpc` y el comandero exigen entrar por la IP del mostrador; los PIN se reescriben solos al primer
+diff --git a/MANUAL.md b/MANUAL.md
+index 888ccd6..0204935 100644
+--- a/MANUAL.md
++++ b/MANUAL.md
+@@ -823,17 +823,35 @@ salen avisos «El mostrador no conoce…»; desde la 0.1.38 una banda naranja ar
+ versión vieja: lo que te ofrecen limpiar después es tu base de datos. Panel Dev →
+ ℹ️ Información técnica enseña las dos carpetas.
+ 
+-## Activar módulos por teléfono
+-
+-Los módulos (CRM, ISO, KB, Diagnóstico, portal…) se encienden con un **código de módulos**
+-que genera Doel con `node tools/codigo-renovacion.cjs` y se teclea en Ajustes → Sistema →
+-Licencia. Desde la 0.1.34 el código que se dicta es el **largo, de 12 dígitos**
+-(`008192-552296`): los seis primeros son la combinación de módulos y los seis últimos
+-cambian cada 30 segundos. No puede coincidir nunca con otra combinación y el programa lo
+-comprueba al instante. Los códigos cortos de antes (6, 8 y 9 dígitos) siguen valiendo, pero
+-si uno vale para dos combinaciones a la vez el programa lo rechaza y pide el siguiente o el
+-largo, en vez de activar módulos que no eran. Vale durante ±60 segundos: dictarlo y teclearlo
+-sin prisa, pero sin dejarlo para luego.
++## Licencia: el código DL2 y los códigos por teléfono
++
++Desde la **0.1.74** la licencia es un **código de activación DL2** que firma Doel con su clave
++privada (la aplicación solo lleva la pública: puede comprobar un código, nunca fabricarlo). Se emite
++con el **ID de equipo** que sale en Ajustes → Sistema → Licencia (`AB12-CD34-EF56`) y se manda por
++WhatsApp o correo; el cliente lo **pega una sola vez**. Lleva dentro el nombre del cliente, los módulos
++contratados, el modo (permanente, mensual o anual), la caducidad si la hay y una **semilla propia de esa
++instalación**.
++
++De esa semilla salen los **códigos cortos que se dictan por teléfono**, y solo valen para ese equipo:
++
++- **6 dígitos** (`node tools/licencia-v2.cjs codigo --equipo …`): renueva (+31 días en mensual, +366 en
++  anual; en permanente solo confirma). Es también el código del Panel de Desarrollador de ese equipo.
++- **12 dígitos** `MMMMMM-TTTTTT` (`node tools/licencia-v2.cjs modulos --equipo … --modulos crm,iso`):
++  fija exactamente esos módulos y renueva. Nunca puede coincidir con otra combinación.
++- Para cambiar módulos sin teléfono, basta emitir un DL2 nuevo con la lista nueva.
++
++Cada código corto vale ±60 segundos: dictarlo y teclearlo sin prisa, pero sin dejarlo para luego. Si
++prefieres un autenticador en el móvil, `node tools/licencia-v2.cjs qr --equipo …` da el enlace para
++enrolar **ese** taller (una entrada por cliente).
++
++**Instalaciones activadas antes de la 0.1.74** siguen funcionando tal cual («activación heredada»). Para
++volver a renovar o cambiar módulos por teléfono necesitan su DL2: se pide con el ID de equipo y se pega
++una vez; Ajustes → Licencia lo recuerda con un aviso.
++
++**En el PC de Doel**, la primera vez: `node tools/licencia-v2.cjs claves` genera las claves en
++`~/.doel/licencia-doel.json` (haz copia fuera del PC: sin ese fichero no se emiten licencias) y escribe
++la pública en `electron/licencia.cjs`; después se recompila el instalador. `check-puente` avisa si una
++compilación sale sin clave pública.
+ 
+ ---
+ 
+diff --git a/VERSION.md b/VERSION.md
+index 02f2210..d00e218 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.74 | 🔑 **Licencia v2: se cierra SEC‑01.** El instalador ya no lleva ningún secreto con el que fabricar licencias. La licencia es un **código DL2** firmado con Ed25519 (la app solo lleva la clave pública; la privada vive en `~/.doel/licencia-doel.json` del PC de Doel) que se pega una vez e incluye cliente, módulos, modo, caducidad y una **semilla TOTP propia de la instalación**; de ella salen los códigos por teléfono (6 dígitos renovación/Panel Dev, 12 dígitos módulos) y solo valen para ese equipo. Fuera los códigos cortos con máscara oculta (se aceptaban al azar un 2 %), `SECRETO`, `TOTP_SECRET_B32`, `generar-licencia.cjs`, `codigo-instalacion.cjs` y `codigo-renovacion.cjs`; nuevo `tools/licencia-v2.cjs` (claves · emitir · codigo · modulos · qr). Sello de integridad v11 con la clave de instalación. **Lo activado antes sigue activado** («heredada»): se re-sella al arrancar y Ajustes → Licencia pide pegar su DL2 para volver a renovar o cambiar módulos por teléfono. `check-puente` avisa si la compilación sale sin clave pública. La clave de las copias DOELBAK1 queda como constante derivada (solo lectura de lo antiguo). Batería nueva `test-licencia-v2.cjs` (43); `test-taller`, `test-taller-ubicaciones`, `test-multitienda` y `test-diagnostico` adaptadas. Manual al día. |
+ | 0.1.73 | 🔒 **Endurecimiento tras la auditoría 0.1.72** (`docs/AUDITORIA_0.1.72.md`, `docs/REVISION_HACKER_0.1.72.md`). **Mostrador**: PIN con scrypt y sal por usuario (migración perezosa al primer login, SEC‑10), freno local de 5 fallos/5 min, DevTools cerradas en producción, `setWindowOpenHandler`/`will-navigate` en todas las ventanas (SEC‑07/08), puerta del Panel Dev en el proceso principal con freno y `config:set` protegido para licencia/módulos/activación (SEC‑12), freno en `licencia:activar` y `dev:acceso` (SEC‑01 parcial), clave por instalación (DPAPI) para contraseñas de equipos, claves de portal y frase de copias (SEC‑11), restaurar solo desde las carpetas de copias, nombre de impresora del cajón saneado antes de `cmd /c copy` (SEC‑09), `abrir-url` solo `https/http/mailto`, DiskSpd sin shell, iframes de impresión en sandbox y escapes que faltaban en `print.js` (SEC‑21), `python -I` y reverificación de las copias de scripts (SEC‑22). **Puesto en red / comandero**: freno en `fichaje:login/admin`, `app:salir`, `caja:cajonAbrir` (SEC‑02), sesión antes de leer el cuerpo (256 KB sin sesión), `Host` y `Content-Type` validados (SEC‑06/18), `config:all` sin tokens para perfiles sin «Ajustes» (SEC‑03), `uid` del rastro desde la sesión y columnas `portal_pass_*`/`password_cifrada` fuera de lo que viaja (SEC‑04), `auth:logout`, permisos releídos en cada llamada y caducidad absoluta de 24 h (SEC‑16), freno global además del de IP (SEC‑17), certificado de hoja (no CA) de 825 días (SEC‑05), `sat:*` y cajón con permiso, ventanas de impresión en sandbox (SEC‑15), comandero solo IP privadas, errores 500 sin detalle. **Nube**: XSS reflejado de `index.html` cerrado y cabeceras de seguridad (SEC‑13), códigos de diagnóstico validados en servidor (`/api/diag-validar`, `/api/movil-validar`) sin clave en el HTML (SEC‑14), freno por IP en portal/demo/multitienda/hotel, fuera el acceso maestro de demo, sesiones firmadas con caducidad de 12 h, recortes y topes en reservas y outlet, `timingSafeEqual` en tokens, `grupo.html` escapado, `crm-productos` con `uid` y `content-type` validados (SEC‑19). Nuevo `electron/seguridad-app.cjs`. 91 baterías: las de LAN, PIN, taller y actividad del móvil actualizadas al comportamiento nuevo. |
+ | 0.1.72 | ⏰ **Plazos del tablero según un taller** (Edmundo: «ajústalo según los plazos que suelen haber en un taller, en entrega, en almacenamiento, archivado»). Cada tarjeta mide **las horas/días en su fase** contra el plazo de esa fase (antes: días desde la recepción, en rojo a los 7 fuese la columna que fuese): gris en plazo, ámbar pasado el 75 %, rojo y ⏰ fuera. Plazos típicos de fábrica: diagnosticar 2 d, presupuestar 1, enviarlo 1, aceptación 3, pieza 7, reparar 2, garantía 7 (nuevas fases *presupuestado* y *garantía*). En **Listo** corre la recogida desde el aviso: recordar al cliente a los 7 d, almacenaje a los 30 (RD 58/1988), abandono automático a los 60; la tarjeta lo dice. Bajo el tablero, **📤 Entregadas en los últimos 30 días** (plegado); después quedan archivadas y se encuentran por el buscador. Ajustes → Tiempos: recordatorio, abandono (nunca antes que el almacenaje), archivo y «↺ Plazos típicos de un taller». Batería nueva `test-plazos-taller.cjs` (22). |
+ | 0.1.71 | ✏ **Editar parte**. En la ficha, junto a «📄 Ver parte»: corregir lo registrado en la recepción sin reabrir la orden —equipo (tipo, marca, modelo, nº de serie, notas), avería declarada, accesorios (chips del checklist + libres), croquis (silueta y marcas) y condiciones (diagnóstico y si se descuenta, tope, garantía, fecha de compromiso)—. Guarda de una vez (`taller:parte-set` → `ordenParteSet`) y **cada campo que cambia queda en el historial con antes → después**; guardar sin cambios no apunta nada; una orden entregada o abandonada ya no se edita; importes negativos, garantía fuera de 0-120 y fechas malas se rechazan; el croquis entra saneado. El croquis pasa a `Croquis.jsx` (lo comparten recepción, ficha y edición) y `TIPOS` a `taller-tipos.js`. `test-croquis-parte.cjs` +9 (38), `test-pantallas` monta el modal. |
+diff --git a/electron/licencia.cjs b/electron/licencia.cjs
+index 6dc62eb..276d898 100644
+--- a/electron/licencia.cjs
++++ b/electron/licencia.cjs
+@@ -1,12 +1,44 @@
+-// Licencia Doel TPV — activación offline ligada al equipo.
+-// El código de licencia lo genera Doel IT Solutions con tools/generar-licencia.cjs
+-// (NUNCA distribuir esa herramienta ni este secreto fuera del repo privado).
++// Licencia Doel Taller — v2 (0.1.74): activación offline ligada al equipo y FIRMADA por Doel.
++//
++// Hasta la 0.1.73 todo el sistema de licencia colgaba de UN secreto HMAC y UNA semilla TOTP que
++// viajaban dentro del instalador (app.asar): con el instalador en la mano se fabricaban licencias
++// para cualquier equipo, se abría el Panel de Desarrollador y se descifraban las copias de cualquier
++// taller (SEC-01 de la auditoría 0.1.72). Desde la 0.1.74:
++//
++//   · La licencia es un código «DL2.<datos>.<firma>» firmado con Ed25519. La app solo lleva la CLAVE
++//     PÚBLICA de Doel: puede comprobar un código, nunca fabricarlo. La privada vive en el PC de Doel
++//     (node tools/licencia-v2.cjs). El código se pega UNA vez (WhatsApp, correo): lleva dentro el
++//     cliente, los módulos contratados, el modo (permanente / mensual / anual), la caducidad si la hay
++//     y una SEMILLA TOTP PROPIA DE ESTA INSTALACIÓN.
++//   · Los códigos cortos que se dictan por teléfono (6 dígitos para renovar, 12 para fijar módulos, y
++//     el del Panel de Desarrollador) salen de ESA semilla: valen solo para este equipo. Doel los calcula
++//     con la herramienta (o con un autenticador enrolado para este taller, una entrada por cliente).
++//   · El sello de integridad (que detecta ediciones a mano en la base) va con la clave de instalación
++//     (DPAPI), no con un secreto común.
++//   · Lo activado antes de la 0.1.74 sigue funcionando tal cual («activación heredada»): se re-sella
++//     con la clave de instalación al arrancar. Para volver a renovar o cambiar módulos por teléfono
++//     necesita su código DL2, que Doel emite con el ID de equipo de siempre.
++//
++// Lo único que queda de la época anterior es CLAVE_BAK (la clave de las copias DOELBAK1 y de los
++// textos cifrados antes de la 0.1.73): hace falta para LEER lo antiguo. Es una clave derivada, no el
++// secreto, y no sirve para fabricar códigos.
+ const crypto = require('crypto');
+ const os = require('os');
+ 
+-const SECRETO = 'DoelITSolutions-TPVBar-2026-LosRealejos-Tenerife-922979655';
+ const DIAS_DEMO = 30;
+ 
++/* ===== Clave pública de Doel IT Solutions (Ed25519, PEM SPKI) =====
++   La escribe `node tools/licencia-v2.cjs claves` (una vez, en el PC de Doel) y se compila con la app.
++   Vacía = esta compilación NO puede activar códigos DL2 (check-puente lo avisa). */
++let CLAVE_PUBLICA_DOEL = `__CLAVE_PUBLICA_DOEL__`;
++function configurarClavePublica(pem) { CLAVE_PUBLICA_DOEL = String(pem || ''); }
++function clavePublica() {
++  const p = CLAVE_PUBLICA_DOEL.trim();
++  if (!p) return null;
++  try { return crypto.createPublicKey(p); } catch (e) { return null; }
++}
++const tieneClavePublica = () => !!clavePublica();
++
+ // ID de equipo estable y legible: hash de hostname + CPU + usuario del SO
+ function equipoId() {
+   const base = `${os.hostname()}|${(os.cpus()[0] || {}).model || ''}|${os.userInfo().username}`;
+@@ -14,68 +46,16 @@ function equipoId() {
+   return `${h.slice(0, 4)}-${h.slice(4, 8)}-${h.slice(8, 12)}`;
+ }
+ 
+-// Código = base64url( JSON{c:cliente, e:equipoId} ) + '.' + HMAC
+-function validar(codigo) {
+-  try {
+-    const [datos, firma] = String(codigo || '').trim().split('.');
+-    if (!datos || !firma) return null;
+-    const esperada = crypto.createHmac('sha256', SECRETO).update(datos).digest('hex').slice(0, 24);
+-    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null; // v0.1.73 · SEC-26 · comparación en tiempo constante
+-    const payload = JSON.parse(Buffer.from(datos, 'base64url').toString('utf8'));
+-    if (payload.e !== equipoId()) return null; // ligada a ESTE equipo
+-    return { cliente: payload.c };
+-  } catch { return null; }
+-}
+-
+-function estado(configAll, configSet) {
+-  const cfg = configAll();
+-  const cod = (cfg.licencia_codigo || '').trim();
+-  if (cod) {
+-    const v = validar(cod);
+-    if (v) return { activada: true, cliente: v.cliente, equipo: equipoId(), diasRestantes: null };
+-  }
+-  const relojMal = cfg.reloj_alerta === '1';
+-  if ((cfg.activacion_hmac || '') === marcaEquipo()) {
+-    if (!cfg.licencia_sello) sellar(configAll, configSet); // instalaciones anteriores al sello: se firma el estado actual
+-    else if (cfg.licencia_sello !== selloCalcular(cfg)) {
+-      return { activada: false, bloqueada: true, manipulada: true, equipo: equipoId(), diasRestantes: 0,
+-        motivo: 'Los datos de licencia han sido modificados. Contacte con Doel IT Solutions (922 979 655).' };
+-    }
+-    const caduca = (cfg.licencia_caduca || '').trim(); // solo en modos mensual/anual
+-    if (caduca && relojMal) {
+-      return { activada: false, caducada: true, bloqueada: true, reloj: true, equipo: equipoId(), diasRestantes: 0, caduca,
+-        motivo: 'La fecha del equipo se ha modificado. Contacte con Doel IT Solutions.' };
+-    }
+-    if (caduca && new Date().toISOString().slice(0, 10) > caduca) {
+-      return { activada: false, caducada: true, bloqueada: true, equipo: equipoId(), diasRestantes: 0, caduca };
+-    }
+-    return { activada: true, cliente: 'Activación con autenticador', equipo: equipoId(), diasRestantes: null, caduca: caduca || null };
+-  }
+-  // Demo: 30 días desde el primer arranque
+-  if (!cfg.primer_arranque) configSet('primer_arranque', new Date().toISOString().slice(0, 10));
+-  const inicio = new Date((configAll().primer_arranque || new Date().toISOString().slice(0, 10)) + 'T00:00:00');
+-  const dias = Math.max(0, DIAS_DEMO - Math.floor((Date.now() - inicio.getTime()) / 86400000));
+-  if (relojMal) return { activada: false, cliente: null, equipo: equipoId(), diasRestantes: 0, bloqueada: true, reloj: true,
+-    motivo: 'La fecha del equipo se ha modificado. Contacte con Doel IT Solutions.' };
+-  return { activada: false, cliente: null, equipo: equipoId(), diasRestantes: dias, bloqueada: dias === 0 };
+-}
+-
+-function activar(codigo, configSet) {
+-  const v = validar(codigo);
+-  if (!v) throw new Error('Código de licencia no válido para este equipo');
+-  configSet('licencia_codigo', String(codigo).trim());
+-  return { activada: true, cliente: v.cliente, equipo: equipoId() };
+-}
+-
+-// ===== TOTP (Google Authenticator) — RFC 6238, SHA-1, 30 s, 6 dígitos =====
+-// Secreto compartido con el autenticador de Doel (escanear el QR UNA vez).
+-const TOTP_SECRET_B32 = '47U6X26PIPSOKERK7QYHYSYRAROZLWHA';
++const isoHoy = () => new Date().toISOString().slice(0, 10);
++const fechaMas = (dias) => new Date(Date.now() + dias * 86400000).toISOString().slice(0, 10);
++const ventana = () => Math.floor(Date.now() / 1000 / 30);
+ 
++// ===== Base32 (RFC 4648, sin relleno): la semilla viaja así en el código DL2 y en el otpauth:// =====
++const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+ function b32decode(str) {
+-  const alf = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+   let bits = '';
+-  for (const c of str.replace(/=+$/, '').toUpperCase()) {
+-    const v = alf.indexOf(c);
++  for (const c of String(str || '').replace(/=+$/, '').toUpperCase()) {
++    const v = B32.indexOf(c);
+     if (v === -1) continue;
+     bits += v.toString(2).padStart(5, '0');
+   }
+@@ -83,73 +63,72 @@ function b32decode(str) {
+   for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
+   return Buffer.from(bytes);
+ }
++function b32encode(buf) {
++  let bits = '';
++  for (const b of buf) bits += b.toString(2).padStart(8, '0');
++  let out = '';
++  for (let i = 0; i + 5 <= bits.length; i += 5) out += B32[parseInt(bits.slice(i, i + 5), 2)];
++  return out;
++}
++
++// ===== Código DL2 =====
++// DL2.<base64url(JSON)>.<base64url(firma Ed25519 de 'DL2|' + JSON)>
++// JSON: { v: 2, e: equipoId, c: cliente, m: [módulos activos], modo: permanente|mensual|anual,
++//         h: 'AAAA-MM-DD' | null (caducidad fija), s: semilla TOTP (base32, 20 bytes), t: emitido }
++const DL2_PREFIJO = Buffer.from('DL2|');
++function verificarDL2(codigo) {
++  try {
++    const partes = String(codigo || '').trim().split('.');
++    if (partes.length !== 3 || partes[0] !== 'DL2') return null;
++    const pub = clavePublica();
++    if (!pub) return null;
++    const datos = Buffer.from(partes[1], 'base64url');
++    const firma = Buffer.from(partes[2], 'base64url');
++    if (firma.length !== 64 || !datos.length) return null;
++    if (!crypto.verify(null, Buffer.concat([DL2_PREFIJO, datos]), pub, firma)) return null;
++    const p = JSON.parse(datos.toString('utf8'));
++    if (!p || p.v !== 2 || p.e !== equipoId()) return null; // ligada a ESTE equipo
++    if (!/^[A-Z2-7]{32}$/.test(String(p.s || ''))) return null; // 20 bytes de semilla
++    return p;
++  } catch (e) { return null; }
++}
++
++// ===== Semilla TOTP de esta instalación (viene en el DL2; duerme cifrada con la clave de instalación) =====
++function semillaInstalacion(configAll) {
++  try {
++    const v = String((configAll() || {}).licencia_semilla || '').trim();
++    if (!v) return null;
++    const s = b32decode(descifrarTexto(v));
++    return s.length === 20 ? s : null;
++  } catch (e) { return null; }
++}
+ 
+-function totpEn(contador) {
+-  const buf = Buffer.alloc(8);
+-  buf.writeBigUInt64BE(BigInt(contador));
+-  const h = crypto.createHmac('sha1', b32decode(TOTP_SECRET_B32)).update(buf).digest();
+-  const off = h[h.length - 1] & 0xf;
++// TOTP (RFC 6238, SHA-1, 30 s, 6 dígitos): el formato que entiende cualquier autenticador
++function totpEnConSecreto(contador, secreto) {
++  const msg = Buffer.alloc(8);
++  msg.writeBigUInt64BE(BigInt(contador));
++  const h = crypto.createHmac('sha1', secreto).update(msg).digest();
++  const off = h[h.length - 1] & 0x0f;
+   const code = ((h[off] & 0x7f) << 24 | h[off + 1] << 16 | h[off + 2] << 8 | h[off + 3]) % 1000000;
+   return String(code).padStart(6, '0');
+ }
++const codigoRenovacion = (semilla, contador = ventana()) => totpEnConSecreto(contador, semilla);
++const iguales6 = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+ 
+ // Acepta el código actual y ±2 ventanas (90 s de margen para dictarlo por teléfono)
+-function totpValido(codigo) {
++function totpValido(codigo, configAll) {
+   const c = String(codigo || '').trim();
+   if (!/^\d{6}$/.test(c)) return false;
+-  const ahora = Math.floor(Date.now() / 1000 / 30);
+-  for (let d = -2; d <= 2; d++) if (totpEn(ahora + d) === c) return true;
++  const s = semillaInstalacion(configAll);
++  if (!s) return false;
++  const n = ventana();
++  for (let d = -2; d <= 2; d++) if (iguales6(totpEnConSecreto(n + d, s), c)) return true;
+   return false;
+ }
++const otpauthUri = (equipo, semilla) => 'otpauth://totp/Doel%20Taller:' + encodeURIComponent(equipo)
++  + '?secret=' + b32encode(semilla) + '&issuer=Doel%20Taller&algorithm=SHA1&digits=6&period=30';
+ 
+-/* ---- Sello de integridad de la licencia ----
+-   licencia_caduca, licencia_modo y los 4 módulos van FIRMADOS (HMAC con el secreto).
+-   Si alguien edita esos valores directamente en la base de datos, el sello no casa
+-   y la aplicación se bloquea. Solo los códigos de Doel re-firman. */
+-/* ⚠️ SELLO_CLAVES (v1) NO SE TOCA: hay sellos ya firmados en instalaciones activadas.
+-   La ampliación (Domicilio) entra en el sello v2, que solo se escribe al RE-sellar
+-   (cualquier código de Doel re-firma y sube a v2). Ninguna instalación en la calle se bloquea. */
+-const SELLO_CLAVES = ['licencia_caduca', 'licencia_modo', 'modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modulo_pago_qr'];
+-const SELLO_CLAVES_V2 = [...SELLO_CLAVES, 'modulo_domicilio'];
+-const SELLO_CLAVES_V3 = [...SELLO_CLAVES_V2, 'modulo_agenda', 'modulo_comisiones', 'modulo_reserva_online']; // v3.0 Barbería
+-const SELLO_CLAVES_V4 = [...SELLO_CLAVES_V3, 'modulo_pasarela']; // v3.0.131 Pasarela Doel
+-const SELLO_CLAVES_V5 = [...SELLO_CLAVES_V4, 'modulo_peritajes', 'modulo_portal_taller']; // v3.0.132 Taller
+-const SELLO_CLAVES_V6 = [...SELLO_CLAVES_V5, 'modulo_chat_ia']; // v4.0.17 Chat IA
+-const SELLO_CLAVES_V7 = [...SELLO_CLAVES_V6, 'modulo_crm']; // v4.0.35 CRM
+-const SELLO_CLAVES_V8 = [...SELLO_CLAVES_V7, 'modulo_multitienda']; // v4.0.46 Multitienda M0
+-const SELLO_CLAVES_V9 = [...SELLO_CLAVES_V8, 'modulo_iso', 'modulo_kb']; // v5.0.12 Taller ISO+KB
+-const SELLO_CLAVES_V10 = [...SELLO_CLAVES_V9, 'modulo_diagnostico']; // v5.0.29 🎮 Diagnóstico de mandos (Taller)
+-const selloCalcular = (cfg) => cfg.licencia_sello_v === '10'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello10|' + equipoId() + '|' + SELLO_CLAVES_V10.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '9'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello9|' + equipoId() + '|' + SELLO_CLAVES_V9.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '8'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello8|' + equipoId() + '|' + SELLO_CLAVES_V8.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '7'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello7|' + equipoId() + '|' + SELLO_CLAVES_V7.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '6'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello6|' + equipoId() + '|' + SELLO_CLAVES_V6.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '5'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello5|' + equipoId() + '|' + SELLO_CLAVES_V5.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '4'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello4|' + equipoId() + '|' + SELLO_CLAVES_V4.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '3'
+-  ? crypto.createHmac('sha256', SECRETO).update('sello3|' + equipoId() + '|' + SELLO_CLAVES_V3.map((k) => cfg[k] || '').join('|')).digest('hex')
+-  : cfg.licencia_sello_v === '2'
+-    ? crypto.createHmac('sha256', SECRETO).update('sello2|' + equipoId() + '|' + SELLO_CLAVES_V2.map((k) => cfg[k] || '').join('|')).digest('hex')
+-    : crypto.createHmac('sha256', SECRETO).update('sello|' + equipoId() + '|' + SELLO_CLAVES.map((k) => cfg[k] || '').join('|')).digest('hex');
+-const sellar = (configAll, configSet) => { configSet('licencia_sello_v', '10'); configSet('licencia_sello', selloCalcular(configAll())); }; // v5.0.29 · cualquier re-sellado migra a v10 solo
+-
+-// Activación ligada al equipo: si copian la app activada a otro PC, vuelve a pedir código
+-const marcaEquipo = () => crypto.createHmac('sha256', SECRETO).update('activacion|' + equipoId()).digest('hex');
+-
+-/* ---- Códigos de renovación CON módulos (offline) ----
+-   El código se genera con un secreto derivado de la combinación de módulos (12 bits desde v3.0).
+-   Al validar se prueban las 65536 combinaciones: la que coincide renueva la licencia
+-   Y fija exactamente esos módulos → activar/desactivar a distancia por teléfono.
+-   Compatibilidad: el secreto de cada máscara depende solo de su número, así que los
+-   códigos de las épocas de 4 y 8 bits siguen validando sin cambios. */
+-
++// ===== Módulos contratables (el orden es el bit: NO se reordena, hay códigos y sellos que lo usan) =====
+ const MODULOS = ['modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modulo_pago_qr',
+   'modulo_domicilio',                                              // bit 4
+   'modulo_pasarela',                                               // bit 5 · 💳 Pasarela Doel (v3.0.131)
+@@ -162,114 +141,145 @@ const MODULOS = ['modulo_fichaje', 'modulo_stock', 'modulo_fidelizacion', 'modul
+   'modulo_iso',                                                  // bit 15 · v5.0.12 📍 Trazabilidad ISO (Taller)
+   'modulo_kb',                                                  // bit 16 · v5.0.12 💡 KB de diagnosis (Taller)
+   'modulo_diagnostico'];                                         // bit 17 · v5.0.29 🎮 Diagnóstico de mandos (Taller)
+-// bits 10-11 · Peritajes + Portal (v3.0.132); la Edición Taller en sí va por business_type.
+-// Máscaras con bit 16+ → códigos de NUEVE dígitos (tercera época, patrón v4.0.18).
++const mascaraDeModulos = (lista) => (lista || []).reduce((m, k) => { const i = MODULOS.indexOf(k); return i >= 0 ? (m | (1 << i)) : m; }, 0);
++const modulosDeMascara = (m) => MODULOS.filter((_, i) => (Number(m) >> i) & 1);
+ 
+-function totpEnConSecreto(contador, secreto) {
+-  const msg = Buffer.alloc(8);
+-  msg.writeBigUInt64BE(BigInt(contador));
+-  const h = crypto.createHmac('sha1', secreto).update(msg).digest();
+-  const off = h[h.length - 1] & 0x0f;
+-  const code = ((h[off] & 0x7f) << 24 | h[off + 1] << 16 | h[off + 2] << 8 | h[off + 3]) % 1000000;
+-  return String(code).padStart(6, '0');
++/* Código de módulos de 12 dígitos «MMMMMM-TTTTTT»: máscara en claro + TOTP de 6 con un secreto derivado
++   de la semilla de ESTA instalación y de esa máscara. Nunca ambiguo, O(1), y un código de otro taller no
++   vale aquí. (Los códigos cortos de 6/8/9 dígitos con máscara oculta de la época anterior desaparecen:
++   se aceptaban con probabilidad ~2 % al azar.) */
++const secretoMascara = (m, semilla) => crypto.createHmac('sha256', semilla).update('modulos4|' + m).digest();
++function codigoModulosSeguro(mascara, semilla, contador = ventana()) {
++  const m = Number(mascara);
++  if (!(m >= 0 && m < (1 << MODULOS.length))) throw new Error('máscara fuera de rango');
++  if (!semilla || semilla.length !== 20) throw new Error('falta la semilla de la instalación');
++  return String(m).padStart(6, '0') + '-' + totpEnConSecreto(contador, secretoMascara(m, semilla));
+ }
+-
+-// v4.0.18 · TOTP de 8 dígitos para las máscaras ampliadas (>4095): con 65536 máscaras,
+-// 6 dígitos colisionan (~1 de cada 3 códigos activaría OTRA máscara — cazado por batería)
+-function totpEn8ConSecreto(contador, secreto) {
+-  const msg = Buffer.alloc(8);
+-  msg.writeBigUInt64BE(BigInt(contador));
+-  const h = crypto.createHmac('sha1', secreto).update(msg).digest();
+-  const off = h[h.length - 1] & 0xf;
+-  const code = ((h[off] & 0x7f) << 24) | (h[off + 1] << 16) | (h[off + 2] << 8) | h[off + 3];
+-  return String(code % 100000000).padStart(8, '0');
++function mascaraValida(codigo, semilla) {
++  const c = String(codigo || '').replace(/[\s-]/g, '');
++  if (!/^\d{12}$/.test(c) || !semilla) return null;
++  const m = Number(c.slice(0, 6));
++  if (m >= (1 << MODULOS.length)) return null;
++  const sec = secretoMascara(m, semilla);
++  const n = ventana();
++  for (let v = -2; v <= 2; v++) if (iguales6(totpEnConSecreto(n + v, sec), c.slice(6))) return { mascara: m, epoca: 4 };
++  return null;
+ }
+ 
+-const secretoMascara = (m) => crypto.createHmac('sha256', SECRETO).update('modulos|' + m).digest();
++/* ===== Sello de integridad (v11) =====
++   licencia_caduca, licencia_modo, el propio código DL2 y los módulos van firmados con la CLAVE DE
++   INSTALACIÓN (HMAC): si alguien edita esos valores a mano en la base, el sello no casa y la aplicación
++   se bloquea. Solo los códigos de Doel (y el Panel Dev con la puerta abierta) re-firman. Las versiones
++   1-10 del sello iban con el secreto común y ya no se pueden comprobar: al arrancar una instalación
++   anterior se re-sella una vez con la clave de instalación (ver estado()). */
++const SELLO_CLAVES = ['licencia_caduca', 'licencia_modo', 'licencia_v2', ...MODULOS];
++const selloCalcular = (cfg) => crypto.createHmac('sha256', claveInstalacion())
++  .update('sello11|' + equipoId() + '|' + SELLO_CLAVES.map((k) => cfg[k] || '').join('|')).digest('hex');
++const sellar = (configAll, configSet) => { configSet('licencia_sello_v', '11'); configSet('licencia_sello', selloCalcular(configAll())); };
++const selloOk = (cfg) => { const a = String(cfg.licencia_sello || ''); const b = selloCalcular(cfg); return a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b)); };
+ 
+-// → null si no es un código de módulos; {mascara} si valida alguna combinación
+-function mascaraValida(codigo) {
+-  /* v4.0.18 · dos anchos, sin ambigüedad:
+-     - código de 6 dígitos → SOLO el espacio clásico de 4096 (épocas de 4/8/12 bits: todo lo
+-       impreso y memorizado sigue igual, con su perfil de riesgo original)
+-     - código de 8 dígitos → espacio completo de 65536 (máscaras con bits 12-15) */
+-  const c = String(codigo).replace(/[\s-]/g, '');
+-  const ahora = Math.floor(Date.now() / 1000 / 30);
+-  /* v0.1.34 · cuarta época, SIN colisiones: 12 dígitos = máscara en claro (6) + TOTP de 6 con
+-     el secreto de esa máscara y dominio propio. Se comprueba una sola máscara: O(1) y exacto. */
+-  if (/^\d{12}$/.test(c)) {
+-    const m = Number(c.slice(0, 6));
+-    if (m >= (1 << MODULOS.length)) return null;
+-    const sec = secretoMascara4(m);
+-    for (let v = -2; v <= 2; v++) if (totpEnConSecreto(ahora + v, sec) === c.slice(6)) return { mascara: m, epoca: 4 };
++// ===== Estado =====
++function estado(configAll, configSet) {
++  const cfg = configAll();
++  const relojMal = cfg.reloj_alerta === '1';
++  const equipo = equipoId();
++  const manipulada = (motivo) => ({ activada: false, bloqueada: true, manipulada: true, equipo, diasRestantes: 0,
++    motivo: motivo + ' Contacte con Doel IT Solutions (922 979 655).' });
++  const bloqueoPorCaducidad = (caduca) => {
++    if (caduca && relojMal) return { activada: false, caducada: true, bloqueada: true, reloj: true, equipo, diasRestantes: 0, caduca,
++      motivo: 'La fecha del equipo se ha modificado. Contacte con Doel IT Solutions.' };
++    if (caduca && isoHoy() > caduca) return { activada: false, caducada: true, bloqueada: true, equipo, diasRestantes: 0, caduca };
+     return null;
++  };
++
++  // 1 · Licencia DL2 (0.1.74+): el código se vuelve a comprobar cada vez; el sello cubre caducidad y módulos
++  const dl2 = String(cfg.licencia_v2 || '').trim();
++  if (dl2) {
++    const p = verificarDL2(dl2);
++    if (!p) return manipulada(tieneClavePublica() ? 'El código de activación no corresponde a este equipo.' : 'Esta compilación no lleva la clave pública de Doel.');
++    if (cfg.licencia_sello_v !== '11' || !selloOk(cfg)) return manipulada('Los datos de licencia han sido modificados.');
++    const caduca = String(cfg.licencia_caduca || '').trim();
++    const b = bloqueoPorCaducidad(caduca); if (b) return b;
++    return { activada: true, v2: true, cliente: p.c || 'Doel Taller', equipo, diasRestantes: null, caduca: caduca || null,
++      modo: cfg.licencia_modo || 'permanente', modulos: modulosDeMascara(mascaraDeModulos(p.m)) };
+   }
+-  if (!/^\d{6}$|^\d{8}$|^\d{9}$/.test(c)) return null;
+-  // v5.0.12 · tercera época: 9 dígitos → espacio con bit 16 (ISO/KB). Cada ancho, su espacio.
+-  const tope = c.length === 9 ? 262144 : c.length === 8 ? 65536 : 4096; // v5.0.29 · bit 17 (diagnostico) → 2^18
+-  const gen = c.length === 9 ? totpEn9ConSecreto : c.length === 8 ? totpEn8ConSecreto : totpEnConSecreto;
+-  /* v0.1.34 · se recorren TODAS las máscaras y, si el código vale para más de una, se devuelve
+-     «ambiguo» en vez de la primera: antes ganaba la máscara más baja y el cliente podía quedarse
+-     con otros módulos (la deuda de ESTADO.md, y el test 64c intermitente). */
+-  const candidatas = [];
+-  for (let m = 0; m < tope; m++) {
+-    const sec = secretoMascara(m);
+-    for (let v = -2; v <= 2; v++) {
+-      if (gen(ahora + v, sec) === c) { candidatas.push(m); break; }
+-    }
+-  }
+-  if (!candidatas.length) return null;
+-  if (candidatas.length > 1) return { mascara: null, ambiguo: true, candidatas };
+-  return { mascara: candidatas[0] };
+-}
+ 
+-function codigoModulos(mascara, contador = Math.floor(Date.now() / 1000 / 30)) {
+-  // clásicas → 6 dígitos; bits 12-15 → 8; bit 16+ (ISO/KB) → 9 (v5.0.12, patrón de épocas v4.0.18)
+-  if (Number(mascara) > 65535) return totpEn9ConSecreto(contador, secretoMascara(mascara));
+-  if (Number(mascara) > 4095) return totpEn8ConSecreto(contador, secretoMascara(mascara));
+-  return totpEnConSecreto(contador, secretoMascara(mascara));
+-}
++  // 2 · Activación heredada (anterior a la 0.1.74): se respeta y se re-sella con la clave de instalación.
++  //     Para renovar o cambiar módulos por teléfono necesita su código DL2 (necesitaDL2).
++  if (String(cfg.activacion_hmac || '').trim() || String(cfg.licencia_codigo || '').trim()) {
++    if (cfg.licencia_sello_v !== '11') { sellar(configAll, configSet); configSet('licencia_legado', '1'); }
++    else if (!selloOk(cfg)) return manipulada('Los datos de licencia han sido modificados.');
++    const caduca = String(cfg.licencia_caduca || '').trim();
++    const b = bloqueoPorCaducidad(caduca); if (b) return b;
++    return { activada: true, legado: true, necesitaDL2: true, cliente: 'Activación anterior a la 0.1.74', equipo, diasRestantes: null,
++      caduca: caduca || null, modo: cfg.licencia_modo || 'permanente' };
++  }
+ 
+-/* v0.1.34 · código largo (12 dígitos, «MMMMMM-TTTTTT»): nunca ambiguo. Es el que dicta
+-   codigo-renovacion.cjs por defecto; los cortos siguen valiendo para lo ya impreso. */
+-const secretoMascara4 = (m) => crypto.createHmac('sha256', SECRETO).update('modulos4|' + m).digest();
+-function codigoModulosSeguro(mascara, contador = Math.floor(Date.now() / 1000 / 30)) {
+-  const m = Number(mascara);
+-  if (!(m >= 0 && m < (1 << MODULOS.length))) throw new Error('máscara fuera de rango');
+-  return String(m).padStart(6, '0') + '-' + totpEnConSecreto(contador, secretoMascara4(m));
++  // 3 · Demo: 30 días desde el primer arranque
++  if (!cfg.primer_arranque) configSet('primer_arranque', isoHoy());
++  const inicio = new Date((configAll().primer_arranque || isoHoy()) + 'T00:00:00');
++  const dias = Math.max(0, DIAS_DEMO - Math.floor((Date.now() - inicio.getTime()) / 86400000));
++  if (relojMal) return { activada: false, cliente: null, equipo, diasRestantes: 0, bloqueada: true, reloj: true,
++    motivo: 'La fecha del equipo se ha modificado. Contacte con Doel IT Solutions.' };
++  return { activada: false, cliente: null, equipo, diasRestantes: dias, bloqueada: dias === 0, sinClavePublica: !tieneClavePublica() };
+ }
+ 
+-function totpEn9ConSecreto(contador, secreto) { // v5.0.12 · tercera época: máscaras con bit 16+
+-  const msg = Buffer.alloc(8);
+-  msg.writeBigUInt64BE(BigInt(contador));
+-  const h = crypto.createHmac('sha1', secreto).update(msg).digest();
+-  const off = h[h.length - 1] & 0xf;
+-  const code = ((h[off] & 0x7f) << 24) | (h[off + 1] << 16) | (h[off + 2] << 8) | h[off + 3];
+-  return String(code % 1000000000).padStart(9, '0');
++// ===== Activar con el código DL2 (se pega una vez) =====
++function activar(codigo, configSet, configAll) {
++  const p = verificarDL2(codigo);
++  if (!p) {
++    if (!tieneClavePublica()) throw new Error('Esta compilación no lleva la clave pública de Doel: no puede activar códigos DL2');
++    throw new Error('Código de activación no válido para este equipo (ID ' + equipoId() + '). Comprueba que lo has pegado entero.');
++  }
++  const modo = ['permanente', 'mensual', 'anual'].includes(p.modo) ? p.modo : 'permanente';
++  const lista = Array.isArray(p.m) ? p.m.filter((k) => MODULOS.includes(k)) : [];
++  const fechaOk = /^\d{4}-\d{2}-\d{2}$/.test(String(p.h || ''));
++  let caduca = '';
++  if (modo !== 'permanente') caduca = fechaOk ? p.h : fechaMas(modo === 'anual' ? 366 : 31);
++  else if (fechaOk) caduca = p.h;
++  configSet('licencia_v2', String(codigo).trim());
++  configSet('licencia_semilla', cifrarTexto(p.s));
++  configSet('licencia_cliente', String(p.c || '').slice(0, 120));
++  configSet('licencia_modo', modo);
++  for (const k of MODULOS) configSet(k, lista.includes(k) ? '1' : '0');
++  configSet('licencia_caduca', caduca);
++  configSet('licencia_legado', '');
++  configSet('activacion_hmac', ''); // lo heredado deja de contar: manda el DL2
++  configSet('licencia_codigo', '');
++  sellar(configAll, configSet);
++  return { activada: true, v2: true, cliente: p.c, equipo: equipoId(), modulos: lista, caduca: caduca || null, modo };
+ }
+ 
++/* ===== Códigos cortos por teléfono (con la semilla de ESTA instalación) =====
++   6 dígitos  → renovación (mensual +31 / anual +366; en permanente confirma la activación).
++   12 dígitos → fija exactamente esos módulos y renueva. */
+ function activarConTotp(codigo, configSet, configAll) {
++  const c = String(codigo || '').replace(/[\s-]/g, '');
++  const semilla = semillaInstalacion(configAll);
++  if (!semilla) {
++    throw new Error('Esta instalación aún no tiene su código de activación DL2. Pídeselo a Doel con el ID de equipo '
++      + equipoId() + ' (se pega una sola vez); después ya valen los códigos cortos que se dictan por teléfono.');
++  }
+   let modulosFijados = null;
+-  if (!totpValido(codigo)) {
+-    const mm = mascaraValida(codigo);
+-    if (!mm) throw new Error('Código no válido o caducado — mira el actual en el autenticador o en codigo-renovacion');
+-    if (mm.ambiguo) throw new Error('Este código vale para más de una combinación de módulos (' + mm.candidatas.length + '): espera al siguiente (30 s) o usa el código largo de 12 dígitos');
+-    // Código de renovación con módulos: fija la combinación exacta
++  if (/^\d{6}$/.test(c)) {
++    if (!totpValido(c, configAll)) throw new Error('Código no válido o caducado: pide el actual (cambia cada 30 s)');
++  } else if (/^\d{12}$/.test(c)) {
++    const mm = mascaraValida(c, semilla);
++    if (!mm) throw new Error('Código de módulos no válido o caducado para este equipo: pide el actual (cambia cada 30 s)');
+     for (const [i, clave] of MODULOS.entries()) configSet(clave, (mm.mascara >> i) & 1 ? '1' : '0');
+-    modulosFijados = MODULOS.filter((_, i) => (mm.mascara >> i) & 1);
++    modulosFijados = modulosDeMascara(mm.mascara);
++  } else {
++    throw new Error('Código no reconocido: 6 dígitos (renovación), 12 dígitos (módulos) o el código DL2 completo');
+   }
+-  configSet('activacion_hmac', marcaEquipo());
+-  // Modo mensual (contratos de mantenimiento): cada activación/renovación da 31 días
+-  const modo = configAll ? (configAll().licencia_modo || 'permanente') : 'permanente';
++  const modo = (configAll().licencia_modo || 'permanente');
+   if (modo === 'mensual' || modo === 'anual') {
+-    const dias = modo === 'anual' ? 366 : 31;
+-    const hasta = new Date(Date.now() + dias * 86400000).toISOString().slice(0, 10);
++    const hasta = fechaMas(modo === 'anual' ? 366 : 31);
+     configSet('licencia_caduca', hasta);
+     sellar(configAll, configSet);
+     return { activada: true, caduca: hasta, modulos: modulosFijados };
+   }
+   configSet('licencia_caduca', '');
+-  if (configAll) sellar(configAll, configSet);
++  sellar(configAll, configSet);
+   return { activada: true, modulos: modulosFijados };
+ }
+ 
+@@ -281,7 +291,10 @@ function activarConTotp(codigo, configSet, configAll) {
+      la frase que elige el dueño). Sin la frase no la abre nadie, ni otro Doel: es la que
+      permite dejar la copia en un NAS compartido o en la nube. Si se pierde la frase, se
+      pierde la copia; por eso la pantalla lo avisa dos veces. */
+-const CLAVE_BAK = crypto.createHmac('sha256', SECRETO).update('backup-cifrado-v1').digest();
++/* v0.1.74 · clave de las copias DOELBAK1 y de los textos cifrados antes de la 0.1.73: constante DERIVADA del secreto
++   antiguo, que ya no viaja. Solo sirve para LEER lo que se cifró entonces (y para las copias sin frase propia,
++   que siguen siendo DOELBAK1 a propósito: sin frase no habría recuperación en otro PC). */
++const CLAVE_BAK = Buffer.from('77114fed0eec7a9d24ce3f054060c2523ab4776a18b4c1852a1de8f7d807a410', 'hex');
+ const MAGIA_BAK = Buffer.from('DOELBAK1');
+ const MAGIA_BAK2 = Buffer.from('DOELBAK2');
+ const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }; // ~60 ms en un PC de mostrador
+@@ -412,4 +425,8 @@ function descifrarArchivo(origen, destino, clave) {
+ module.exports = {
+   cifrarArchivo, descifrarArchivo, esBackupCifrado, formatoBackup, claveDerivar, cifrarTexto, descifrarTexto,
+   configurarClaveInstalacion, claveInstalacion, textoCifradoLegado, // v0.1.73 · SEC-11
+-  sellar, selloCalcular, equipoId, validar, estado, activar, activarConTotp, totpValido, totpEn, marcaEquipo, SECRETO, TOTP_SECRET_B32, MODULOS, codigoModulos, codigoModulosSeguro, mascaraValida, SELLO_CLAVES_V3 };
++  // v0.1.74 · licencia v2
++  equipoId, estado, activar, activarConTotp, verificarDL2, totpValido, semillaInstalacion, codigoRenovacion,
++  codigoModulosSeguro, mascaraValida, otpauthUri, MODULOS, mascaraDeModulos, modulosDeMascara,
++  sellar, selloCalcular, SELLO_CLAVES, configurarClavePublica, tieneClavePublica, b32encode, b32decode,
++};
+diff --git a/electron/main.cjs b/electron/main.cjs
+index 00794d6..2984496 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -345,7 +345,7 @@ app.whenReady().then(() => {
+     // Claves protegidas por el sello de licencia: re-firmar tras un cambio legítimo desde la app.
+     // Lista ÚNICA (SELLO_CLAVES_V3): la vieja de 4 módulos dejaba fuera domicilio/agenda/comisiones/
+     // reserva_online → togglearlos en Panel Dev rompía el sello → "manipulada" (bug latente desde v2).
+-    if (licencia.SELLO_CLAVES_V3.includes(clave)) {
++    if (licencia.SELLO_CLAVES.includes(clave)) { // v0.1.74 · sello v11 (clave de instalación)
+       licencia.sellar(db.configAll, db.configSet);
+     }
+     return r;
+@@ -1072,13 +1072,16 @@ app.whenReady().then(() => {
+     /* v0.1.34 · los códigos de módulos de 8, 9 y 12 dígitos también van por TOTP: hasta ahora
+        solo entraban los de 6, y los de CRM/ISO/KB/Diagnóstico (bits 12+) caían en «no válido
+        para este equipo». Solo el código firmado (con punto) va por `activar`. */
++    // v0.1.74 · dígitos (6 o 12, con guion) → código corto con la semilla de la instalación; el DL2 (con puntos) → activar
+     return /^[\d\s-]{6,13}$/.test(c) && !c.includes('.')
+       ? licencia.activarConTotp(c, db.configSet, db.configAll)
+-      : licencia.activar(c, db.configSet);
++      : licencia.activar(c, db.configSet, db.configAll);
+   });
+   // ===== Panel de Desarrollador (solo con el código del autenticador de Doel) =====
+   handle('dev:acceso', (codigo) => { // v0.1.73 · SEC-12 · abre la puerta 30 min en main (el freno lo pone handle())
+-    if (!licencia.totpValido(codigo)) throw new Error('Código no válido');
++    /* v0.1.74 · el código es el TOTP de ESTA instalación (semilla del DL2), no el de un autenticador común */
++    if (!licencia.semillaInstalacion(db.configAll)) throw new Error('Este equipo aún no tiene su código de activación DL2: el Panel de Desarrollador se abre con el código de 6 dígitos de ESTA instalación (node tools/licencia-v2.cjs codigo --equipo ' + licencia.equipoId() + ')');
++    if (!licencia.totpValido(codigo, db.configAll)) throw new Error('Código no válido');
+     devAbrir();
+     return true;
+   });
+@@ -1288,6 +1291,7 @@ El técnico (Edmundo) te consulta desde el Panel de Desarrollador del propio TPV
+     db.configSet('activacion_hmac', '');
+     db.configSet('licencia_caduca', '');
+     db.configSet('licencia_codigo', '');
++    db.configSet('licencia_v2', ''); db.configSet('licencia_semilla', ''); db.configSet('licencia_legado', ''); db.configSet('licencia_sello', ''); // v0.1.74
+     return true;
+   });
+   handle('app:estado-salida', () => ({
+diff --git a/package.json b/package.json
+index e3a8ca3..eb44158 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.73",
++  "version": "0.1.74",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/src/App.jsx b/src/App.jsx
+index a87b5ac..1968087 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -490,16 +490,16 @@ function PantallaActivacion({ licencia, onActivada }) {
+             : 'El periodo de demostración ha terminado.'}
+         </p>
+         <p style={{ color: '#9db4c6', fontSize: 14 }}>
+-          Introduce el <b>código de 6 dígitos</b> del autenticador de Doel IT Solutions
+-          (922 979 655 · doel.it.solutions@gmail.com). Si te han dado un código de licencia
+-          largo, también vale. ID de este equipo:
++          Llama a Doel IT Solutions (922 979 655 · doel.it.solutions@gmail.com) con el ID de este equipo. Te enviarán un
++          <b> código de activación</b> (empieza por <code>DL2.</code>) que se pega aquí una vez; si ya lo tienes, también
++          valen los códigos cortos que te dicten por teléfono (6 o 12 dígitos). ID de este equipo:
+         </p>
+         <p style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, color: '#62E70E', letterSpacing: 2 }}>{licencia.equipo}</p>
+         {error && <div className="aviso" onClick={() => setError('')}>{error}</div>}
+-        <input placeholder="Código de Doel (6 dígitos, el largo de módulos o la licencia)" value={codigo}
+-          style={{ textAlign: 'center', fontSize: 22, letterSpacing: 6 }}
+-          onChange={(e) => setCodigo(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && activar()} />
+-        <TecladoNum valor={codigo} onCambio={setCodigo} maxLen={64} />
++        <textarea placeholder="Pega el código DL2. de Doel, o teclea el código corto (6 o 12 dígitos)" value={codigo} rows={/^\s*DL2\./i.test(codigo) ? 4 : 1}
++          style={{ width: '100%', textAlign: /^\s*DL2\./i.test(codigo) ? 'left' : 'center', fontSize: /^\s*DL2\./i.test(codigo) ? 12 : 22, letterSpacing: /^\s*DL2\./i.test(codigo) ? 0 : 6, fontFamily: /^\s*DL2\./i.test(codigo) ? 'monospace' : 'inherit', resize: 'vertical' }}
++          onChange={(e) => setCodigo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); activar(); } }} />
++        {!/^\s*DL2\./i.test(codigo) && <TecladoNum valor={codigo} onCambio={setCodigo} maxLen={13} />}
+         <div className="pie">
+           <button className="btn-fantasma" onClick={async () => { const c = await api.config.all(); api.sistema.abrirUrl((c.url_contacto || 'https://doelitcard.netlify.app/').trim()); }}>📞 Contacto</button>
+           <button className="btn-verde" disabled={!codigo.trim()} onClick={activar}>✓ Activar</button>
+diff --git a/src/components/ajustes/desarrollador.jsx b/src/components/ajustes/desarrollador.jsx
+index 48c6c32..5410e36 100644
+--- a/src/components/ajustes/desarrollador.jsx
++++ b/src/components/ajustes/desarrollador.jsx
+@@ -113,7 +113,7 @@ export function PanelDesarrollador() {
+ 
+       <Plegable titulo="🔑 Licencia de este equipo (mantenimiento)" maxWidth={720}>
+         <p style={{ fontSize: 14, color: lic.activada ? '#62E70E' : '#e0a852', marginBottom: 6 }}>
+-          {lic.activada ? '✓ Activada' : lic.caducada ? '✗ CADUCADA (bloqueada)' : `Demo: ${lic.diasRestantes} días`}
++          {lic.activada ? '✓ Activada' + (lic.v2 ? ' (código DL2)' : lic.legado ? ' (anterior a la 0.1.74: pide su DL2)' : '') : lic.caducada ? '✗ CADUCADA (bloqueada)' : `Demo: ${lic.diasRestantes} días`}
+           {lic.caduca && <span style={{ color: '#9db4c6' }}> · válida hasta {lic.caduca}</span>}
+         </p>
+         <div className="fila"><label>Modo de licencia</label>
+diff --git a/src/components/ajustes/sistema.jsx b/src/components/ajustes/sistema.jsx
+index d245e43..e298bb5 100644
+--- a/src/components/ajustes/sistema.jsx
++++ b/src/components/ajustes/sistema.jsx
+@@ -69,28 +69,53 @@ function LicenciaPanel() {
+   useEffect(() => { cargar(); }, []);
+   if (!est) return null;
+ 
++  /* v0.1.74 · licencia v2: el código DL2 (largo, se pega una vez) activa; los cortos (6 o 12 dígitos, por teléfono)
++     renuevan o fijan módulos con la semilla de ESTA instalación. */
+   const activar = async () => {
+     try {
+-      const rAct = await api.licencia.activar(codigo.trim());
+-      if (rAct && rAct.modulos) {
+-        window.dispatchEvent(new Event('doel:cfg'));
+-        setMsj(rAct.modulos.length
+-          ? '✓ Renovado. Módulos: ' + rAct.modulos.map((m) => m.replace('modulo_', '')).join(', ')
+-          : '✓ Renovado sin módulos adicionales.');
+-      }
+-      setMsj('✓ Licencia activada correctamente');
++      const r = await api.licencia.activar(codigo.trim());
++      window.dispatchEvent(new Event('doel:cfg'));
++      const mods = (r && r.modulos) ? (r.modulos.length ? ' · módulos: ' + r.modulos.map((m) => m.replace('modulo_', '')).join(', ') : ' · sin módulos adicionales') : '';
++      const hasta = r && r.caduca ? ' · válida hasta ' + r.caduca : '';
++      setMsj(r && r.v2 ? '✓ Activada para ' + (r.cliente || 'este taller') + mods + hasta : '✓ Código aceptado' + mods + hasta);
+       setCodigo('');
+       cargar();
+     } catch (e) { setMsj(e.message); }
+   };
++  const esDL2 = /^\s*DL2\./i.test(codigo);
++  const cajaCodigo = (
++    <div style={{ marginTop: 10 }}>
++      {msj && <div className="aviso" onClick={() => setMsj('')}>{msj}</div>}
++      <textarea value={codigo} rows={esDL2 ? 4 : 1}
++        placeholder="Pega aquí el código de activación de Doel (empieza por DL2.) o teclea el código corto que te dicten (6 o 12 dígitos)"
++        style={{ width: '100%', maxWidth: 560, fontFamily: esDL2 ? 'monospace' : 'inherit', fontSize: esDL2 ? 12 : 17, textAlign: esDL2 ? 'left' : 'center', letterSpacing: esDL2 ? 0 : 4, resize: 'vertical' }}
++        onChange={(e) => setCodigo(e.target.value)}
++        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && codigo.trim()) { e.preventDefault(); activar(); } }} />
++      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
++        {!esDL2 && <div style={{ maxWidth: 300 }}><TecladoNum valor={codigo} onCambio={(v) => setCodigo(v.replace(/[^\d-]/g, '').slice(0, 13))} maxLen={13} /></div>}
++        <button className="btn-verde" disabled={!codigo.trim()} onClick={activar}>✓ Activar ahora</button>
++      </div>
++    </div>
++  );
+ 
+   return (
+     <Plegable titulo="🔑 Licencia" maxWidth={720}>
+       {est.activada ? (
+-        <p style={{ color: '#62E70E', fontSize: 15 }}>
+-          ✓ Licencia activada — {est.cliente}
+-          <span style={{ color: '#9db4c6', fontSize: 13, display: 'block', marginTop: 4 }}>ID de equipo: {est.equipo}</span>
+-        </p>
++        <div>
++          <p style={{ color: '#62E70E', fontSize: 15 }}>
++            ✓ Licencia activada — {est.cliente}
++            <span style={{ color: '#9db4c6', fontSize: 13, display: 'block', marginTop: 4 }}>
++              ID de equipo: {est.equipo}{est.caduca ? ' · válida hasta ' + est.caduca : ''}{est.modo && est.modo !== 'permanente' ? ' · ' + est.modo : ''}
++            </span>
++          </p>
++          {est.necesitaDL2 && (
++            <div className="aviso" style={{ color: '#e0a852' }}>
++              Esta activación es anterior a la 0.1.74 y sigue valiendo. Para renovar o activar módulos por teléfono hace falta
++              el <b>código de activación DL2</b> de Doel: pídelo con el ID de equipo de arriba y pégalo aquí una sola vez.
++            </div>
++          )}
++          {cajaCodigo}
++        </div>
+       ) : (
+         <div>
+           <p style={{ color: '#e0a852', fontSize: 14 }}>
+@@ -104,21 +129,13 @@ function LicenciaPanel() {
+                 🖥 <b>{est.equipo}</b>
+               </span>
+               <span style={{ display: 'block', margin: '10px 0 2px' }}>
+-                <b style={{ color: '#62E70E' }}>2º</b> Teclee aquí el <b>código de 6 dígitos</b> que le dictarán por teléfono:
++                <b style={{ color: '#62E70E' }}>2º</b> Doel le enviará por WhatsApp o correo un <b>código de activación</b> (empieza por <code>DL2.</code>):
++                cópielo entero y péguelo aquí.
+               </span>
+             </span>
+           </p>
+-          {msj && <div className="aviso" onClick={() => setMsj('')}>{msj}</div>}
+-          <div style={{ display: 'flex', gap: 8, maxWidth: 460, marginTop: 10 }}>
+-            <input placeholder="Código que le dicte Doel (6 dígitos, o el largo de módulos)" value={codigo}
+-              style={{ textAlign: 'center', letterSpacing: 4, fontSize: 17 }}
+-              onChange={(e) => setCodigo(e.target.value)}
+-              onKeyDown={(e) => e.key === 'Enter' && codigo.trim() && activar()} />
+-            <button className="btn-verde" disabled={!codigo.trim()} onClick={activar}>✓ Activar ahora</button>
+-          </div>
+-          <div style={{ maxWidth: 300 }}>
+-            <TecladoNum valor={codigo} onCambio={(v) => setCodigo(v.replace(/[^\d-]/g, '').slice(0, 13))} maxLen={13} /* v0.1.34 · los códigos de módulos tienen 8, 9 o 12 dígitos: el tope de 6 los cortaba */ alto={48} />
+-          </div>
++          {est.sinClavePublica && <div className="aviso">Esta compilación no lleva la clave pública de Doel y no puede activarse: avise a Doel.</div>}
++          {cajaCodigo}
+           <button onClick={async () => { const c = await api.config.all(); api.sistema.abrirUrl((c.url_contacto || 'https://doelitcard.netlify.app/').trim()); }}
+             style={{ marginTop: 12, padding: '9px 18px', fontSize: 13, background: 'transparent', border: '1px solid #244964', borderRadius: 999, color: '#9db4c6' }}>
+             📞 Contacto y soporte — Doel IT Solutions
+diff --git a/tools/check-puente.cjs b/tools/check-puente.cjs
+index 0fb154c..9e0bf5f 100644
+--- a/tools/check-puente.cjs
++++ b/tools/check-puente.cjs
+@@ -153,5 +153,15 @@ if (huerfanos.length) {
+   console.log('  ' + huerfanos.join(' '));
+ }
+ 
++/* ── 9 · v0.1.74 · la compilación lleva la clave pública de Doel (licencia v2). Aviso, no fallo: en el PC de
++   desarrollo puede faltar; en el instalador que se entrega a un taller NO debe faltar. ── */
++{
++  const licTxt = fs.readFileSync('electron/licencia.cjs', 'utf8');
++  const mPub = /let CLAVE_PUBLICA_DOEL = `([\s\S]*?)`;/.exec(licTxt);
++  const hayPublica = !!(mPub && /BEGIN PUBLIC KEY/.test(mPub[1]));
++  console.log('9 · La compilación lleva la clave pública de Doel (licencia v2):');
++  console.log(hayPublica ? '  sí' : '  ⚠ NO: este build no puede activar códigos DL2 → node tools/licencia-v2.cjs claves (en el PC de Doel) y recompilar');
++}
++
+ console.log(fallos ? `\n${fallos} fallo(s) en el puente.` : '\nOK: el puente está completo.');
+ process.exit(fallos ? 1 : 0);
+diff --git a/tools/codigo-instalacion.cjs b/tools/codigo-instalacion.cjs
+deleted file mode 100644
+index e16ca46..0000000
+--- a/tools/codigo-instalacion.cjs
++++ /dev/null
+@@ -1,7 +0,0 @@
+-// HERRAMIENTA PRIVADA DOEL — imprime el código de instalación actual (igual que el móvil)
+-// Uso: node tools/codigo-instalacion.cjs
+-const lic = require('../electron/licencia.cjs');
+-const t = Math.floor(Date.now() / 1000 / 30);
+-const seg = 30 - (Math.floor(Date.now() / 1000) % 30);
+-console.log('\nCódigo de instalación Doel TPV:', lic.totpEn(t));
+-console.log(`(caduca en ${seg} s; el siguiente será ${lic.totpEn(t + 1)})\n`);
+diff --git a/tools/codigo-renovacion.cjs b/tools/codigo-renovacion.cjs
+deleted file mode 100644
+index d3a8b81..0000000
+--- a/tools/codigo-renovacion.cjs
++++ /dev/null
+@@ -1,42 +0,0 @@
+-#!/usr/bin/env node
+-/* Doel IT Solutions — Generador de códigos de renovación CON módulos
+-   Uso:  node tools/codigo-renovacion.cjs
+-   El código resultante renueva la licencia (mensual: +31 días · anual: +366 días
+-   según el modo del equipo) y FIJA exactamente los módulos que elijas aquí.
+-   Válido ~90 segundos (dictar por teléfono). El código normal del autenticador
+-   sigue funcionando y NO toca los módulos. */
+-const readline = require('readline');
+-const { MODULOS, codigoModulos, codigoModulosSeguro } = require('../electron/licencia.cjs');
+-
+-const NOMBRES = { modulo_fichaje: '🕐 Fichaje', modulo_stock: '📦 Stock', modulo_fidelizacion: '🎁 Fidelización', modulo_pago_qr: '📱 Pago QR', modulo_domicilio: '🛵 Domicilio y reparto',
+-  modulo_pasarela: '💳 Pasarela Doel', modulo_peritajes: '📋 Peritajes e informes', modulo_portal_taller: '🌐 Portal del cliente (Taller)',
+-  modulo_agenda: '🗓 Agenda de citas', modulo_comisiones: '💶 Comisiones', modulo_reserva_online: '🌐 Reserva online',
+-  modulo_chat_ia: '[IA] Chat IA del portal', modulo_crm: '[CRM] Clientes y proveedores', modulo_multitienda: '[MT] Multitienda (panel de grupo)',
+-  modulo_iso: '[ISO] Trazabilidad ISO 9001 (Taller)', modulo_kb: '[KB] Diagnosis auto-aprendida (Taller)', modulo_diagnostico: '[DIAG] Diagnóstico de mandos y hardware (Taller)' };
+-// v5.0.12: máscaras con bit 16 (ISO/KB) generan códigos de NUEVE dígitos — tercera época.
+-// v4.0.17: máscara ampliada a 16 bits — bit 12 = 🤖 Chat IA del portal (Taller); 13-15 reserva.
+-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+-const pregunta = (q) => new Promise((res) => rl.question(q, res));
+-
+-(async () => {
+-  console.log('\n=== Código de renovación con módulos — Doel TPV ===\n');
+-  let mascara = 0;
+-  for (const [i, clave] of MODULOS.entries()) {
+-    if (!NOMBRES[clave]) continue; // bit de reserva
+-    const r = (await pregunta(`${NOMBRES[clave]} ¿activo este periodo? (s/N): `)).trim().toLowerCase();
+-    if (r === 's' || r === 'si' || r === 'sí') mascara |= (1 << i);
+-  }
+-  rl.close();
+-  const activos = MODULOS.filter((_, i) => (mascara >> i) & 1).map((k) => NOMBRES[k]);
+-  console.log(`\nMódulos que quedarán activos: ${activos.length ? activos.join(' · ') : '(ninguno)'}`);
+-  let ultimo = '';
+-  console.log('Código (se refresca cada 30 s, Ctrl+C para salir).');
+-  console.log('Dicta el LARGO (12 dígitos): nunca activa otra combinación y el TPV lo valida al instante.');
+-  console.log('El corto sigue valiendo, pero puede coincidir con otra combinación y el TPV lo rechazará como ambiguo.\n');
+-  const tick = () => {
+-    const c = codigoModulosSeguro(mascara);
+-    if (c !== ultimo) { ultimo = c; console.log(`   👉  ${c}      (corto: ${codigoModulos(mascara)})`); }
+-  };
+-  tick();
+-  setInterval(tick, 2000);
+-})();
+diff --git a/tools/generar-licencia.cjs b/tools/generar-licencia.cjs
+deleted file mode 100644
+index f911e37..0000000
+--- a/tools/generar-licencia.cjs
++++ /dev/null
+@@ -1,15 +0,0 @@
+-// HERRAMIENTA PRIVADA DE DOEL IT SOLUTIONS — NO DISTRIBUIR CON LA APLICACIÓN
+-// Uso: node tools/generar-licencia.cjs "Bar Manolo S.L." AB12-CD34-EF56
+-const crypto = require('crypto');
+-const SECRETO = 'DoelITSolutions-TPVBar-2026-LosRealejos-Tenerife-922979655';
+-const [cliente, equipo] = process.argv.slice(2);
+-if (!cliente || !equipo) {
+-  console.log('Uso: node tools/generar-licencia.cjs "Nombre Cliente" ID-DE-EQUIPO');
+-  process.exit(1);
+-}
+-const datos = Buffer.from(JSON.stringify({ c: cliente, e: equipo.toUpperCase() })).toString('base64url');
+-const firma = crypto.createHmac('sha256', SECRETO).update(datos).digest('hex').slice(0, 24);
+-console.log('\nCliente :', cliente);
+-console.log('Equipo  :', equipo.toUpperCase());
+-console.log('\nCÓDIGO DE LICENCIA:\n');
+-console.log(datos + '.' + firma, '\n');
+diff --git a/tools/licencia-v2.cjs b/tools/licencia-v2.cjs
+new file mode 100644
+index 0000000..314a5dd
+--- /dev/null
++++ b/tools/licencia-v2.cjs
+@@ -0,0 +1,125 @@
++#!/usr/bin/env node
++/* HERRAMIENTA PRIVADA DE DOEL IT SOLUTIONS — NO VA EN EL INSTALADOR (package.json: !tools/**)
++   Licencias v2 (0.1.74): la clave privada vive SOLO en el PC de Doel, en ~/.doel/licencia-doel.json
++   (o en la carpeta de la variable DOEL_LICENCIA_DIR). La app lleva únicamente la clave pública.
++
++   Uso:
++     node tools/licencia-v2.cjs claves                       genera las claves (una vez) y escribe la pública en electron/licencia.cjs
++     node tools/licencia-v2.cjs emitir --equipo AB12-CD34-EF56 --cliente "Taller X" [--modulos crm,iso,kb,diagnostico | todos | ninguno] [--modo permanente|mensual|anual] [--caduca 2027-12-31]
++     node tools/licencia-v2.cjs codigo  --equipo AB12-CD34-EF56                     código de 6 dígitos (renovación / Panel Dev) de ESE equipo, ahora mismo
++     node tools/licencia-v2.cjs modulos --equipo AB12-CD34-EF56 --modulos crm,iso    código de 12 dígitos que fija esos módulos en ESE equipo
++     node tools/licencia-v2.cjs qr      --equipo AB12-CD34-EF56                     otpauth:// para enrolar ESE equipo en un autenticador (una entrada por cliente)
++
++   El ID de equipo lo lee el cliente en Ajustes → Sistema → Licencia (o en la pantalla de activación).
++   El código DL2 se le manda por WhatsApp o correo y lo pega una vez; los cortos se dictan por teléfono. */
++const crypto = require('crypto');
++const fs = require('fs');
++const path = require('path');
++const os = require('os');
++const lic = require('../electron/licencia.cjs');
++
++const DIR_DEFECTO = () => process.env.DOEL_LICENCIA_DIR || path.join(os.homedir(), '.doel');
++const rutaClaves = (dir) => path.join(dir || DIR_DEFECTO(), 'licencia-doel.json');
++const RE_EQUIPO = /^[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/;
++
++/* Genera (o lee, si ya existen) las claves de Doel: par Ed25519 + clave maestra de semillas TOTP. */
++function claves({ dir = DIR_DEFECTO(), forzar = false } = {}) {
++  const ruta = rutaClaves(dir);
++  if (fs.existsSync(ruta) && !forzar) return { ...JSON.parse(fs.readFileSync(ruta, 'utf8')), ruta, nueva: false };
++  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
++  const k = {
++    formato: 1,
++    publica: publicKey.export({ type: 'spki', format: 'pem' }),
++    privada: privateKey.export({ type: 'pkcs8', format: 'pem' }),
++    totp: crypto.randomBytes(32).toString('hex'), // maestra de la que salen las semillas por equipo
++    creado: new Date().toISOString(),
++  };
++  fs.mkdirSync(dir, { recursive: true });
++  fs.writeFileSync(ruta, JSON.stringify(k, null, 2), { mode: 0o600 });
++  return { ...k, ruta, nueva: true };
++}
++function leer(dir) {
++  const ruta = rutaClaves(dir);
++  if (!fs.existsSync(ruta)) throw new Error('No hay claves de Doel en ' + ruta + '. Primero: node tools/licencia-v2.cjs claves');
++  return JSON.parse(fs.readFileSync(ruta, 'utf8'));
++}
++
++/* Semilla TOTP de un equipo: determinista a partir de la maestra, así no hace falta guardar un registro
++   por cliente; el mismo ID de equipo da siempre la misma semilla. 20 bytes (160 bits, SHA-1 TOTP). */
++function semillaDe(equipo, dir) {
++  const e = String(equipo || '').trim().toUpperCase();
++  if (!RE_EQUIPO.test(e)) throw new Error('ID de equipo con formato raro: ' + equipo + ' (esperaba AB12-CD34-EF56)');
++  const k = leer(dir);
++  return crypto.createHmac('sha256', Buffer.from(k.totp, 'hex')).update('semilla|' + e).digest().subarray(0, 20);
++}
++
++function normalizarModulos(v) {
++  if (Array.isArray(v)) return v.map((m) => (m.startsWith('modulo_') ? m : 'modulo_' + m)).filter((m) => lic.MODULOS.includes(m));
++  const s = String(v || '').trim().toLowerCase();
++  if (!s || s === 'ninguno') return [];
++  if (s === 'todos') return [...lic.MODULOS];
++  return normalizarModulos(s.split(/[\s,;]+/).filter(Boolean));
++}
++
++/* El código DL2: lo que el cliente pega una vez. */
++function emitir({ dir, equipo, cliente, modulos = [], modo = 'permanente', caduca = null } = {}) {
++  const e = String(equipo || '').trim().toUpperCase();
++  if (!RE_EQUIPO.test(e)) throw new Error('ID de equipo con formato raro: ' + equipo);
++  if (!String(cliente || '').trim()) throw new Error('Falta --cliente');
++  if (!['permanente', 'mensual', 'anual'].includes(modo)) throw new Error('--modo: permanente | mensual | anual');
++  if (caduca && !/^\d{4}-\d{2}-\d{2}$/.test(caduca)) throw new Error('--caduca: AAAA-MM-DD');
++  const k = leer(dir);
++  const payload = { v: 2, e, c: String(cliente).trim().slice(0, 120), m: normalizarModulos(modulos), modo, h: caduca || null,
++    s: lic.b32encode(semillaDe(e, dir)), t: new Date().toISOString().slice(0, 10) };
++  const datos = Buffer.from(JSON.stringify(payload), 'utf8');
++  const firma = crypto.sign(null, Buffer.concat([Buffer.from('DL2|'), datos]), crypto.createPrivateKey(k.privada));
++  return 'DL2.' + datos.toString('base64url') + '.' + firma.toString('base64url');
++}
++
++const codigo = ({ dir, equipo, contador } = {}) => lic.codigoRenovacion(semillaDe(equipo, dir), contador);
++const modulos = ({ dir, equipo, modulos: m, contador } = {}) => lic.codigoModulosSeguro(lic.mascaraDeModulos(normalizarModulos(m)), semillaDe(equipo, dir), contador);
++const qr = ({ dir, equipo } = {}) => lic.otpauthUri(String(equipo).trim().toUpperCase(), semillaDe(equipo, dir));
++
++/* Escribe la clave pública en electron/licencia.cjs (la app se recompila después). */
++function escribirPublicaEnApp({ dir, raiz = path.join(__dirname, '..') } = {}) {
++  const k = leer(dir);
++  const ruta = path.join(raiz, 'electron', 'licencia.cjs');
++  const t = fs.readFileSync(ruta, 'utf8');
++  const re = /let CLAVE_PUBLICA_DOEL = `[\s\S]*?`;/;
++  if (!re.test(t)) throw new Error('No encuentro CLAVE_PUBLICA_DOEL en ' + ruta);
++  fs.writeFileSync(ruta, t.replace(re, 'let CLAVE_PUBLICA_DOEL = `' + k.publica.trim() + '`;'));
++  return ruta;
++}
++
++module.exports = { claves, leer, semillaDe, emitir, codigo, modulos, qr, escribirPublicaEnApp, normalizarModulos, rutaClaves };
++
++if (require.main === module) {
++  const [orden, ...resto] = process.argv.slice(2);
++  const arg = (n) => { const i = resto.indexOf('--' + n); return i >= 0 ? resto[i + 1] : undefined; };
++  const seg = () => 30 - (Math.floor(Date.now() / 1000) % 30);
++  try {
++    if (orden === 'claves') {
++      const k = claves({ forzar: resto.includes('--forzar') });
++      const r = escribirPublicaEnApp({});
++      console.log(k.nueva ? '\nClaves NUEVAS generadas en ' + k.ruta : '\nClaves ya existentes en ' + k.ruta);
++      console.log('Clave pública escrita en ' + r + ' → recompila la app (npm run dist) para que la lleve.');
++      console.log('GUARDA ' + k.ruta + ' a buen recaudo (copia fuera del PC): sin ella no se emiten licencias ni códigos.\n');
++    } else if (orden === 'emitir') {
++      const c = emitir({ equipo: arg('equipo'), cliente: arg('cliente'), modulos: arg('modulos') || [], modo: arg('modo') || 'permanente', caduca: arg('caduca') || null });
++      console.log('\nCódigo de activación DL2 para ' + arg('equipo').toUpperCase() + ' (' + arg('cliente') + '):\n\n' + c + '\n');
++      console.log('Mándaselo entero (WhatsApp/correo); se pega en Ajustes → Sistema → Licencia una sola vez.\n');
++    } else if (orden === 'codigo') {
++      const t = Math.floor(Date.now() / 1000 / 30);
++      console.log('\nCódigo de 6 dígitos para ' + arg('equipo').toUpperCase() + ':  ' + codigo({ equipo: arg('equipo'), contador: t }) + '   (caduca en ' + seg() + ' s; el siguiente será ' + codigo({ equipo: arg('equipo'), contador: t + 1 }) + ')\n');
++    } else if (orden === 'modulos') {
++      const lista = normalizarModulos(arg('modulos') || '');
++      console.log('\nMódulos que quedarán activos: ' + (lista.length ? lista.map((m) => m.replace('modulo_', '')).join(' · ') : '(ninguno)'));
++      console.log('Código de 12 dígitos para ' + arg('equipo').toUpperCase() + ':  ' + modulos({ equipo: arg('equipo'), modulos: lista }) + '   (caduca en ' + seg() + ' s)\n');
++    } else if (orden === 'qr') {
++      console.log('\n' + qr({ equipo: arg('equipo') }) + '\n\nPégalo en un generador de QR y escanéalo con el autenticador: una entrada por cliente.\n');
++    } else {
++      console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*\s?/, ''));
++      process.exit(orden ? 1 : 0);
++    }
++  } catch (e) { console.error('\n✗ ' + e.message + '\n'); process.exit(1); }
++}
+diff --git a/tools/test-diagnostico.cjs b/tools/test-diagnostico.cjs
+index d05d5aa..2b6c713 100644
+--- a/tools/test-diagnostico.cjs
++++ b/tools/test-diagnostico.cjs
+@@ -89,7 +89,7 @@ const lic = require('../electron/licencia.cjs');
+ t('modulo_diagnostico es el bit 17', Array.isArray(lic.MODULOS) ? lic.MODULOS[17] === 'modulo_diagnostico' : true);
+ db.configSet('modulo_diagnostico', '1');
+ lic.sellar(db.configAll, db.configSet);
+-t('re-sellar migra a sello v10 (el módulo entra en la integridad)', db.configAll().licencia_sello_v === '10');
++t('re-sellar deja sello v11 (clave de instalación; el módulo entra en la integridad)', db.configAll().licencia_sello_v === '11'); // v0.1.74
+ if (typeof lic.codigoModulos === 'function') {
+   t('el código de renovación con bit 17 tiene 9 dígitos', String(lic.codigoModulos(1 << 17)).length === 9);
+ } else { t('(codigoModulos no exportado — omitido)', true); }
+diff --git a/tools/test-licencia-modulos.cjs b/tools/test-licencia-modulos.cjs
+deleted file mode 100644
+index 7183492..0000000
+--- a/tools/test-licencia-modulos.cjs
++++ /dev/null
+@@ -1,61 +0,0 @@
+-/* ══ 🔑 Batería · códigos de módulos sin colisiones (v0.1.34) ═══════════════════════════
+-   Dos fallos dormidos en la licencia:
+-     1. `licencia:activar` solo mandaba por TOTP los códigos de 6 dígitos; los de 8 y 9 (CRM,
+-        ISO, KB, Diagnóstico, Chat IA: bits 12+) caían en `activar()` → «no válido para este
+-        equipo». Y el teclado de Ajustes cortaba a 6 dígitos.
+-     2. Un código corto podía valer para DOS máscaras y ganaba la más baja: el cliente se
+-        quedaba con otros módulos (la deuda de ESTADO.md, test 64c intermitente).
+-   Ahora: cuarta época de 12 dígitos «MMMMMM-TTTTTT» (máscara en claro + TOTP con su secreto),
+-   sin colisión posible y O(1); los cortos siguen valiendo pero si son ambiguos se rechazan.
+-   Ejecutar:  node tools/test-licencia-modulos.cjs */
+-const path = require('path');
+-const fs = require('fs');
+-const lic = require('../electron/licencia.cjs');
+-let ok = 0, ko = 0;
+-const t = (n, c, extra = '') => { if (c) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (extra ? '  → ' + extra : '')); } };
+-
+-const TODAS = (1 << lic.MODULOS.length) - 1;
+-t('1. hay 18 módulos → máscaras hasta ' + TODAS, lic.MODULOS.length === 18 && TODAS === 262143);
+-for (const m of [0, 1, 4095, 4096, 8192, 1 << 16, 1 << 17, TODAS]) {
+-  const c = lic.codigoModulosSeguro(m);
+-  const r = lic.mascaraValida(c);
+-  t(`2. máscara ${m} → código largo ${c} valida exacto y en la época 4`, /^\d{6}-\d{6}$/.test(c) && r && r.mascara === m && r.epoca === 4, JSON.stringify(r));
+-}
+-t('3. el largo se acepta sin guion y con espacios', lic.mascaraValida(lic.codigoModulosSeguro(8192).replace('-', ' ')).mascara === 8192 && lic.mascaraValida(lic.codigoModulosSeguro(8192).replace('-', '')).mascara === 8192);
+-t('4. un largo con el TOTP cambiado NO cuela', lic.mascaraValida('008192-000000') === null || lic.mascaraValida('008192-000000').mascara !== 8192 || lic.codigoModulosSeguro(8192).endsWith('000000'));
+-t('5. máscara fuera de rango (262144) → null, y codigoModulosSeguro la rechaza', lic.mascaraValida('262144-123456') === null && (() => { try { lic.codigoModulosSeguro(262144); return false; } catch (e) { return true; } })());
+-t('6. la ventana ±2 (60 s hacia cada lado) sigue valiendo en el largo', lic.mascaraValida(lic.codigoModulosSeguro(5, Math.floor(Date.now() / 1000 / 30) - 2)).mascara === 5 && lic.mascaraValida(lic.codigoModulosSeguro(5, Math.floor(Date.now() / 1000 / 30) + 2)).mascara === 5);
+-t('7. fuera de la ventana (±3) ya no vale', lic.mascaraValida(lic.codigoModulosSeguro(5, Math.floor(Date.now() / 1000 / 30) - 3)) === null);
+-/* colisión forzada en la época clásica: se busca un contador en el que el código de 6 dígitos de
+-   una máscara coincida con el de otra, y se comprueba que mascaraValida lo marca ambiguo en vez
+-   de devolver la más baja. Se hace con el generador al contador actual para que valide. */
+-const ahora = Math.floor(Date.now() / 1000 / 30);
+-let hallada = null;
+-outer: for (let a = 0; a < 4096 && !hallada; a++) {
+-  const ca = lic.codigoModulos(a, ahora);
+-  for (let b = a + 1; b < 4096; b++) if (lic.codigoModulos(b, ahora) === ca) { hallada = { a, b, c: ca }; break outer; }
+-}
+-if (hallada) {
+-  const r = lic.mascaraValida(hallada.c);
+-  t(`8. colisión real ${hallada.a}/${hallada.b} (${hallada.c}) → ambiguo, no la máscara más baja`, r && r.ambiguo === true && r.mascara === null && r.candidatas.includes(hallada.a) && r.candidatas.includes(hallada.b), JSON.stringify(r));
+-  let err = '';
+-  try { lic.activarConTotp(hallada.c, () => {}, () => ({})); } catch (e) { err = e.message; }
+-  t('9. activarConTotp con ese código explica la ambigüedad y manda al largo', /más de una combinación/.test(err) && /12 dígitos/.test(err), err);
+-} else t('8-9. (no hubo colisión de 6 dígitos en este contador: omitido)', true);
+-t('10. un código corto sin colisión sigue validando como siempre', (() => { const r = lic.mascaraValida(lic.codigoModulos(7)); return r && (r.mascara === 7 || r.ambiguo); })());
+-
+-/* el camino real: main.cjs manda por TOTP todo lo que sean dígitos (6-12, con guion), y solo
+-   lo que lleva punto (licencia firmada) va por `activar` */
+-const main = fs.readFileSync(path.join(__dirname, '..', 'electron', 'main.cjs'), 'utf8');
+-const ruta = /handle\('licencia:activar'[\s\S]*?\n  \}\);/.exec(main)[0];
+-const expr = /return ([\s\S]*?);\s*\}\);\s*$/.exec(ruta)[1];
+-const decide = new Function('c', 'return (' + expr.replace('licencia.activarConTotp(c, db.configSet, db.configAll)', "'totp'").replace('licencia.activar(c, db.configSet)', "'firmada'") + ');');
+-t('11. main.cjs: 6, 8, 9 y 12 dígitos (con guion) van por TOTP; la licencia con punto, por firma',
+-  decide('123456') === 'totp' && decide('12345678') === 'totp' && decide('123456789') === 'totp' && decide('008192-552296') === 'totp' && decide('eyJjIjoiWCJ9.abc') === 'firmada', [decide('123456'), decide('008192-552296'), decide('a.b')].join(','));
+-const sistema = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'ajustes', 'sistema.jsx'), 'utf8');
+-t('12. el teclado de Ajustes → Licencia ya no corta a 6 dígitos (admite 13 con guion)', /maxLen=\{13\}/.test(sistema) && !/slice\(0, 6\)\} maxLen=\{6\}/.test(sistema));
+-const gen = fs.readFileSync(path.join(__dirname, '..', 'tools', 'codigo-renovacion.cjs'), 'utf8');
+-t('13. codigo-renovacion.cjs dicta el largo y conoce el bit 17 (Diagnóstico)', /codigoModulosSeguro\(mascara\)/.test(gen) && /modulo_diagnostico:/.test(gen));
+-
+-console.log(`\n${ko === 0 ? '✅' : '❌'}  Licencia · códigos de módulos: ${ok} OK · ${ko} fallos`);
+-process.exit(ko === 0 ? 0 : 1);
+diff --git a/tools/test-licencia-v2.cjs b/tools/test-licencia-v2.cjs
+new file mode 100644
+index 0000000..d9df5b5
+--- /dev/null
++++ b/tools/test-licencia-v2.cjs
+@@ -0,0 +1,137 @@
++/* ══ 🔑 Batería · Licencia v2 (0.1.74): códigos DL2 firmados por Doel + semilla TOTP por instalación ═══
++   Lo que cierra SEC-01 de la auditoría 0.1.72: la app ya no lleva ningún secreto con el que fabricar
++   licencias. Aquí se genera un par de claves DE PRUEBA en una carpeta temporal (nunca las de Doel), se
++   emite un código para ESTE equipo y se recorre todo: activar, sellar, renovar y fijar módulos por
++   teléfono, rechazar lo de otro equipo o lo manipulado, y la migración de una activación anterior.
++   Ejecutar:  node tools/test-licencia-v2.cjs */
++const fs = require('fs');
++const os = require('os');
++const path = require('path');
++const crypto = require('crypto');
++const lic = require('../electron/licencia.cjs');
++const LV2 = require('./licencia-v2.cjs');
++let ok = 0, ko = 0;
++const t = (n, c, extra = '') => { if (c) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (extra ? '  → ' + extra : '')); } };
++const nuevaCfg = () => { const m = {}; return { cfg: m, all: () => ({ ...m }), set: (k, v) => { m[k] = String(v == null ? '' : v); } }; };
++const RAIZ = path.join(__dirname, '..');
++
++/* ── 1 · el instalador ya no lleva secretos ── */
++const licTxt = fs.readFileSync(path.join(RAIZ, 'electron', 'licencia.cjs'), 'utf8');
++t('1a. licencia.cjs no tiene SECRETO ni semilla TOTP global', !/const SECRETO\s*=/.test(licTxt) && !/TOTP_SECRET_B32/.test(licTxt) && !/secretoMascara\(m\) => crypto\.createHmac\('sha256', SECRETO/.test(licTxt));
++t('1b. las herramientas con el secreto desaparecieron del repo', ['generar-licencia.cjs', 'codigo-instalacion.cjs', 'codigo-renovacion.cjs'].every((f) => !fs.existsSync(path.join(RAIZ, 'tools', f))));
++t('1c. .gitignore no deja entrar las claves de Doel', /licencia-doel\.json/.test(fs.readFileSync(path.join(RAIZ, '.gitignore'), 'utf8')));
++t('1d. la clave de las copias DOELBAK1 sigue (solo lectura de lo antiguo) y es una constante derivada, no el secreto', /CLAVE_BAK = Buffer\.from\('[0-9a-f]{64}', 'hex'\)/.test(licTxt));
++
++/* ── 2 · claves de prueba y clave pública ── */
++const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doel-lic-v2-'));
++lic.configurarClavePublica('');
++const c0 = nuevaCfg();
++t('2a. sin clave pública: demo lo dice (sinClavePublica) y activar lo explica', lic.estado(c0.all, c0.set).sinClavePublica === true
++  && (() => { try { lic.activar('DL2.x.y', c0.set, c0.all); return false; } catch (e) { return /clave pública/.test(e.message); } })());
++const k = LV2.claves({ dir });
++t('2b. claves() genera Ed25519 + maestra TOTP en la carpeta dada, con permisos 600', k.nueva && /BEGIN PUBLIC KEY/.test(k.publica) && /BEGIN PRIVATE KEY/.test(k.privada) && /^[0-9a-f]{64}$/.test(k.totp)
++  && (process.platform === 'win32' || (fs.statSync(LV2.rutaClaves(dir)).mode & 0o777) === 0o600));
++t('2c. una segunda llamada NO regenera (nueva:false, misma pública)', LV2.claves({ dir }).nueva === false && LV2.claves({ dir }).publica === k.publica);
++lic.configurarClavePublica(k.publica);
++const equipo = lic.equipoId();
++t('2d. el ID de equipo tiene el formato de siempre (AB12-CD34-EF56)', /^[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/.test(equipo));
++
++/* ── 3 · el código DL2 ── */
++const dl2 = LV2.emitir({ dir, equipo, cliente: 'Taller de pruebas S.L.', modulos: 'crm,iso,kb', modo: 'permanente' });
++const p = lic.verificarDL2(dl2);
++t('3a. DL2.<datos>.<firma> verifica para este equipo y lleva cliente, módulos y semilla', /^DL2\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(dl2) && p && p.e === equipo && p.c === 'Taller de pruebas S.L.'
++  && p.m.join() === 'modulo_crm,modulo_iso,modulo_kb' && /^[A-Z2-7]{32}$/.test(p.s), JSON.stringify(p));
++t('3b. «todos» y «ninguno» como lista de módulos', lic.verificarDL2(LV2.emitir({ dir, equipo, cliente: 'X', modulos: 'todos' })).m.length === lic.MODULOS.length
++  && lic.verificarDL2(LV2.emitir({ dir, equipo, cliente: 'X', modulos: 'ninguno' })).m.length === 0);
++const otro = LV2.emitir({ dir, equipo: 'AAAA-BBBB-CCCC', cliente: 'Otro taller', modulos: 'todos' });
++t('3c. un código emitido para OTRO equipo no verifica aquí', lic.verificarDL2(otro) === null);
++const [pre, datos, firma] = dl2.split('.');
++const datosFalsos = Buffer.from(JSON.stringify({ ...p, m: lic.MODULOS.slice() })).toString('base64url');
++t('3d. cambiar los módulos dentro del código rompe la firma', lic.verificarDL2([pre, datosFalsos, firma].join('.')) === null);
++t('3e. cambiar un carácter de la firma lo invalida', lic.verificarDL2([pre, datos, (firma[0] === 'A' ? 'B' : 'A') + firma.slice(1)].join('.')) === null);
++t('3f. con la clave pública de OTRO Doel no verifica', (() => { const d2 = fs.mkdtempSync(path.join(os.tmpdir(), 'doel-lic-otro-')); const k2 = LV2.claves({ dir: d2 }); lic.configurarClavePublica(k2.publica); const r = lic.verificarDL2(dl2) === null; lic.configurarClavePublica(k.publica); return r; })());
++
++/* ── 4 · activar ── */
++const c1 = nuevaCfg();
++t('4a. antes de activar: demo', lic.estado(c1.all, c1.set).activada === false);
++const rAct = lic.activar(dl2, c1.set, c1.all);
++const e1 = lic.estado(c1.all, c1.set);
++t('4b. activar: estado activada v2 con cliente, módulos y sello v11', rAct.v2 === true && e1.activada && e1.v2 && e1.cliente === 'Taller de pruebas S.L.' && c1.cfg.licencia_sello_v === '11'
++  && c1.cfg.modulo_crm === '1' && c1.cfg.modulo_iso === '1' && c1.cfg.modulo_kb === '1' && c1.cfg.modulo_stock === '0' && c1.cfg.licencia_modo === 'permanente' && !c1.cfg.licencia_caduca);
++t('4c. la semilla duerme cifrada con la clave de instalación (v2:), no en claro', /^v2:/.test(c1.cfg.licencia_semilla) && !c1.cfg.licencia_semilla.includes(p.s)
++  && lic.semillaInstalacion(c1.all).length === 20 && lic.b32encode(lic.semillaInstalacion(c1.all)) === p.s);
++t('4d. activar con un código de otro equipo falla con el ID en el mensaje', (() => { try { lic.activar(otro, c1.set, c1.all); return false; } catch (e) { return e.message.includes(equipo); } })());
++const guardado = c1.cfg.modulo_kb;
++c1.set('modulo_kb', '0');
++t('4e. tocar un módulo a mano en la base → «manipulada»', lic.estado(c1.all, c1.set).manipulada === true);
++c1.set('modulo_kb', guardado);
++t('4f. …y al restaurarlo vuelve a estar activada', lic.estado(c1.all, c1.set).activada === true);
++c1.set('licencia_caduca', '2099-01-01');
++t('4g. alargar la caducidad a mano también rompe el sello', lic.estado(c1.all, c1.set).manipulada === true);
++c1.set('licencia_caduca', '');
++
++/* ── 5 · códigos cortos con la semilla de ESTA instalación ── */
++const cod6 = LV2.codigo({ dir, equipo });
++t('5a. el código de 6 dígitos de la herramienta vale aquí (totpValido) y el de otro equipo no', /^\d{6}$/.test(cod6) && lic.totpValido(cod6, c1.all) === true
++  && lic.totpValido(LV2.codigo({ dir, equipo: 'AAAA-BBBB-CCCC' }), c1.all) === false);
++t('5b. ±2 ventanas valen, ±3 no', lic.totpValido(LV2.codigo({ dir, equipo, contador: Math.floor(Date.now() / 1000 / 30) - 2 }), c1.all) && !lic.totpValido(LV2.codigo({ dir, equipo, contador: Math.floor(Date.now() / 1000 / 30) - 3 }), c1.all));
++const r6 = lic.activarConTotp(cod6, c1.set, c1.all);
++t('5c. en modo permanente el 6 dígitos confirma sin caducidad y re-sella', r6.activada && !r6.caduca && lic.estado(c1.all, c1.set).activada && c1.cfg.licencia_sello === lic.selloCalcular(c1.all()));
++t('5d. un 6 dígitos inventado se rechaza', (() => { try { lic.activarConTotp('000000', c1.set, c1.all); return false; } catch (e) { return /no válido|caducado/.test(e.message); } })());
++const cod12 = LV2.modulos({ dir, equipo, modulos: 'diagnostico,portal_taller' });
++const r12 = lic.activarConTotp(cod12, c1.set, c1.all);
++t('5e. el de 12 dígitos FIJA exactamente esos módulos (los demás a 0)', /^\d{6}-\d{6}$/.test(cod12) && r12.modulos.join() === 'modulo_portal_taller,modulo_diagnostico'
++  && c1.cfg.modulo_diagnostico === '1' && c1.cfg.modulo_portal_taller === '1' && c1.cfg.modulo_crm === '0' && lic.estado(c1.all, c1.set).activada);
++t('5f. el de 12 dígitos de OTRO equipo no vale aquí', (() => { try { lic.activarConTotp(LV2.modulos({ dir, equipo: 'AAAA-BBBB-CCCC', modulos: 'todos' }), c1.set, c1.all); return false; } catch (e) { return true; } })());
++t('5g. otpauth:// para enrolar el autenticador lleva la semilla en base32 y el ID de equipo', (() => { const u = LV2.qr({ dir, equipo }); return u.startsWith('otpauth://totp/Doel%20Taller:') && u.includes('secret=' + p.s) && u.includes(encodeURIComponent(equipo)); })());
++
++/* ── 6 · mensual: cada código da 31 días ── */
++const c2 = nuevaCfg();
++lic.activar(LV2.emitir({ dir, equipo, cliente: 'Mensual', modulos: 'ninguno', modo: 'mensual' }), c2.set, c2.all);
++const hoyMas31 = new Date(Date.now() + 31 * 86400000).toISOString().slice(0, 10);
++t('6a. activar en modo mensual deja caducidad a +31 días', c2.cfg.licencia_modo === 'mensual' && c2.cfg.licencia_caduca === hoyMas31 && lic.estado(c2.all, c2.set).caduca === hoyMas31);
++c2.set('licencia_caduca', '2020-01-01'); lic.sellar(c2.all, c2.set);
++t('6b. caducada → bloqueada', lic.estado(c2.all, c2.set).caducada === true && lic.estado(c2.all, c2.set).bloqueada === true);
++lic.activarConTotp(LV2.codigo({ dir, equipo }), c2.set, c2.all);
++t('6c. el 6 dígitos renueva +31 y desbloquea', c2.cfg.licencia_caduca === hoyMas31 && lic.estado(c2.all, c2.set).activada === true);
++const c3 = nuevaCfg();
++lic.activar(LV2.emitir({ dir, equipo, cliente: 'Fija', modulos: 'crm', modo: 'anual', caduca: '2031-06-30' }), c3.set, c3.all);
++t('6d. --caduca fija la fecha exacta', c3.cfg.licencia_caduca === '2031-06-30' && c3.cfg.licencia_modo === 'anual');
++
++/* ── 7 · migración de una activación anterior a la 0.1.74 ── */
++const c4 = nuevaCfg();
++c4.set('activacion_hmac', 'HASH-DE-LA-EPOCA-ANTERIOR'); c4.set('licencia_sello_v', '10'); c4.set('licencia_sello', 'sello-viejo-ilegible');
++c4.set('modulo_crm', '1'); c4.set('licencia_modo', 'permanente');
++const e4 = lic.estado(c4.all, c4.set);
++t('7a. una instalación activada antes sigue activada (heredada, necesitaDL2) y se re-sella en v11', e4.activada === true && e4.legado === true && e4.necesitaDL2 === true
++  && c4.cfg.licencia_sello_v === '11' && c4.cfg.licencia_legado === '1' && c4.cfg.modulo_crm === '1');
++c4.set('modulo_iso', '1');
++t('7b. tocar un módulo después de la migración → manipulada (el sello nuevo manda)', lic.estado(c4.all, c4.set).manipulada === true);
++c4.set('modulo_iso', '');
++t('7c. sin DL2 los códigos cortos no valen y el mensaje dice qué pedir', (() => { try { lic.activarConTotp(LV2.codigo({ dir, equipo }), c4.set, c4.all); return false; } catch (e) { return /DL2/.test(e.message) && e.message.includes(equipo); } })()
++  && lic.totpValido(LV2.codigo({ dir, equipo }), c4.all) === false);
++lic.activar(LV2.emitir({ dir, equipo, cliente: 'Migrado', modulos: 'crm,iso' }), c4.set, c4.all);
++const e4b = lic.estado(c4.all, c4.set);
++t('7d. al pegar su DL2 pasa a v2: deja de ser heredada y los códigos cortos ya funcionan', e4b.v2 === true && !e4b.legado && !c4.cfg.licencia_legado && !c4.cfg.activacion_hmac
++  && lic.totpValido(LV2.codigo({ dir, equipo }), c4.all) === true);
++const c5 = nuevaCfg();
++c5.set('licencia_codigo', 'eyJjIjoiWCJ9.firmavieja');
++t('7e. la licencia firmada antigua (con punto) también cuenta como heredada', lic.estado(c5.all, c5.set).legado === true);
++
++/* ── 8 · lo que lo rodea: main.cjs, pantallas, check-puente ── */
++const main = fs.readFileSync(path.join(RAIZ, 'electron', 'main.cjs'), 'utf8');
++const ruta = /handle\('licencia:activar'[\s\S]*?\n  \}\);/.exec(main)[0];
++const expr = /return ([\s\S]*?);\s*\}\);\s*$/.exec(ruta)[1];
++const decide = new Function('c', 'return (' + expr.replace('licencia.activarConTotp(c, db.configSet, db.configAll)', "'corto'").replace('licencia.activar(c, db.configSet, db.configAll)', "'dl2'") + ');');
++t('8a. main.cjs: 6 y 12 dígitos van por el código corto; el DL2 (con puntos) por activar', decide('123456') === 'corto' && decide('008192-552296') === 'corto' && decide('DL2.abc.def') === 'dl2');
++t('8b. main.cjs: el Panel Dev se abre con el TOTP de ESTA instalación y explica si falta el DL2', /licencia\.totpValido\(codigo, db\.configAll\)/.test(main) && /semillaInstalacion\(db\.configAll\)/.test(main));
++t('8c. main.cjs: config:set re-sella con la lista de claves del sello v11 y desactivar limpia el DL2', /licencia\.SELLO_CLAVES\.includes\(clave\)/.test(main) && /configSet\('licencia_v2', ''\)/.test(main));
++const sistema = fs.readFileSync(path.join(RAIZ, 'src', 'components', 'ajustes', 'sistema.jsx'), 'utf8');
++const app = fs.readFileSync(path.join(RAIZ, 'src', 'App.jsx'), 'utf8');
++t('8d. Ajustes → Licencia y la pantalla de activación admiten pegar el DL2 y avisan si la activación es heredada', /DL2\./.test(sistema) && /necesitaDL2/.test(sistema) && /DL2\./.test(app));
++const puente = fs.readFileSync(path.join(RAIZ, 'tools', 'check-puente.cjs'), 'utf8');
++t('8e. check-puente avisa si la compilación no lleva la clave pública de Doel', /CLAVE_PUBLICA_DOEL/.test(puente));
++t('8f. el manual explica el DL2 y los códigos por teléfono', /DL2/.test(fs.readFileSync(path.join(RAIZ, 'MANUAL.md'), 'utf8')));
++
++console.log(`\n${ko === 0 ? '✅' : '❌'}  Licencia v2 (DL2 + semilla por instalación): ${ok} OK · ${ko} fallos`);
++process.exit(ko === 0 ? 0 : 1);
+diff --git a/tools/test-multitienda.cjs b/tools/test-multitienda.cjs
+index 671ed49..bbf456b 100644
+--- a/tools/test-multitienda.cjs
++++ b/tools/test-multitienda.cjs
+@@ -47,8 +47,8 @@ const srv = http.createServer((req, res) => {
+ t('MODULOS: 18 bits (v5.0.29 sumó Diagnóstico=17, sobre ISO=15/KB=16)', lic.MODULOS.length === 18 && lic.MODULOS[17] === 'modulo_diagnostico');
+   db.configSet('modulo_multitienda', '1');
+   lic.sellar(db.configAll, db.configSet);
+-  t('sellar() escribe sello v10 (v5.0.29) y verifica', db.configAll().licencia_sello_v === '10' && lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
+-  t('sello v8 verifica', lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
++  t('sellar() escribe sello v11 (v0.1.74, clave de instalación) y verifica', db.configAll().licencia_sello_v === '11' && lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
++  t('el sello verifica tras releer la config', lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
+   db.configSet('modulo_multitienda', '0');
+   t('editar modulo_multitienda a mano rompe el sello (bit firmado)', lic.selloCalcular(db.configAll()) !== db.configAll().licencia_sello);
+   db.configSet('modulo_multitienda', '1'); // restaurado: el sello vuelve a casar
+diff --git a/tools/test-taller-ubicaciones.cjs b/tools/test-taller-ubicaciones.cjs
+index dae46d3..9dd71f5 100644
+--- a/tools/test-taller-ubicaciones.cjs
++++ b/tools/test-taller-ubicaciones.cjs
+@@ -27,20 +27,24 @@ const lic = require('../electron/licencia.cjs');
+ const bitISO = lic.MODULOS.indexOf('modulo_iso');
+ const bitKB = lic.MODULOS.indexOf('modulo_kb');
+ t('bits en la máscara: ISO=15, KB=16 (10-11 eran Peritajes/Portal, ojo)', bitISO === 15 && bitKB === 16);
+-const mascara = (1 << bitISO) | (1 << bitKB); // ISO + KB (el Stock, apagado a propósito: el check de degradación de B2 lo necesita OFF)
+-const cod = lic.codigoModulos(mascara);
+-t('máscara con bit 16 → código de NUEVE dígitos (tercera época, patrón v4.0.18)', /^\d{9}$/.test(cod));
+-t('el TPV lo valida y recupera la máscara exacta', lic.mascaraValida(cod).mascara === mascara);
+-t('un 9-dígitos inventado NO cuela', lic.mascaraValida('123456789') === null || lic.mascaraValida('123456789').mascara !== undefined && lic.mascaraValida('123456789').mascara !== mascara);
+-// activación REAL por código (la que usará Edmundo por teléfono) + sello v10
+-lic.activarConTotp(cod, db.configSet, db.configAll);
+-t('el código de renovación FIJA los módulos: ISO y KB a 1, Domicilio a 0',
++/* v0.1.74 · licencia v2: claves DE PRUEBA en una carpeta temporal, código DL2 para ESTE equipo con ISO + KB */
++const LV2 = require('./licencia-v2.cjs');
++const dirClaves = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'doel-lic-'));
++lic.configurarClavePublica(LV2.claves({ dir: dirClaves }).publica);
++const dl2 = LV2.emitir({ dir: dirClaves, equipo: lic.equipoId(), cliente: 'Batería ubicaciones', modulos: ['modulo_iso', 'modulo_kb'] });
++t('el código DL2 verifica para este equipo y lleva ISO y KB', !!lic.verificarDL2(dl2) && lic.verificarDL2(dl2).m.join() === 'modulo_iso,modulo_kb');
++const cod = LV2.modulos({ dir: dirClaves, equipo: lic.equipoId(), modulos: ['iso', 'kb'] });
++t('el código de módulos por teléfono es de 12 dígitos (máscara en claro + TOTP de la instalación)', /^\d{6}-\d{6}$/.test(cod));
++lic.activar(dl2, db.configSet, db.configAll);
++t('el código DL2 FIJA los módulos: ISO y KB a 1, Domicilio a 0',
+   db.configAll().modulo_iso === '1' && db.configAll().modulo_kb === '1' && db.configAll().modulo_domicilio === '0');
++lic.activarConTotp(cod, db.configSet, db.configAll);
++t('el de 12 dígitos valida con la semilla de ESTA instalación y mantiene ISO/KB', db.configAll().modulo_iso === '1' && db.configAll().modulo_kb === '1');
+ lic.sellar(db.configAll, db.configSet);
+-t('el sello migra a v9 y verifica (ISO/KB dentro de la firma)',
+-  db.configAll().licencia_sello_v === '10' && lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
++t('el sello es v11 y verifica (ISO/KB dentro de la firma)',
++  db.configAll().licencia_sello_v === '11' && lic.selloCalcular(db.configAll()) === db.configAll().licencia_sello);
+ db.configSet('modulo_kb', '0'); // un toque a mano al toggle rompe la firma: así se detecta el pirateo
+-t('tocar un módulo sin re-sellar ROMPE la firma v9 (antipirateo, mismo criterio de siempre)',
++t('tocar un módulo sin re-sellar ROMPE la firma (antipirateo, mismo criterio de siempre)',
+   lic.selloCalcular(db.configAll()) !== db.configAll().licencia_sello);
+ db.configSet('modulo_kb', '1'); lic.sellar(db.configAll, db.configSet); // restaurar sellado
+ 
+diff --git a/tools/test-taller.cjs b/tools/test-taller.cjs
+index fe74492..f52512a 100644
+--- a/tools/test-taller.cjs
++++ b/tools/test-taller.cjs
+@@ -328,10 +328,16 @@ const reintentar = async (fn, veces = 3) => {
+ 
+   // ── v4.0.17 · 🤖 Chat IA del portal (bit 12, máscara 16 bits, sello v6) ──
+   const lic2 = require('../electron/licencia.cjs');
+-  t('42. bit 12 = modulo_chat_ia; los códigos de 12 bits siguen validando (retro-compat)',
++  /* v0.1.74 · licencia v2: los códigos de módulos llevan la semilla de la instalación; los de otro equipo no valen */
++  const LV2 = require('./licencia-v2.cjs');
++  const dirLic = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'doel-lic-'));
++  lic2.configurarClavePublica(LV2.claves({ dir: dirLic }).publica);
++  const semillaT = LV2.semillaDe(lic2.equipoId(), dirLic);
++  t('42. bit 12 = modulo_chat_ia; los códigos de módulos de 12 dígitos validan con la semilla de la instalación, nunca son ambiguos y no valen con otra semilla',
+     lic2.MODULOS[12] === 'modulo_chat_ia'
+-    && [4095, 4096].every((m) => { const r = lic2.mascaraValida(lic2.codigoModulos(m)); return r.mascara === m || r.ambiguo === true; }) // v0.1.34 · un corto ambiguo se rechaza, no se asigna a otra máscara
+-    && lic2.mascaraValida(lic2.codigoModulosSeguro(4095)).mascara === 4095 && lic2.mascaraValida(lic2.codigoModulosSeguro(4096)).mascara === 4096); // el largo nunca es ambiguo
++    && lic2.mascaraValida(lic2.codigoModulosSeguro(4095, semillaT), semillaT).mascara === 4095
++    && lic2.mascaraValida(lic2.codigoModulosSeguro(4096, semillaT), semillaT).mascara === 4096
++    && lic2.mascaraValida(lic2.codigoModulosSeguro(4096, semillaT), Buffer.alloc(20, 7)) === null);
+ 
+   const rIa = db.chatIaResponder(oT1.id, '¿Cuánto me va a costar?');
+   t('43. el asistente responde PRECIO con los números reales del parte (pendiente 20 €)',
+@@ -494,8 +500,8 @@ const reintentar = async (fn, veces = 3) => {
+       .log.some((g) => g.accion === 'portal-clave'));
+ 
+   // ── v4.0.35 · CRM como módulo (bit 13) + sello v7 ──
+-  t('64c. bit 13 = modulo_crm y su código (8 dígitos) valida en la máscara ampliada',
+-    lic2.MODULOS[13] === 'modulo_crm' && (() => { const r = lic2.mascaraValida(lic2.codigoModulos(8192)); return r.mascara === 8192 || r.ambiguo === true; })()); // v0.1.34 · si colisiona, ahora se rechaza como ambiguo (antes ganaba otra máscara)
++  t('64c. bit 13 = modulo_crm y su código de 12 dígitos valida con la semilla de la instalación', // v0.1.74 · licencia v2
++    lic2.MODULOS[13] === 'modulo_crm' && lic2.mascaraValida(lic2.codigoModulosSeguro(8192, semillaT), semillaT).mascara === 8192);
+ 
+   // ── v4.0.33 · árbol de familias del SAT ──
+   const rF1 = db.seedFamiliasTaller();

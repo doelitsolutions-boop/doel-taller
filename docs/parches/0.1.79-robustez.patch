@@ -1,0 +1,427 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index 5807792..534808f 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.78 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.79 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -100,7 +100,7 @@ se piden otra vez al cliente); la nube necesita redesplegar `reserva-online/` (n
+ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
+ 1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
+-`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
++`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
+ numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
+ 10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
+ 
+diff --git a/VERSION.md b/VERSION.md
+index 0242a17..bfbc14c 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.79 | 🧱 **Robustez del quiosco (punto 6 del plan).** Cada vista va dentro de un **límite de error propio** (`src/components/LimiteVista.jsx`, montado en `App.jsx` con `key={vista}`): un `.map` sobre undefined en Informes ya no tira la barra lateral, el TPV ni la orden a medio escribir; la pantalla enseña «Esta pantalla ha fallado» con el mensaje y tres salidas (↻ Reintentar, 🏠 Volver al inicio, Reiniciar). El fallo, con vista, mensaje, pila y componente, se apunta en el **registro de eventos del mostrador** (tipo «pantalla», canal nuevo `sistema:error-pantalla`, `electron/robustez.cjs`: sin repetidos en un minuto y con tope de 40 por diez minutos). `src/errores.js` engancha `window.onerror` y las promesas sin `catch` (lo que no pasa por ningún límite: manejadores de botones, `setTimeout`) al mismo registro, una vez por fallo y minuto y 30 por sesión de pantalla; el límite raíz de `main.jsx` también informa. En el proceso principal, si la ventana **muere** (`render-process-gone`: GPU, memoria, driver) se apunta y se recarga sola; tres caídas en cinco minutos → se deja de recargar y se avisa; `unresponsive`/`responsive` quedan en el registro. Nueva batería `test-robustez.cjs` (26: monta el límite con jsdom, pulsa los botones, fuerza caídas con una ventana falsa). |
+ | 0.1.78 | 🔐 **Permiso por canal también en el mostrador (punto 5 del plan).** Nuevo `electron/sesion-local.cjs`: `auth:login` desde la pantalla de Electron abre una **sesión local** en el proceso principal (quién entró con PIN) y `auth:logout` la cierra; `handle()` pregunta en **cada llamada IPC** si el perfil de esa sesión puede con el canal, con la misma tabla (`canales.cjs`) y la misma regla (`permisos-canal.autorizado`) que el puesto en red. Lo que no exige permiso pasa siempre (lo que la pantalla lee antes de entrar); lo que lo exige, sin nadie dentro, no (salvo `licencia:activar`, que se hace con la app bloqueada); el perfil se relee de la base en cada llamada (baja o cambio de permisos → efecto inmediato). Las negativas quedan en el registro (`Denegado canal a usuario: motivo`) y llegan a la pantalla como error legible. Hasta ahora lo tapaba solo la barra: cualquier cosa que hablara con el puente podía llamar a `config:set` o `usuarios:save` con un técnico dentro. Nuevo canal **`auth:verificar`** (comprueba un PIN sin cambiar de usuario) para «quién abre la caja» en el TPV: antes pasaba por `auth:login` y **en el puesto en red cambiaba la sesión al encargado para el resto del día**. Nueva batería `test-permisos-ipc.cjs` (19). `@babel/parser`, `eslint`, `jsdom`, `esbuild` y `@netlify/blobs` pasan a `devDependencies`: las baterías y `limpiar-muertos` los necesitan y un `npm install` los borraba (Vite 8 ya no arrastra el parser). Los arneses de `test-permisos-canal` y `test-puesto-catalogo` solo evalúan la primera función de cada `handle()` (la variante IPC usa la sesión local). |
+ | 0.1.77 | 🧭 **Una sola lista de canales (punto 4 del plan).** Nuevo `electron/canales.cjs`: 404 filas, una por canal, con el método de `window.doel`, la firma de los que reordenan argumentos, el permiso que exige, la marca del puesto en red (`local` = solo en el mostrador, `mide` = mide el PC del mostrador), si valida PIN y la posición del usuario de la sesión. `preload.cjs` se **genera** de ahí (`node tools/puente-generar.cjs`; `check-puente` falla si no coincide, si una fila no tiene `handle()` o si un `handle()` no tiene fila); `permisos-canal.cjs` y `puesto-red.cjs` la leen: fuera las cuatro listas que había que tocar a la vez (`PROHIBIDOS`, `MIDEN_ESTE_PC`, `CANALES_PIN`, `POS_USUARIO`) y el parseo del texto del preload en `leerPuente()`. **`/rpc` deny-by-default (SEC‑19)**: el puesto en red solo sirve lo declarado con método y sin marca; un handler interno (`dev:cerrar`) o un canal fuera de la tabla devuelve 403 «no está disponible desde el puesto en red» sin ejecutarse, con o sin sesión. Nueva batería `test-canales.cjs` (28). Seis baterías que leían las listas en el texto de `puesto-red.cjs` pasan a preguntar a la tabla. Para la pantalla no cambia nada: el preload generado es equivalente canal a canal y firma a firma al que había. |
+ | 0.1.76 | ⬆️ **Dependencias al día (punto 3 del plan).** Electron 33.4 → **44.9** (la 33 llevaba año y medio sin soporte: 40 avisos), electron-builder 25 → 26, Vite 6 → 8 (compila en menos de 1 s), plugin-react 4 → 6, concurrently 9 → 10, better-sqlite3 12 → 13, wait-on 9, cross-env 10 y **selfsigned 2 → 5** (criptografía nativa de Node, fuera node-forge). `npm audit --omit=dev` a **cero**. selfsigned 5 es asíncrono: `certificado()` e `iniciar()` del puesto en red pasan a `async` (main y las tres baterías del puesto lo esperan). **Sin firma de código** a propósito: cuesta 200‑400 €/año y para uso interno no hace falta. **Pendiente de probar en Windows** tras el salto de Electron: WebHID y mando (DualSense/Switch), visor PDF de diagramas, impresión silenciosa, safeStorage, instalador NSIS con electron-builder 26. |
+diff --git a/electron/canales.cjs b/electron/canales.cjs
+index 5bcafcb..fd13ab5 100644
+--- a/electron/canales.cjs
++++ b/electron/canales.cjs
+@@ -472,6 +472,7 @@ const CANALES = {
+   'sistema:abrir-url': { api: 'sistema.abrirUrl', permiso: 'ajustes' },
+   'sistema:teclado-tactil': { api: 'sistema.tecladoTactil', permiso: 'ajustes' },
+   'sistema:teclado-tactil-configurar': { api: 'sistema.tecladoConfigurar', permiso: 'ajustes' },
++  'sistema:error-pantalla': { api: 'sistema.errorPantalla' },
+   /* ── app ── */
+   'app:salir': { api: 'app.salir', pin: true },
+   'app:estado-salida': { api: 'app.estadoSalida' },
+diff --git a/electron/main.cjs b/electron/main.cjs
+index c942935..bc96c95 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -10,7 +10,8 @@ const outletNube = require('./outlet-nube.cjs'); // v0.0.71 · 🏷 Outlet: cat
+ const hotelNube = require('./hotel-nube.cjs');   // v0.0.95 · 🏨 Modo hotel: teles a la web (hotel.html)
+ const crypto = require('crypto');                // v0.0.98 · ficha de las ventanas de herramienta
+ const puestoRed = require('./puesto-red.cjs');
+-const sesionLocal = require('./sesion-local.cjs'); // v0.1.78 · punto 5 · permiso por canal también en IPC // v0.0.78 · 🖥 el programa entero desde otro PC de la red
++const sesionLocal = require('./sesion-local.cjs');
++const robustez = require('./robustez.cjs'); // v0.1.79 · punto 6 · errores de pantalla al registro, recarga si la ventana muere // v0.1.78 · punto 5 · permiso por canal también en IPC // v0.0.78 · 🖥 el programa entero desde otro PC de la red
+ const cajon = require('./cajon.cjs'); // v0.0.82 · 💵 pulso del cajón: pin y duración configurables
+ const seg = require('./seguridad-lan.cjs'); // v0.0.85 · 🔒 permisos, sesiones, freno y escape
+ const tallerPython = require('./taller-python.cjs'); // v0.0.87 · 💾 agente portable (Python opcional)
+@@ -53,10 +54,10 @@ function createWindow() {
+     }
+   });
+   endurecerVentana(win); // v0.1.73 · SEC-20
+-  // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que
+-  // aprobarla explícitamente o getGamepads() devuelve siempre vacío (el mando va en la web
+-  // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID). v0.0.85 · SEC-01 · hasta la 0.0.84 la lista blanca de permisos terminaba en un «o true» que la anulaba entera: se concedía TODO, y cualquier permis
+-  // o nuevo de Chromium entraba solo. Ahora la lista manda de verdad y vive en seguridad-lan.cjs, donde una batería comprueba una por una qué capacidad entra y cuál no.
++  robustez.vigilarVentana(win, db); // v0.1.79 · punto 6
++  // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que aprobarla explícitamente o
++  // getGamepads() devuelve siempre vacío. Aprobamos gamepad + hid (algunos mandos se enumeran como HID). v0.0.85 · SEC-01 · hasta la
++  // 0.0.84 la lista blanca terminaba en un «o true» que la anulaba entera; ahora manda y vive en seguridad-lan.cjs, con batería.
+   try {
+     const ses = win.webContents.session;
+     ses.setPermissionRequestHandler((wc, permiso, cb) => cb(seg.permisoConcedido(permiso)));
+@@ -247,6 +248,7 @@ app.whenReady().then(() => {
+   handle('auth:login', (pin) => db.login(pin), (pin) => sesionLocal.entrar(db.login(pin, { frenoLocal: true }))); // v0.1.73 · SEC-10 · freno local solo en IPC · v0.1.78 · abre la sesión local
+   handle('auth:logout', () => true, () => { sesionLocal.salir(); return true; }); // v0.1.73 · SEC-16 · en el puesto en red lo intercepta /rpc · v0.1.78 · cierra la sesión local
+   handle('auth:verificar', (pin) => db.login(pin), (pin) => db.login(pin, { frenoLocal: true })); // v0.1.78 · solo comprueba un PIN (quién abre la caja): NO cambia de usuario
++  handle('sistema:error-pantalla', (info) => robustez.registrarErrorPantalla(db, info)); // v0.1.79 · punto 6 · la pantalla apunta sus fallos
+ 
+   /* v0.1.68 · AUD-04: los dominios grandes viven en electron/main/*.cjs y reciben este contexto. `ventana()` y no `win`: la ventana se reasigna al recrearla y hay que leerla viva. */
+   const ctx = { handle, HANDLERS, db, app, ipcMain, dialog, shell, fs, path, licencia, reserva, sat, cajon, psEjecutar, tallerPython, ventana: () => win, imprimirHtml: (...a) => imprimirHtml(...a) };
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index 8feadf9..25d3c86 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -142,6 +142,7 @@ contextBridge.exposeInMainWorld('doel', {
+     agente: call('dev:agente'), elegirImagenes: call('dev:elegir-imagenes'), guardarTodo: call('dev:guardar-todo'), restaurarTodo: call('dev:restaurar-todo'),
+     seedPruebas: call('dev:seed-pruebas') },
+   sistema: { puestaEnMarcha: call('sistema:puesta-en-marcha'), puestaEnMarchaOk: call('sistema:puesta-en-marcha-ok'), autostart: call('sistema:autostart'),
+-    abrirUrl: call('sistema:abrir-url'), tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar') },
++    abrirUrl: call('sistema:abrir-url'), tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar'),
++    errorPantalla: call('sistema:error-pantalla') },
+   app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => ipcRenderer.on('app:cierre-solicitado', cb) },
+ });
+diff --git a/electron/robustez.cjs b/electron/robustez.cjs
+new file mode 100644
+index 0000000..2b048e7
+--- /dev/null
++++ b/electron/robustez.cjs
+@@ -0,0 +1,59 @@
++/* v0.1.79 · punto 6 del plan · Robustez del quiosco, lado del proceso principal.
++   1 · `sistema:error-pantalla`: la pantalla (ErrorBoundary por vista, window.onerror, promesas sin catch) manda
++       el fallo y aquí se apunta en el registro del mostrador (tipo «pantalla»), con tope y sin repetidos.
++   2 · Si el proceso de la ventana MUERE (render-process-gone: sin memoria, fallo de GPU, un driver) o se queda
++       colgado (unresponsive), hasta ahora el mostrador se quedaba en blanco hasta que alguien mataba el
++       programa. Ahora se apunta y se recarga la ventana; si muere tres veces en cinco minutos, se deja de
++       recargar y se avisa (algo más gordo pasa: driver, disco, RAM). */
++const MAX_POR_VENTANA = 40;      // errores de pantalla apuntados por cada 10 minutos
++const VENTANA_MS = 10 * 60000;
++const REPETIDO_MS = 60000;
++const CAIDAS_MAX = 3;
++const CAIDAS_VENTANA_MS = 5 * 60000;
++
++const estado = { desde: 0, apuntados: 0, vistos: new Map(), caidas: [] };
++
++function registrarErrorPantalla(db, info, ahora = Date.now()) {
++  if (!info || typeof info !== 'object') return { ok: false, motivo: 'sin datos' };
++  const vista = String(info.vista || '?').slice(0, 60);
++  const mensaje = String(info.mensaje || 'error sin mensaje').replace(/\s+/g, ' ').slice(0, 400);
++  const pila = String(info.pila || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 4).join(' ← ').slice(0, 500);
++  if (ahora - estado.desde > VENTANA_MS) { estado.desde = ahora; estado.apuntados = 0; estado.vistos.clear(); }
++  const clave = vista + '|' + mensaje;
++  const ultimo = estado.vistos.get(clave);
++  if (ultimo != null && ahora - ultimo < REPETIDO_MS) return { ok: true, apuntado: false, motivo: 'repetido' };
++  if (estado.apuntados >= MAX_POR_VENTANA) return { ok: true, apuntado: false, motivo: 'tope' };
++  estado.vistos.set(clave, ahora); estado.apuntados++;
++  try { db.logEvento('pantalla', vista + ': ' + mensaje + (pila ? ' · ' + pila : '')); } catch (e) { return { ok: false, motivo: e.message }; }
++  return { ok: true, apuntado: true };
++}
++
++/* Qué hacer cuando la ventana muere: devuelve 'recargar' o 'parar' (y por qué), para que vigilarVentana lo haga
++   y la batería lo compruebe sin Electron. */
++function decidirTrasCaida(ahora = Date.now()) {
++  estado.caidas = estado.caidas.filter((t) => ahora - t < CAIDAS_VENTANA_MS);
++  estado.caidas.push(ahora);
++  return estado.caidas.length >= CAIDAS_MAX ? 'parar' : 'recargar';
++}
++
++function vigilarVentana(win, db) {
++  const log = (d) => { try { db.logEvento('pantalla', d); } catch (e) { /* base cerrada: nada */ } };
++  win.webContents.on('render-process-gone', (_e, det) => {
++    const motivo = det && det.reason ? det.reason + (det.exitCode != null ? ' (' + det.exitCode + ')' : '') : 'desconocido';
++    const que = decidirTrasCaida();
++    log('La ventana se ha caído: ' + motivo + ' → ' + (que === 'recargar' ? 'se recarga' : 'tres caídas en cinco minutos: no se recarga más'));
++    if (que === 'recargar') { setTimeout(() => { try { if (!win.isDestroyed()) win.webContents.reload(); } catch (e) { /* nada */ } }, 800); return; }
++    try {
++      require('electron').dialog.showMessageBox(win, { type: 'error', title: 'Doel Taller — la pantalla se cae repetidamente',
++        message: 'La ventana se ha caído tres veces en cinco minutos (' + motivo + ').',
++        detail: 'Suele ser el controlador de vídeo, la memoria o el disco. Cierra el programa, reinicia el PC y, si sigue, avisa a Doel. El registro de eventos tiene el detalle.' });
++    } catch (e) { /* sin diálogo: ya está apuntado */ }
++  });
++  win.webContents.on('unresponsive', () => log('La ventana no responde (colgada más de 30 s)'));
++  win.webContents.on('responsive', () => log('La ventana vuelve a responder'));
++}
++
++/* para la batería */
++function _reiniciar() { estado.desde = 0; estado.apuntados = 0; estado.vistos.clear(); estado.caidas = []; }
++
++module.exports = { registrarErrorPantalla, decidirTrasCaida, vigilarVentana, MAX_POR_VENTANA, REPETIDO_MS, CAIDAS_MAX, CAIDAS_VENTANA_MS, _reiniciar };
+diff --git a/package.json b/package.json
+index 080631e..63d02ca 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.78",
++  "version": "0.1.79",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/src/App.jsx b/src/App.jsx
+index 40e9a5a..279082f 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -13,6 +13,7 @@ import TecladoNum from './components/TecladoNum.jsx';
+ import Fichaje from './components/Fichaje.jsx';
+ import PuestaEnMarcha from './components/PuestaEnMarcha.jsx';
+ import ConfirmHost from './components/ConfirmHost.jsx';
++import LimiteVista from './components/LimiteVista.jsx'; // v0.1.79 · punto 6 · un fallo se queda en su pantalla
+ import { avisar as avisarModal } from './confirm.js';
+  // Edición Pizzería: carga dinámica
+ const Agenda = React.lazy(() => import('./components/Agenda.jsx'));       // Edición Barbería: carga dinámica
+@@ -347,6 +348,7 @@ export default function App() {
+           </div>
+         </div>
+         <div className="contenido">
++          <LimiteVista key={vista} vista={vista} onSalir={() => setVista(VISTA_INICIO)}>{/* v0.1.79 · punto 6 */}
+           {usuario.rol === 'admin' && vista === 'tpv' && <PuestaEnMarcha onIrAjustes={(tab) => { if (tab === 'productos') { setVista('productos'); return; } setAjustesTab(tab); setVista('ajustes'); }} /* v0.1.51 · el catálogo vive en Inventario */ />}
+           {vista === 'tpv' && <TPV usuario={usuario} cajaAbierta={caja.abierta} onCambioCaja={refrescarCaja}
+             ventaInicial={ventaCita} onVentaInicialUsada={() => setVentaCita(null)}
+@@ -382,6 +384,7 @@ export default function App() {
+             {vista === 'herramientas' && tipoNegocio === 'taller' && <Herramientas usuario={usuario} modulos={modulos} />}
+           </React.Suspense>
+           {vista === 'fichaje' && modulos.modulo_fichaje && <Fichaje />}
++          </LimiteVista>
+           {modalSalir && <ModalSalir info={modalSalir} onCerrar={() => setModalSalir(null)} />}
+           {finHorario.length > 0 && usuario && (
+             <div style={{ position: 'fixed', bottom: 14, right: 14, zIndex: 80, background: '#0d3352',
+diff --git a/src/components/LimiteVista.jsx b/src/components/LimiteVista.jsx
+new file mode 100644
+index 0000000..87e8f84
+--- /dev/null
++++ b/src/components/LimiteVista.jsx
+@@ -0,0 +1,35 @@
++import React from 'react';
++import { api } from '../api.js';
++
++/* v0.1.79 · punto 6 del plan · Límite de error POR VISTA.
++   Hasta ahora el único ErrorBoundary estaba en main.jsx, alrededor de toda la App: un `.map` sobre undefined en
++   Informes tiraba la barra lateral, el TPV y la orden a medio escribir, y el único botón era «Reiniciar». Ahora
++   cada vista va dentro de esto (App.jsx lo monta con `key={vista}`, así cambiar de pantalla lo deja limpio): el
++   fallo se queda en su pantalla, se apunta en el registro del mostrador (`sistema:error-pantalla`, con vista,
++   mensaje y pila) y el técnico puede reintentar, volver al inicio o, si no hay otra, reiniciar. */
++export default class LimiteVista extends React.Component {
++  constructor(props) { super(props); this.state = { error: null, intentos: 0 }; }
++  static getDerivedStateFromError(error) { return { error }; }
++  componentDidCatch(error, info) {
++    try {
++      const f = api && api.sistema && api.sistema.errorPantalla;
++      if (f) f({ vista: String(this.props.vista || '?'), mensaje: String((error && error.message) || error), pila: String((error && error.stack) || '').slice(0, 1500), componente: String((info && info.componentStack) || '').slice(0, 600) }).catch(() => { /* sin puente: nada */ });
++    } catch (e) { /* informar nunca puede fallar más fuerte que el propio fallo */ }
++  }
++  render() {
++    if (!this.state.error) return <React.Fragment key={this.state.intentos}>{this.props.children}</React.Fragment>;
++    const msg = String((this.state.error && this.state.error.message) || this.state.error);
++    return (
++      <div className="limite-vista" style={{ padding: 32, maxWidth: 760, color: '#f2f7fb' }}>
++        <h2 style={{ color: '#e05252', marginTop: 0 }}>Esta pantalla ha fallado</h2>
++        <p style={{ margin: '10px 0' }}>El resto del programa sigue funcionando. El fallo ha quedado apuntado en el registro para que Doel lo vea.</p>
++        <pre style={{ fontSize: 12, color: '#9db4c6', whiteSpace: 'pre-wrap', background: '#061f36', padding: 10, borderRadius: 8 }}>{msg}</pre>
++        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
++          <button className="btn" onClick={() => this.setState((s) => ({ error: null, intentos: s.intentos + 1 }))}>↻ Reintentar</button>
++          {this.props.onSalir && <button className="btn" onClick={this.props.onSalir}>🏠 Volver al inicio</button>}
++          <button className="btn" onClick={() => window.location.reload()}>Reiniciar aplicación</button>
++        </div>
++      </div>
++    );
++  }
++}
+diff --git a/src/errores.js b/src/errores.js
+new file mode 100644
+index 0000000..5c33607
+--- /dev/null
++++ b/src/errores.js
+@@ -0,0 +1,40 @@
++/* v0.1.79 · punto 6 del plan · Errores del renderer que NO pasan por un ErrorBoundary: excepciones en manejadores
++   de eventos, en setTimeout y promesas rechazadas sin catch. Hasta ahora morían en la consola de una ventana sin
++   DevTools: nadie se enteraba. Se mandan al proceso principal (`sistema:error-pantalla`), que los apunta en el
++   registro. Sin repetir el mismo fallo cada segundo (un setInterval roto) ni sin tope (un bucle): el mismo
++   vista+mensaje se manda una vez por minuto, y como mucho TOPE por sesión de pantalla. */
++export const TOPE = 30;
++export const VENTANA_MS = 60000;
++
++export function crearInformador(enviar, ahora = () => Date.now()) {
++  const vistos = new Map(); // clave → último envío
++  let enviados = 0;
++  return function informar(info) {
++    try {
++      const vista = String((info && info.vista) || '?');
++      const mensaje = String((info && info.mensaje) || 'error sin mensaje').slice(0, 500);
++      const clave = vista + '|' + mensaje;
++      const t = ahora();
++      const ultimo = vistos.get(clave);
++      if (ultimo != null && t - ultimo < VENTANA_MS) return false;
++      if (enviados >= TOPE) return false;
++      vistos.set(clave, t); enviados++;
++      const p = enviar({ vista, mensaje, pila: String((info && info.pila) || '').slice(0, 1500), componente: String((info && info.componente) || '').slice(0, 600) });
++      if (p && typeof p.catch === 'function') p.catch(() => { /* sin puente */ });
++      return true;
++    } catch (e) { return false; }
++  };
++}
++
++/* Engancha window.onerror y unhandledrejection. `vistaActual()` dice en qué pantalla estaba el usuario. */
++export function vigilarErroresGlobales(enviar, vistaActual = () => '?') {
++  const informar = crearInformador(enviar);
++  window.addEventListener('error', (e) => {
++    informar({ vista: 'global:' + vistaActual(), mensaje: (e && e.message) || String(e && e.error), pila: e && e.error && e.error.stack });
++  });
++  window.addEventListener('unhandledrejection', (e) => {
++    const r = e && e.reason;
++    informar({ vista: 'promesa:' + vistaActual(), mensaje: (r && r.message) || String(r), pila: r && r.stack });
++  });
++  return informar;
++}
+diff --git a/src/main.jsx b/src/main.jsx
+index 2183be1..a06d0e0 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -2,10 +2,15 @@ import React from 'react';
+ import { createRoot } from 'react-dom/client';
+ import App from './App.jsx';
+ import './styles.css';
++import { api } from './api.js';
++import { vigilarErroresGlobales } from './errores.js'; // v0.1.79 · punto 6
++
++const informarError = (info) => (api && api.sistema && api.sistema.errorPantalla ? api.sistema.errorPantalla(info) : Promise.resolve());
+ 
+ class ErrorBoundary extends React.Component {
+   constructor(props) { super(props); this.state = { error: null }; }
+   static getDerivedStateFromError(error) { return { error }; }
++  componentDidCatch(error, info) { try { informarError({ vista: 'raiz', mensaje: String((error && error.message) || error), pila: String((error && error.stack) || '').slice(0, 1500), componente: String((info && info.componentStack) || '').slice(0, 600) }).catch(() => {}); } catch (e) { /* nada */ } } // v0.1.79
+   render() {
+     if (this.state.error) {
+       return (
+@@ -35,6 +40,8 @@ document.addEventListener('click', (e) => {
+   if (fondo.querySelector('input, textarea, select, [contenteditable="true"]')) e.stopPropagation();
+ }, true);
+ 
++vigilarErroresGlobales(informarError, () => { try { return (document.querySelector('.topbar h1') || {}).textContent || '?'; } catch (e) { return '?'; } }); // v0.1.79 · punto 6
++
+ createRoot(document.getElementById('root')).render(
+   <ErrorBoundary>
+     <App />
+diff --git a/tools/test-robustez.cjs b/tools/test-robustez.cjs
+new file mode 100644
+index 0000000..7e3477c
+--- /dev/null
++++ b/tools/test-robustez.cjs
+@@ -0,0 +1,104 @@
++/* v0.1.79 · punto 6 del plan · robustez del quiosco.
++   1 · registro de errores de pantalla en main (tope, repetidos, entrada rara)   2 · qué hace main si la ventana muere
++   3 · el límite por vista, montado de verdad (jsdom): el fallo se queda en su pantalla, se informa, se reintenta
++   4 · el informador global (window.onerror / promesas) no repite ni desborda   5 · el cableado */
++const fs = require('fs'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const R = require('../electron/robustez.cjs');
++
++console.log('1 · Registro de errores de pantalla');
++R._reiniciar();
++const eventos = []; const db = { logEvento: (tipo, det) => eventos.push(tipo + '|' + det) };
++let T = 1000000;
++const r1 = R.registrarErrorPantalla(db, { vista: 'informes', mensaje: "Cannot read properties of undefined (reading 'map')", pila: 'TypeError: x\n    at Informes (Informes.jsx:40)\n    at renderWithHooks' }, T);
++t('1a. se apunta con tipo «pantalla», vista, mensaje y las primeras líneas de la pila', r1.apuntado === true && eventos.length === 1 && /^pantalla\|informes: Cannot read.*reading 'map'.* · TypeError: x ← at Informes/.test(eventos[0]), eventos[0]);
++const r2 = R.registrarErrorPantalla(db, { vista: 'informes', mensaje: "Cannot read properties of undefined (reading 'map')" }, T + 5000);
++t('1b. el mismo fallo cinco segundos después no se repite', r2.apuntado === false && r2.motivo === 'repetido' && eventos.length === 1);
++const r3 = R.registrarErrorPantalla(db, { vista: 'informes', mensaje: "Cannot read properties of undefined (reading 'map')" }, T + R.REPETIDO_MS + 1);
++t('1c. pasado un minuto, sí', r3.apuntado === true && eventos.length === 2);
++for (let i = 0; i < R.MAX_POR_VENTANA + 10; i++) R.registrarErrorPantalla(db, { vista: 'tpv', mensaje: 'fallo ' + i }, T + 10000 + i);
++t('1d. tope por ventana de diez minutos: no pasa de MAX_POR_VENTANA', eventos.length === R.MAX_POR_VENTANA && R.registrarErrorPantalla(db, { vista: 'tpv', mensaje: 'otro' }, T + 20000).motivo === 'tope');
++t('1e. pasada la ventana vuelve a apuntar', R.registrarErrorPantalla(db, { vista: 'tpv', mensaje: 'otro' }, T + 11 * 60000).apuntado === true);
++t('1f. entrada rara (null, texto, sin mensaje) no revienta y el mensaje largo se recorta', R.registrarErrorPantalla(db, null).ok === false && R.registrarErrorPantalla(db, 'x').ok === false && (() => { const n = eventos.length; R.registrarErrorPantalla(db, { vista: 'x'.repeat(200), mensaje: 'y'.repeat(2000) }, T + 12 * 60000); return eventos.length === n + 1 && eventos[n].length < 1100; })());
++t('1g. si la base está cerrada, no se cae: devuelve ok:false con el motivo', R.registrarErrorPantalla({ logEvento: () => { throw new Error('cerrada'); } }, { vista: 'a', mensaje: 'b' }, T + 13 * 60000).motivo === 'cerrada');
++
++console.log('\n2 · Si la ventana muere');
++R._reiniciar();
++t('2a. primera y segunda caída → se recarga; tercera en cinco minutos → se para', R.decidirTrasCaida(T) === 'recargar' && R.decidirTrasCaida(T + 1000) === 'recargar' && R.decidirTrasCaida(T + 2000) === 'parar');
++R._reiniciar();
++t('2b. tres caídas espaciadas más de cinco minutos siguen recargando', R.decidirTrasCaida(T) === 'recargar' && R.decidirTrasCaida(T + 6 * 60000) === 'recargar' && R.decidirTrasCaida(T + 12 * 60000) === 'recargar');
++/* vigilarVentana con una ventana de mentira */
++R._reiniciar();
++const oyentes = {}; let recargas = 0;
++const winFalsa = { isDestroyed: () => false, webContents: { on: (ev, fn) => { oyentes[ev] = fn; }, reload: () => { recargas++; } } };
++R.vigilarVentana(winFalsa, db);
++t('2c. engancha render-process-gone, unresponsive y responsive', ['render-process-gone', 'unresponsive', 'responsive'].every((e) => typeof oyentes[e] === 'function'));
++const antes = eventos.length;
++oyentes['render-process-gone']({}, { reason: 'crashed', exitCode: 5 });
++oyentes['unresponsive'](); oyentes['responsive']();
++t('2d. la caída queda en el registro con el motivo y se programa la recarga', eventos.slice(antes).some((e) => /La ventana se ha caído: crashed \(5\) → se recarga/.test(e)) && eventos.slice(antes).some((e) => /no responde/.test(e)) && eventos.slice(antes).some((e) => /vuelve a responder/.test(e)));
++
++(async () => {
++  await new Promise((r) => setTimeout(r, 1000));
++  t('2e. …y la ventana se recarga (al segundo, no en caliente)', recargas === 1);
++
++  console.log('\n3 · El límite por vista, montado de verdad');
++  const esbuild = require('esbuild'); const { JSDOM } = require('jsdom');
++  fs.mkdirSync('.tmp-pantallas', { recursive: true });
++  const salida = path.resolve('.tmp-pantallas', 'LimiteVista-prueba.cjs');
++  const fuente = path.resolve('.tmp-pantallas', 'LimiteVista-prueba.jsx');
++  fs.writeFileSync(fuente, `import React from 'react'; import LimiteVista from '../src/components/LimiteVista.jsx'; export { LimiteVista, React };
++export function Rota({ veces }) { if (veces.n > 0) throw new Error('la pantalla ha petado'); return React.createElement('div', null, 'pantalla viva'); } /* React reintenta un render fallido una vez antes de ir al límite: por eso no se decrementa al vuelo */`);
++  await esbuild.build({ entryPoints: [fuente], bundle: true, format: 'cjs', platform: 'browser', outfile: salida, external: ['react', 'react-dom', 'react-dom/*', 'react/*'], jsx: 'automatic', logLevel: 'silent' });
++  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'http://localhost/', pretendToBeVisual: true });
++  const w = dom.window;
++  for (const k of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'Event']) if (global[k] === undefined) global[k] = w[k];
++  const informes = [];
++  global.window.doel = { sistema: { errorPantalla: async (info) => { informes.push(info); return { ok: true, data: { ok: true } }; } } };
++  global.IS_REACT_ACT_ENVIRONMENT = true;
++  const consoleError = console.error; console.error = () => {};
++  const mod = require(salida); const React = mod.React; const { createRoot } = require('react-dom/client'); const { act } = React;
++  const cont = w.document.createElement('div'); w.document.body.appendChild(cont); const root = createRoot(cont);
++  const veces = { n: 1 }; let salidas = 0;
++  await act(async () => { root.render(React.createElement(mod.LimiteVista, { vista: 'informes', onSalir: () => { salidas++; } }, React.createElement(mod.Rota, { veces }))); });
++  t('3a. la vista rota enseña «Esta pantalla ha fallado» con el mensaje, no una pantalla en blanco', /Esta pantalla ha fallado/.test(cont.textContent) && /la pantalla ha petado/.test(cont.textContent));
++  await new Promise((r) => setTimeout(r, 20));
++  t('3b. y lo informa por sistema:error-pantalla con vista, mensaje, pila y componente', informes.length === 1 && informes[0].vista === 'informes' && informes[0].mensaje === 'la pantalla ha petado' && /la pantalla ha petado/.test(informes[0].pila) && typeof informes[0].componente === 'string', JSON.stringify(informes[0] || null).slice(0, 200));
++  const botones = [...cont.querySelectorAll('button')].map((b) => b.textContent);
++  t('3c. ofrece Reintentar, Volver al inicio y Reiniciar', botones.some((b) => /Reintentar/.test(b)) && botones.some((b) => /Volver al inicio/.test(b)) && botones.some((b) => /Reiniciar/.test(b)), botones.join(' | '));
++  await act(async () => { [...cont.querySelectorAll('button')].find((b) => /Volver al inicio/.test(b.textContent)).click(); });
++  t('3d. «Volver al inicio» llama a onSalir (App cambia de vista)', salidas === 1);
++  veces.n = 0; // «lo que fallaba ya no falla»
++  await act(async () => { [...cont.querySelectorAll('button')].find((b) => /Reintentar/.test(b.textContent)).click(); });
++  t('3e. «Reintentar» vuelve a montar la vista y, si ya no falla, se ve', /pantalla viva/.test(cont.textContent) && !/ha fallado/.test(cont.textContent), cont.textContent.slice(0, 80));
++  console.error = consoleError;
++
++  console.log('\n4 · El informador global');
++  const salidaE = path.resolve('.tmp-pantallas', 'errores-prueba.cjs');
++  await esbuild.build({ entryPoints: ['src/errores.js'], bundle: true, format: 'cjs', platform: 'browser', outfile: salidaE, logLevel: 'silent' });
++  const E = require(salidaE);
++  const enviados = []; let reloj = 5000000;
++  const informar = E.crearInformador((i) => { enviados.push(i); return Promise.resolve(); }, () => reloj);
++  t('4a. manda el primero, no repite el mismo dentro del minuto, sí pasado el minuto', informar({ vista: 'tpv', mensaje: 'x' }) === true && informar({ vista: 'tpv', mensaje: 'x' }) === false && (reloj += E.VENTANA_MS + 1, informar({ vista: 'tpv', mensaje: 'x' })) === true && enviados.length === 2);
++  for (let i = 0; i < E.TOPE + 5; i++) informar({ vista: 'bucle', mensaje: 'm' + i });
++  t('4b. tope por sesión de pantalla', enviados.length === E.TOPE);
++  t('4c. un fallo al enviar no revienta al que informa', E.crearInformador(() => { throw new Error('sin puente'); })({ vista: 'a', mensaje: 'b' }) === false);
++  const avisos = [];
++  const winF = { addEventListener: (ev, fn) => avisos.push(ev) };
++  const g = global.window; global.window = winF; E.vigilarErroresGlobales(() => Promise.resolve()); global.window = g;
++  t('4d. engancha error y unhandledrejection', avisos.includes('error') && avisos.includes('unhandledrejection'));
++
++  console.log('\n5 · El cableado');
++  const app = fs.readFileSync('src/App.jsx', 'utf8'), mainJsx = fs.readFileSync('src/main.jsx', 'utf8'), main = fs.readFileSync('electron/main.cjs', 'utf8');
++  const C = require('../electron/canales.cjs');
++  t('5a. App.jsx monta cada vista dentro de LimiteVista con key={vista} (cambiar de pantalla lo limpia) y onSalir', /<LimiteVista key=\{vista\} vista=\{vista\} onSalir=/.test(app) && /<\/LimiteVista>/.test(app) && app.indexOf('<LimiteVista') < app.indexOf("vista === 'tpv' && <TPV") && app.indexOf('</LimiteVista>') > app.indexOf("vista === 'fichaje'"));
++  t('5b. main.jsx: el límite raíz informa y los errores globales se vigilan', /componentDidCatch\(error, info\) \{ try \{ informarError\(\{ vista: 'raiz'/.test(mainJsx) && /vigilarErroresGlobales\(informarError/.test(mainJsx));
++  t('5c. main.cjs: canal sistema:error-pantalla → robustez.registrarErrorPantalla y vigilarVentana en la ventana principal', /handle\('sistema:error-pantalla', \(info\) => robustez\.registrarErrorPantalla\(db, info\)\)/.test(main) && /robustez\.vigilarVentana\(win, db\)/.test(main));
++  t('5d. la fila está en canales.cjs sin permiso (se informa antes y después de entrar) y el preload la expone', C.CANALES['sistema:error-pantalla'] && C.CANALES['sistema:error-pantalla'].api === 'sistema.errorPantalla' && !C.CANALES['sistema:error-pantalla'].permiso && /errorPantalla: call\('sistema:error-pantalla'\)/.test(fs.readFileSync('electron/preload.cjs', 'utf8')));
++  t('5e. main.cjs sigue por debajo de las 1 400 líneas', main.split('\n').length < 1400, String(main.split('\n').length));
++
++  console.log(`\n${ko === 0 ? '✅' : '❌'}  Robustez del quiosco: ${ok} OK · ${ko} fallos`);
++  process.exit(ko === 0 ? 0 : 1);
++})().catch((e) => { process.stdout.write('  ✗ batería rota: ' + (e && e.stack) + '\n'); process.exit(1); });

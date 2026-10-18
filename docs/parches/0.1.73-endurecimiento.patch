@@ -1,0 +1,2113 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index a10ed4f..d133f77 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
++**Versión actual:** 0.1.73 · **Fecha:** 17 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -69,6 +69,24 @@ y desde la 0.0.85 lo comprueba `check-puente.cjs`, que no deja entregar si `pack
+ 
+ ---
+ 
++### Endurecimiento (0.1.73)
++
++Auditoría de seguridad completa de la 0.1.72 (`docs/AUDITORIA_0.1.72.md`: 24 hallazgos, 2 críticos) y
++dossier para la revisión externa (`docs/REVISION_HACKER_0.1.72.md`). La 0.1.73 cierra o mitiga 20 de los 24
++en el propio código: PIN con scrypt y sal por usuario, freno local y en todos los canales con PIN, puerta del
++Panel Dev en el proceso principal, clave por instalación (DPAPI) para lo cifrado en la base, DevTools y
++`window.open` cerrados, certificado de hoja, `config:all` sin secretos, sesiones del puesto con logout y
++permisos vivos, y en la nube freno por IP, sesiones con caducidad, códigos de diagnóstico validados en
++servidor y el XSS reflejado de la web de reservas. **Queda abierto SEC‑01** (el secreto HMAC y la semilla TOTP
++siguen en el `asar`: firmar licencias con clave asimétrica es un cambio de cómo se emiten los códigos y lo
++decide Edmundo), la copia DOELBAK1 sin frase propia (ahora la puesta en marcha la pide) y Electron 33 → actual.
++
++**Efectos al instalar la 0.1.73**: el certificado del puesto en red se regenera (reinstalar el `.crt` en los PCs
++técnicos); `/rpc` y el comandero exigen entrar por la IP del mostrador; los PIN se reescriben solos al primer
++login; las claves de portal nuevas y la frase de copias se cifran con la clave de instalación (si la base se
++restaura en OTRO PC, la frase de copias hay que volver a ponerla y las contraseñas de equipos de órdenes abiertas
++se piden otra vez al cliente); la nube necesita redesplegar `reserva-online/` (nueva ruta `/api/diag-validar`).
++
+ ### Herramientas de verificación (el «ritual de entrega»)
+ 
+ Se corre **entero** antes de cada versión. Si algo sale rojo, no se entrega.
+diff --git a/VERSION.md b/VERSION.md
+index 7a2a139..02f2210 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.73 | 🔒 **Endurecimiento tras la auditoría 0.1.72** (`docs/AUDITORIA_0.1.72.md`, `docs/REVISION_HACKER_0.1.72.md`). **Mostrador**: PIN con scrypt y sal por usuario (migración perezosa al primer login, SEC‑10), freno local de 5 fallos/5 min, DevTools cerradas en producción, `setWindowOpenHandler`/`will-navigate` en todas las ventanas (SEC‑07/08), puerta del Panel Dev en el proceso principal con freno y `config:set` protegido para licencia/módulos/activación (SEC‑12), freno en `licencia:activar` y `dev:acceso` (SEC‑01 parcial), clave por instalación (DPAPI) para contraseñas de equipos, claves de portal y frase de copias (SEC‑11), restaurar solo desde las carpetas de copias, nombre de impresora del cajón saneado antes de `cmd /c copy` (SEC‑09), `abrir-url` solo `https/http/mailto`, DiskSpd sin shell, iframes de impresión en sandbox y escapes que faltaban en `print.js` (SEC‑21), `python -I` y reverificación de las copias de scripts (SEC‑22). **Puesto en red / comandero**: freno en `fichaje:login/admin`, `app:salir`, `caja:cajonAbrir` (SEC‑02), sesión antes de leer el cuerpo (256 KB sin sesión), `Host` y `Content-Type` validados (SEC‑06/18), `config:all` sin tokens para perfiles sin «Ajustes» (SEC‑03), `uid` del rastro desde la sesión y columnas `portal_pass_*`/`password_cifrada` fuera de lo que viaja (SEC‑04), `auth:logout`, permisos releídos en cada llamada y caducidad absoluta de 24 h (SEC‑16), freno global además del de IP (SEC‑17), certificado de hoja (no CA) de 825 días (SEC‑05), `sat:*` y cajón con permiso, ventanas de impresión en sandbox (SEC‑15), comandero solo IP privadas, errores 500 sin detalle. **Nube**: XSS reflejado de `index.html` cerrado y cabeceras de seguridad (SEC‑13), códigos de diagnóstico validados en servidor (`/api/diag-validar`, `/api/movil-validar`) sin clave en el HTML (SEC‑14), freno por IP en portal/demo/multitienda/hotel, fuera el acceso maestro de demo, sesiones firmadas con caducidad de 12 h, recortes y topes en reservas y outlet, `timingSafeEqual` en tokens, `grupo.html` escapado, `crm-productos` con `uid` y `content-type` validados (SEC‑19). Nuevo `electron/seguridad-app.cjs`. 91 baterías: las de LAN, PIN, taller y actividad del móvil actualizadas al comportamiento nuevo. |
+ | 0.1.72 | ⏰ **Plazos del tablero según un taller** (Edmundo: «ajústalo según los plazos que suelen haber en un taller, en entrega, en almacenamiento, archivado»). Cada tarjeta mide **las horas/días en su fase** contra el plazo de esa fase (antes: días desde la recepción, en rojo a los 7 fuese la columna que fuese): gris en plazo, ámbar pasado el 75 %, rojo y ⏰ fuera. Plazos típicos de fábrica: diagnosticar 2 d, presupuestar 1, enviarlo 1, aceptación 3, pieza 7, reparar 2, garantía 7 (nuevas fases *presupuestado* y *garantía*). En **Listo** corre la recogida desde el aviso: recordar al cliente a los 7 d, almacenaje a los 30 (RD 58/1988), abandono automático a los 60; la tarjeta lo dice. Bajo el tablero, **📤 Entregadas en los últimos 30 días** (plegado); después quedan archivadas y se encuentran por el buscador. Ajustes → Tiempos: recordatorio, abandono (nunca antes que el almacenaje), archivo y «↺ Plazos típicos de un taller». Batería nueva `test-plazos-taller.cjs` (22). |
+ | 0.1.71 | ✏ **Editar parte**. En la ficha, junto a «📄 Ver parte»: corregir lo registrado en la recepción sin reabrir la orden —equipo (tipo, marca, modelo, nº de serie, notas), avería declarada, accesorios (chips del checklist + libres), croquis (silueta y marcas) y condiciones (diagnóstico y si se descuenta, tope, garantía, fecha de compromiso)—. Guarda de una vez (`taller:parte-set` → `ordenParteSet`) y **cada campo que cambia queda en el historial con antes → después**; guardar sin cambios no apunta nada; una orden entregada o abandonada ya no se edita; importes negativos, garantía fuera de 0-120 y fechas malas se rechazan; el croquis entra saneado. El croquis pasa a `Croquis.jsx` (lo comparten recepción, ficha y edición) y `TIPOS` a `taller-tipos.js`. `test-croquis-parte.cjs` +9 (38), `test-pantallas` monta el modal. |
+ | 0.1.70 | 🖼 **Croquis con siluetas reales** y 📄 **Ver parte**. (1) El croquis de daños deja de ser un cuadradillo: 22 siluetas en `src/croquis.js` (mando PS5, PS4, Xbox, Switch Pro, Joy-Con, genérico; PS5, PS4, Xbox Series X, Xbox One/Series S, Switch, Switch Lite; móvil, tablet, portátil, torre, monitor, TV, impresora, impresora 3D, placa, otro), cada una con su cara delante y detrás. Se elige sola por tipo + marca/modelo («Sony Mando DualSense» → mando PS5) y en la recepción hay un desplegable por grupos para cambiarla; la orden guarda `{ plantilla, marcas }` (las antiguas siguen leyéndose). Ficha, contrato y parte pintan la misma silueta. (2) En la ficha, botón **📄 Ver parte**: todo lo registrado de la orden en un A4 en pantalla —cliente y equipo, avería, diagnóstico, trabajos, accesorios, croquis, condiciones, presupuesto con anticipos y pendiente, fotos en miniatura, firmas con DNI, informes, RMA, avisos, mensajes, diagnósticos de hardware e historial completo—, con imprimir y guardar PDF. Batería nueva `test-croquis-parte.cjs` (29). |
+diff --git a/electron/comandero.cjs b/electron/comandero.cjs
+index 3138736..7b30283 100644
+--- a/electron/comandero.cjs
++++ b/electron/comandero.cjs
+@@ -258,6 +258,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+     // ficha del último cliente en la caché y se la enseña al siguiente que abra la PWA.
+     const json = (code, obj) => { res.writeHead(code, seg.cabeceras('json')); res.end(JSON.stringify(obj)); };
+     const ip = seg.ipDe(req);
++    // v0.1.73 · SEC-18 · como el puesto en red: solo IP privadas (un puerto abierto en el router no entra)
++    if (!require('./puesto-red.cjs').esLocal(ip)) return json(403, { ok: false, error: 'El comandero solo funciona dentro del taller' });
+     try {
+       if (req.method === 'GET' && req.url === '/manifest.webmanifest') {
+         /* App instalable: «Añadir a pantalla de inicio» → pantalla completa sin barras.
+@@ -281,6 +283,8 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+         return res.end(HTML_MOVIL);
+       }
+       if (!req.url.startsWith('/api/')) return json(404, { error: 'No existe' });
++      // v0.1.73 · SEC-18 · como /rpc del puesto: el Host debe ser el mostrador (una web ajena con DNS rebinding no entra)
++      if (!require('./puesto-red.cjs').hostPermitido(req.headers.host)) return json(421, { error: 'Entra por la IP del mostrador' });
+       // v0.0.85 · SEC-05 · el cuerpo se corta EN CUANTO pasa de 256 KB, no después de
+       // habérselo tragado entero: el sentido del tope es no llenar la memoria del PC del
+       // mostrador, no enterarse de que ya está llena.
+@@ -315,6 +319,16 @@ function iniciar({ db, imprimirHtml, logEvento }) {
+         return json(200, { token, nombre: u.nombre, id: u.id, es_repartidor: u.es_repartidor === 1,
+           nivel: u.nivel || 9, agenda: false });
+       }
++      /* v0.1.73 · SEC-14 · el código de acceso del móvil del cliente se valida AQUÍ (antes, en el HTML con la
++         clave a la vista). Sin sesión a propósito (es el cliente, no el técnico), con el mismo freno que el login. */
++      if (ruta === 'movil-validar') {
++        const parado = freno.bloqueo(ip);
++        if (parado) return json(429, { ok: false, error: 'Demasiados intentos desde este aparato. Espera ' + parado.segundos + ' s.' });
++        const r = db.validarAccesoMovil(String(body.codigo || ''));
++        if (!r.ok) { freno.fallo(ip); return json(401, r); }
++        freno.acierto(ip);
++        return json(200, r);
++      }
+       // v0.0.85 · SEC-04 · Hasta la 0.0.84 aquí no había NINGUNA comprobación: casi todas
+       // las rutas se salvaban por accidente, porque reventaban con un 500 al tocar
+       // `sesion.usuarioId`. Pero `cliente-buscar` y `taller-linea-del` no tocaban la sesión
+diff --git a/electron/db.cjs b/electron/db.cjs
+index a96ffdd..dea3212 100644
+--- a/electron/db.cjs
++++ b/electron/db.cjs
+@@ -297,6 +297,9 @@ const PUBLICAS = [
+   "validarDniNie",
+   "normalizarDni",
+   "ordenGet",
++  "ordenPasswordCifrada",
++  "validarAccesoMovil",
++  "usuarioVivo",
+   "ordenLineaAdd",
+   "ordenLineaDel",
+   "ordenLineaSet",   // v0.1.61
+diff --git a/electron/db/_nucleo.cjs b/electron/db/_nucleo.cjs
+index 35f5431..43bf229 100644
+--- a/electron/db/_nucleo.cjs
++++ b/electron/db/_nucleo.cjs
+@@ -25,12 +25,68 @@ const dentroDe = (ms) => isoLocal(new Date(Date.now() + ms));
+ const sha256 = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex').toUpperCase();
+ const pinHash = (pin) => sha256(SALT + ':' + pin);
+ 
++/* v0.1.73 · SEC-10 · PIN con scrypt y SAL POR USUARIO.
++   Hasta la 0.1.72 el PIN de `usuarios` era sha256(SAL_FIJA:pin) y el de `fichaje_empleados` y el admin
++   de fichaje sha256(pin) a secas: con una copia de la base (o un .doelbak) se recuperaban TODOS los PIN
++   con una tabla de 10 000 hashes en menos de un segundo. Ahora cada PIN lleva su sal y scrypt
++   (N=2^13: ~15 ms por comprobación, imperceptible al teclear; 10 000 intentos ya no son gratis).
++   Formato guardado: «s1$<sal hex>$<hash hex>». Los hashes antiguos se siguen reconociendo y se
++   reescriben al formato nuevo la primera vez que el PIN entra bien (migración perezosa): nadie tiene
++   que volver a teclear nada. */
++const PIN_SCRYPT = { N: 8192, r: 8, p: 1, maxmem: 32 * 1024 * 1024 };
++const pinHashNuevo = (pin) => {
++  const sal = crypto.randomBytes(16).toString('hex');
++  return 's1$' + sal + '$' + crypto.scryptSync(String(pin), sal, 32, PIN_SCRYPT).toString('hex');
++};
++/* ¿Casa este PIN con este hash? Devuelve { ok, legado } (legado = hash antiguo que conviene reescribir). */
++const pinCoincide = (pin, hash) => {
++  const p = String(pin == null ? '' : pin); const h = String(hash || '');
++  if (!h) return { ok: false, legado: false };
++  if (h.startsWith('s1$')) {
++    const [, sal, esperado] = h.split('$');
++    const calc = crypto.scryptSync(p, sal || '', 32, PIN_SCRYPT).toString('hex');
++    const a = Buffer.from(calc, 'hex'); const b = Buffer.from(esperado || '', 'hex');
++    return { ok: a.length === b.length && crypto.timingSafeEqual(a, b), legado: false };
++  }
++  const H = h.toUpperCase();
++  return { ok: H === pinHash(p) || H === sha256(p), legado: true };
++};
++/* Busca en `tabla` (usuarios | fichaje_empleados) la fila activa cuyo PIN es este, probando una por una
++   (el PIN entra sin usuario, así que no hay otra forma con sal por fila; son decenas de filas, no miles).
++   Si la fila aún lleva un hash antiguo, lo reescribe. Devuelve el id o null. */
++const buscarPorPin = (tabla, pin) => {
++  if (tabla !== 'usuarios' && tabla !== 'fichaje_empleados') throw new Error('Tabla de PIN no válida');
++  const filas = conexion.prepare(`SELECT id, pin_hash FROM ${tabla} WHERE activo = 1`).all();
++  for (const f of filas) {
++    const r = pinCoincide(pin, f.pin_hash);
++    if (!r.ok) continue;
++    if (r.legado) { try { conexion.prepare(`UPDATE ${tabla} SET pin_hash = ? WHERE id = ?`).run(pinHashNuevo(pin), f.id); } catch (e) { /* se reintenta en el próximo login */ } }
++    return f.id;
++  }
++  return null;
++};
++/* Freno local del PIN (el del puesto en red vive en seguridad-lan.cjs y va por IP; este es el del
++   propio mostrador, donde hasta ahora se podían probar los 10 000 sin que nadie lo notara).
++   Cinco fallos seguidos → 5 minutos sin aceptar PIN; un acierto borra el historial. */
++const FRENO_PIN = { fallos: [], tope: 5, ventanaMs: 5 * 60 * 1000 };
++const frenoPin = {
++  bloqueo(ahora = Date.now()) {
++    FRENO_PIN.fallos = FRENO_PIN.fallos.filter((t) => ahora - t < FRENO_PIN.ventanaMs);
++    if (FRENO_PIN.fallos.length < FRENO_PIN.tope) return null;
++    return Math.max(1, Math.ceil((FRENO_PIN.ventanaMs - (ahora - FRENO_PIN.fallos[0])) / 1000));
++  },
++  fallo(ahora = Date.now()) { FRENO_PIN.fallos.push(ahora); },
++  acierto() { FRENO_PIN.fallos = []; },
++  olvidar() { FRENO_PIN.fallos = []; },
++};
++
+ const N = {
+   API: {},                                   // registro: cada módulo se apunta aquí
+   get db() { return conexion; },             // la conexión, tal cual la usaban las funciones
+   abrir(rutaFichero) { conexion = new Database(rutaFichero); return conexion; },
+   Database, crypto, fs, path,
+   SALT, r2, nowISO, isoLocal, dentroDe, sha256, pinHash,
++  pinHashNuevo, pinCoincide, buscarPorPin, frenoPin, // v0.1.73 · SEC-10
+ };
+ 
+ function logEvento(tipo, detalle, usuarioId = null) {
+diff --git a/electron/db/clientes.cjs b/electron/db/clientes.cjs
+index eac9c4f..5d3a22d 100644
+--- a/electron/db/clientes.cjs
++++ b/electron/db/clientes.cjs
+@@ -61,9 +61,14 @@ const clientesList = (q = '', filtros = {}) => {
+       (SELECT COUNT(*) FROM ordenes o WHERE o.cliente_id = c.id) ordenes,
+       (SELECT COUNT(*) FROM ordenes o WHERE o.cliente_id = c.id AND o.estado NOT IN ('entregado','abandonado')) ordenes_abiertas,
+       (SELECT MAX(o.recibido) FROM ordenes o WHERE o.cliente_id = c.id) ultima_orden
+-    FROM clientes c WHERE ${cond.join(' AND ')} ORDER BY c.nombre LIMIT 300`).all(...args);
++    FROM clientes c WHERE ${cond.join(' AND ')} ORDER BY c.nombre LIMIT 300`).all(...args).map(sinSecretos); // v0.1.73 · SEC-04
+ };
+ 
++/* v0.1.73 · SEC-04 · la clave del portal (hash y cifrado) no sale de la capa de datos: hasta ahora
++   clientes:list y clientes:ficha devolvían `SELECT *` y cualquier sesión del puesto en red se llevaba las
++   claves del portal de todos los clientes. Quien la necesita la pide por taller:portal-clave-ver (permiso «ajustes»). */
++const sinSecretos = (c) => { if (!c) return c; const { portal_pass_hash, portal_pass_enc, ...resto } = c; return resto; };
++
+ function clienteSave(c) {
+   const t = (v) => { const x = String(v ?? '').trim(); return x || null; };
+   const nombre = t(c.nombre);
+@@ -241,7 +246,7 @@ function crmProveedores() {
+ function clienteFicha(id) {
+   const c = N.db.prepare('SELECT * FROM clientes WHERE id = ? AND COALESCE(activo, 1) = 1').get(id);
+   if (!c) return null;
+-  return { ...c, telefonos: N.db.prepare('SELECT * FROM clientes_telefonos WHERE cliente_id = ? ORDER BY id').all(id) };
++  return { ...sinSecretos(c), telefonos: N.db.prepare('SELECT * FROM clientes_telefonos WHERE cliente_id = ? ORDER BY id').all(id) }; // v0.1.73 · SEC-04
+ }
+ 
+ function clienteBuscarTelefono(telefono) {
+diff --git a/electron/db/esquema.cjs b/electron/db/esquema.cjs
+index 9f80fc6..5e1fb55 100644
+--- a/electron/db/esquema.cjs
++++ b/electron/db/esquema.cjs
+@@ -333,6 +333,7 @@ function init(userDataPath) {
+     reparado_por INTEGER, firma_fin_tec TEXT, firma_entrega_cli TEXT,
+     almacenaje_desde TEXT, fecha_compromiso TEXT, presupuesto_nota TEXT, trabajos TEXT, presupuesto_numero TEXT, presupuesto_fecha TEXT)`);
+   N.db.exec('CREATE INDEX IF NOT EXISTS ix_ordenes_estado ON ordenes(estado)');
++  N.db.exec('CREATE INDEX IF NOT EXISTS ix_ordenes_numero ON ordenes(numero)'); // v0.1.73 · se busca por número en el portal, «ya vino» y la recepción
+   N.db.exec(`CREATE TABLE IF NOT EXISTS ordenes_avisos (
+     id INTEGER PRIMARY KEY, orden_id INTEGER NOT NULL REFERENCES ordenes(id),
+     tipo TEXT NOT NULL, via TEXT NOT NULL, enviado TEXT DEFAULT (datetime('now','localtime')))`);
+@@ -1084,9 +1085,10 @@ function seed() {
+   const tx = N.db.transaction(() => {
+     N.db.prepare(`INSERT INTO empresa (id, nombre, nif, direccion, cp, municipio, provincia, telefono)
+                 VALUES (1,'Mi Taller','B00000000','','','','Santa Cruz de Tenerife','')`).run();
+-    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Administrador','admin',?)").run(pinHash('1234'));
+-    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Técnico','camarero',?)").run(pinHash('1111'));
+-    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Encargado','camarero',?)").run(pinHash('2222'));
++    // v0.1.73 · SEC-10 · ya nacen con sal + scrypt (los PIN de fábrica siguen siendo los de siempre: la puesta en marcha obliga a cambiarlos)
++    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Administrador','admin',?)").run(N.pinHashNuevo('1234'));
++    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Técnico','camarero',?)").run(N.pinHashNuevo('1111'));
++    N.db.prepare("INSERT INTO usuarios (nombre, rol, pin_hash) VALUES ('Encargado','camarero',?)").run(N.pinHashNuevo('2222'));
+     N.db.prepare("INSERT INTO series (serie, ultimo_numero) VALUES ('T', 0), ('R', 0)").run();
+     N.db.prepare("INSERT INTO config (clave, valor) VALUES ('serie_tickets','T'), ('serie_rectificativas','R')").run();
+   });
+diff --git a/electron/db/fichaje.cjs b/electron/db/fichaje.cjs
+index b584efe..a69f058 100644
+--- a/electron/db/fichaje.cjs
++++ b/electron/db/fichaje.cjs
+@@ -27,13 +27,12 @@ function fichajeEmpleados() {
+ 
+ function fichajeGuardarEmpleado(e) {
+   if (e.pin != null) {
+-    if (!/^\d{4}$/.test(String(e.pin))) throw new Error('El PIN debe ser de 4 dígitos');
+-    const h = sha256(e.pin);
+-    const dup = N.db.prepare('SELECT id FROM fichaje_empleados WHERE activo = 1 AND pin_hash = ? AND id != ?').get(h, e.id || 0);
+-    if (dup) throw new Error('Ese PIN ya está en uso por otro empleado');
++    if (!/^\d{4,8}$/.test(String(e.pin))) throw new Error('El PIN debe tener entre 4 y 8 dígitos'); // v0.1.73 · SEC-10
++    const dupId = N.buscarPorPin('fichaje_empleados', e.pin); // v0.1.73 · SEC-10 · sal por fila
++    if (dupId && dupId !== (e.id || 0)) throw new Error('Ese PIN ya está en uso por otro empleado');
+   }
+   if (e.id) {
+-    if (e.pin != null) N.db.prepare('UPDATE fichaje_empleados SET pin_hash = ? WHERE id = ?').run(sha256(e.pin), e.id);
++    if (e.pin != null) N.db.prepare('UPDATE fichaje_empleados SET pin_hash = ? WHERE id = ?').run(N.pinHashNuevo(e.pin), e.id);
+     if (e.nombre != null) N.db.prepare('UPDATE fichaje_empleados SET nombre = ?, nif = ? WHERE id = ?').run(e.nombre, e.nif || null, e.id);
+     if (e.usuario_id !== undefined) N.db.prepare('UPDATE fichaje_empleados SET usuario_id = ? WHERE id = ?').run(e.usuario_id || null, e.id);
+     if (e.activo != null) N.db.prepare('UPDATE fichaje_empleados SET activo = ? WHERE id = ?').run(e.activo ? 1 : 0, e.id);
+@@ -42,7 +41,7 @@ function fichajeGuardarEmpleado(e) {
+   if (!e.nombre || !String(e.nombre).trim()) throw new Error('El nombre es obligatorio');
+   if (e.pin == null) throw new Error('El PIN es obligatorio');
+   return N.db.prepare('INSERT INTO fichaje_empleados (nombre, nif, pin_hash, usuario_id, activo, creado) VALUES (?,?,?,?,1,?)')
+-    .run(String(e.nombre).trim(), e.nif || null, sha256(e.pin), e.usuario_id || null, nowISO()).lastInsertRowid;
++    .run(String(e.nombre).trim(), e.nif || null, N.pinHashNuevo(e.pin), e.usuario_id || null, nowISO()).lastInsertRowid;
+ }
+ 
+ 
+@@ -53,24 +52,32 @@ function fichajeGuardarEmpleado(e) {
+      1. Un empleado de fichaje con ese PIN (compatibilidad: los que ya tenían su PIN).
+      2. Un USUARIO del TPV con ese PIN → se le crea/vincula su ficha de fichaje al vuelo,
+         de modo que a partir de ahí es el mismo PIN para todo. */
+-function fichajeLogin(pin) {
++function fichajeLogin(pin, opts = {}) {
+   const p = String(pin);
++  /* v0.1.73 · SEC-10 · freno local compartido con el login del TPV (solo intentos desde el propio mostrador) */
++  const local = !!opts.frenoLocal;
++  const espera = local ? N.frenoPin.bloqueo() : null;
++  if (espera) throw new Error('Demasiados intentos. Espera ' + espera + ' s y vuelve a probar');
+   // 1 · empleado de fichaje con PIN propio (como hasta ahora)
+-  const e = N.db.prepare('SELECT id, nombre FROM fichaje_empleados WHERE activo = 1 AND pin_hash = ?').get(sha256(p));
+-  if (e) return e;
++  const eId = N.buscarPorPin('fichaje_empleados', p);
++  const e = eId ? N.db.prepare('SELECT id, nombre FROM fichaje_empleados WHERE id = ?').get(eId) : null;
++  if (e) { if (local) N.frenoPin.acierto(); return e; }
+   // 2 · usuario del TPV con ese PIN → su PIN del TPV sirve para fichar
+-  const u = N.db.prepare('SELECT id, nombre FROM usuarios WHERE activo = 1 AND pin_hash = ?').get(pinHash(p));
++  const uId = N.buscarPorPin('usuarios', p);
++  const u = uId ? N.db.prepare('SELECT id, nombre FROM usuarios WHERE id = ?').get(uId) : null;
+   if (u) {
++    if (local) N.frenoPin.acierto();
+     // ¿ya tiene ficha de fichaje vinculada? (aunque esté sin PIN propio)
+     let f = N.db.prepare('SELECT id, nombre FROM fichaje_empleados WHERE usuario_id = ? AND activo = 1').get(u.id);
+     if (!f) {
+       const id = N.db.prepare('INSERT INTO fichaje_empleados (nombre, nif, pin_hash, usuario_id, activo, creado) VALUES (?,?,?,?,1,?)')
+-        .run(u.nombre, null, sha256(p), u.id, nowISO()).lastInsertRowid;
++        .run(u.nombre, null, N.pinHashNuevo(p), u.id, nowISO()).lastInsertRowid;
+       f = { id, nombre: u.nombre };
+       logEvento('fichaje', `Ficha de fichaje creada para ${u.nombre} (mismo PIN que el TPV)`, u.id);
+     }
+     return f;
+   }
++  if (local) N.frenoPin.fallo();
+   throw new Error('PIN no reconocido');
+ }
+ 
+@@ -479,12 +486,14 @@ function fichajeAvisoEntrada(usuarioId) {
+ 
+ function fichajeAdminOk(pin) {
+   const p = String(pin || '').trim();
+-  const guardado = (configAll().fichaje_admin_hash || '').toUpperCase();
+-  // Comparación robusta (BDs antiguas pudieron guardar el hash en otra capitalización)
+-  if (guardado && guardado === sha256(p).toUpperCase()) return true;
++  const guardado = configAll().fichaje_admin_hash || '';
++  /* v0.1.73 · SEC-10 · acepta el hash antiguo (sha256 pelado, en cualquier capitalización) y lo reescribe
++     con sal + scrypt la primera vez que entra bien */
++  const r = N.pinCoincide(p, guardado);
++  if (guardado && r.ok) { if (r.legado) configSet('fichaje_admin_hash', N.pinHashNuevo(p)); return true; }
+   // Auto-reparación: si sigue el PIN de fábrica y el hash guardado no casa, 9999 debe funcionar
+   if (configAll().fichaje_admin_default === '1' && p === '9999') {
+-    configSet('fichaje_admin_hash', sha256('9999').toUpperCase());
++    configSet('fichaje_admin_hash', N.pinHashNuevo('9999'));
+     return true;
+   }
+   // Rescate del dueño: el PIN de un usuario del TPV con permiso de Ajustes también vale
+@@ -494,8 +503,8 @@ function fichajeAdminOk(pin) {
+ }
+ 
+ function fichajeAdminSet(pin) {
+-  if (!/^\d{4}$/.test(String(pin))) throw new Error('El PIN debe ser de 4 dígitos');
+-  configSet('fichaje_admin_hash', sha256(pin));
++  if (!/^\d{4,8}$/.test(String(pin))) throw new Error('El PIN debe tener entre 4 y 8 dígitos'); // v0.1.73 · SEC-10
++  configSet('fichaje_admin_hash', N.pinHashNuevo(pin));
+   configSet('fichaje_admin_default', '0');
+   return true;
+ }
+diff --git a/electron/db/sistema.cjs b/electron/db/sistema.cjs
+index 1281500..76d12b8 100644
+--- a/electron/db/sistema.cjs
++++ b/electron/db/sistema.cjs
+@@ -56,10 +56,19 @@ function deletePerfil(id) {
+ 
+ 
+ // ---------- Auth ----------
+-function login(pin) {
++function login(pin, opts = {}) {
++  /* v0.1.73 · SEC-10 · freno local: cinco PIN mal seguidos desde el PROPIO mostrador y deja de aceptar PIN 5 minutos.
++     Solo cuenta los intentos locales (opts.frenoLocal, que pone el handler IPC): los del puesto en red y el
++     comandero llevan su freno por IP; si contaran aquí, cinco PIN malos desde la Wi-Fi bloquearían el mostrador. */
++  const local = !!opts.frenoLocal;
++  const espera = local ? N.frenoPin.bloqueo() : null;
++  if (espera) throw new Error('Demasiados intentos. Espera ' + espera + ' s y vuelve a probar');
++  const id = N.buscarPorPin('usuarios', pin);
++  if (!id) { if (local) N.frenoPin.fallo(); return null; }
++  if (local) N.frenoPin.acierto();
+   const u = N.db.prepare(`SELECT u.id, u.nombre, u.rol, u.perfil_id, p.nombre perfil, p.nivel, p.permisos
+     FROM usuarios u LEFT JOIN perfiles p ON p.id = u.perfil_id
+-    WHERE u.pin_hash = ? AND u.activo = 1`).get(pinHash(String(pin)));
++    WHERE u.id = ? AND u.activo = 1`).get(id);
+   if (!u) return null;
+   u.permisos = u.permisos ? JSON.parse(u.permisos) : null;
+   logEvento('login', `Acceso de ${u.nombre} (${u.perfil || u.rol})`, u.id);
+@@ -93,6 +102,14 @@ function saveEmpresa(e) {
+     .run(e.nombre, e.nif, e.direccion, e.cp, e.municipio, e.provincia, e.telefono, e.email);
+ }
+ 
++/* v0.1.73 · SEC-16 · lo que el puesto en red relee en cada llamada: si al técnico le quitan un permiso o le dan
++   de baja a media mañana, su sesión lo nota en la siguiente petición, no a las 12 horas. */
++const usuarioVivo = (id) => {
++  const u = N.db.prepare(`SELECT u.id, u.nombre, u.rol, u.activo, p.permisos FROM usuarios u LEFT JOIN perfiles p ON p.id = u.perfil_id WHERE u.id = ?`).get(id);
++  if (!u || !u.activo) return null;
++  u.permisos = u.permisos ? JSON.parse(u.permisos) : null;
++  return u;
++};
+ const listUsuarios = () => N.db.prepare(`SELECT u.id, u.nombre, u.rol, u.activo, u.perfil_id, u.es_profesional, u.color, p.nombre perfil
+   FROM usuarios u LEFT JOIN perfiles p ON p.id = u.perfil_id
+   WHERE u.activo = 1
+@@ -111,15 +128,16 @@ function saveUsuario(u) {
+   // haría fichar a uno por otro. Se comprueba solo si viene PIN nuevo (editar sin
+   // cambiarlo manda pin vacío y no colisiona consigo mismo).
+   if (u.pin) {
+-    const dup = N.db.prepare('SELECT id FROM usuarios WHERE pin_hash = ? AND activo = 1 AND id != ?').get(pinHash(String(u.pin)), u.id || 0);
+-    if (dup) throw new Error('Ese PIN ya está en uso por otro usuario');
++    if (!/^\d{4,8}$/.test(String(u.pin))) throw new Error('El PIN debe tener entre 4 y 8 dígitos'); // v0.1.73 · SEC-10
++    const dupId = N.buscarPorPin('usuarios', u.pin); // v0.1.73 · SEC-10 · con sal por usuario no se busca por hash
++    if (dupId && dupId !== (u.id || 0)) throw new Error('Ese PIN ya está en uso por otro usuario');
+   }
+   if (u.id) {
+     if (u.pin) {
+       N.db.prepare('UPDATE usuarios SET nombre=?, rol=?, perfil_id=?, pin_hash=? WHERE id=?')
+-        .run(u.nombre, rol, u.perfil_id || null, pinHash(String(u.pin)), u.id);
++        .run(u.nombre, rol, u.perfil_id || null, N.pinHashNuevo(u.pin), u.id);
+       // v3.0.39 · si cambia el PIN del TPV, su ficha de fichaje lo sigue (mismo PIN para todo)
+-      N.db.prepare('UPDATE fichaje_empleados SET pin_hash=? WHERE usuario_id=? AND activo=1').run(sha256(String(u.pin)), u.id);
++      N.db.prepare('UPDATE fichaje_empleados SET pin_hash=? WHERE usuario_id=? AND activo=1').run(N.pinHashNuevo(u.pin), u.id);
+     }
+     else N.db.prepare('UPDATE usuarios SET nombre=?, rol=?, perfil_id=? WHERE id=?')
+       .run(u.nombre, rol, u.perfil_id || null, u.id);
+@@ -128,7 +146,7 @@ function saveUsuario(u) {
+     return u.id;
+   }
+   const nuevoId = N.db.prepare('INSERT INTO usuarios (nombre, rol, perfil_id, pin_hash) VALUES (?,?,?,?)')
+-    .run(u.nombre, rol, u.perfil_id || null, pinHash(String(u.pin || '0000'))).lastInsertRowid;
++    .run(u.nombre, rol, u.perfil_id || null, N.pinHashNuevo(u.pin || '0000')).lastInsertRowid;
+   // v3.0.66 · su ficha de fichaje al vuelo, para que aparezca en Fichaje sin tener que fichar antes
+   try { empleadosSyncUsuarios(); } catch { /* no crítico */ }
+   return nuevoId;
+@@ -579,9 +597,11 @@ Object.assign(N.API, {
+ function puestaEnMarcha() {
+   const cfg = configAll();
+   const emp = N.db.prepare('SELECT nombre, nif, direccion, municipio FROM empresa WHERE id = 1').get() || {};
+-  const adminPinFabrica = !!N.db.prepare('SELECT 1 FROM usuarios WHERE rol = ? AND activo = 1 AND pin_hash = ?').get('admin', pinHash('1234'));
++  /* v0.1.73 · SEC-10 · con sal por usuario el hash ya no se puede comparar en SQL: se prueba fila a fila */
++  const filasU = N.db.prepare('SELECT id, rol, pin_hash FROM usuarios WHERE activo = 1').all();
++  const adminPinFabrica = filasU.some((f) => f.rol === 'admin' && N.pinCoincide('1234', f.pin_hash).ok);
+   // los de fábrica (Técnico 1111, Encargado 2222) no cuentan: hay que dar de alta a los de verdad
+-  const tecnicos = N.db.prepare("SELECT COUNT(*) c FROM usuarios WHERE activo = 1 AND rol <> 'admin' AND pin_hash NOT IN (?, ?)").get(pinHash('1111'), pinHash('2222')).c;
++  const tecnicos = filasU.filter((f) => f.rol !== 'admin' && !N.pinCoincide('1111', f.pin_hash).ok && !N.pinCoincide('2222', f.pin_hash).ok).length;
+   const articulos = N.db.prepare('SELECT COUNT(*) c FROM productos WHERE activo = 1 AND (coste IS NOT NULL OR precio > 0)').get().c;
+   let ultimoBackup = null;
+   try { ultimoBackup = JSON.parse(cfg.backup_ultimo || 'null'); } catch { ultimoBackup = null; }
+@@ -598,6 +618,9 @@ function puestaEnMarcha() {
+       detalle: 'Repuestos con coste y margen, o servicios con precio cerrado', tab: 'productos' },
+     { id: 'backup', titulo: 'Copia de seguridad fuera del PC', hecho: !!String(cfg.backup_carpeta_extra || '').trim() && !!(ultimoBackup && ultimoBackup.ok),
+       detalle: 'Un USB o una carpeta de red. Si el disco muere, el taller sigue', tab: 'sistema' },
++    /* v0.1.73 · SEC-11 · sin frase propia las copias salen con la clave común a todos los Doel (DOELBAK1) */
++    { id: 'backup_clave', titulo: 'Clave propia de las copias de seguridad', hecho: !!backupClave(),
++      detalle: 'Sin ella, cualquier Doel Taller abre tus copias. Con la tuya, solo tú (apúntala: sin la frase no hay copia)', tab: 'sistema' },
+   ];
+   const pendientes = puntos.filter((p) => !p.hecho);
+   return { puntos, pendientes: pendientes.length, completa: pendientes.length === 0, descartada: cfg.puesta_en_marcha_ok === '1' };
+@@ -605,4 +628,4 @@ function puestaEnMarcha() {
+ 
+ const puestaEnMarchaDescartar = () => { configSet('puesta_en_marcha_ok', '1'); return true; };
+ 
+-Object.assign(N.API, { puestaEnMarcha, puestaEnMarchaDescartar });
++Object.assign(N.API, { puestaEnMarcha, puestaEnMarchaDescartar, usuarioVivo });
+diff --git a/electron/db/taller-hardware.cjs b/electron/db/taller-hardware.cjs
+index 2a317cb..addd7b3 100644
+--- a/electron/db/taller-hardware.cjs
++++ b/electron/db/taller-hardware.cjs
+@@ -166,6 +166,16 @@ function ejecutar(cmd, opts = {}) {
+     });
+   });
+ }
++/* v0.1.73 · SEC-20 · igual que ejecutar() pero SIN shell: ejecutable + lista de argumentos. Para lo que lleva
++   datos del renderer (letra de unidad, duración): con exec(string) un «& calc» en el argumento se ejecutaba. */
++function ejecutarArchivo(exe, args, opts = {}) {
++  const { execFile } = require('child_process');
++  return new Promise((resolve) => {
++    execFile(exe, args, { timeout: 15000, windowsHide: true, ...opts }, (err, stdout, stderr) => {
++      resolve({ err, stdout: stdout || '', stderr: stderr || '' });
++    });
++  });
++}
+ 
+ 
+ // ---------------------------------------------------------------------------
+@@ -734,7 +744,9 @@ async function usbDiscosUsb() {
+ // 3) Test de velocidad real — escribe y lee un archivo de prueba en la unidad
+ // ---------------------------------------------------------------------------
+ async function usbTestVelocidad(letraUnidad, tamanoMB = 30) {
+-  const letra = letraUnidad.replace(':', '').toUpperCase();
++  const letra = String(letraUnidad || '').replace(':', '').toUpperCase();
++  if (!/^[A-Z]$/.test(letra)) return { ok: false, error: 'Unidad no válida' }; // v0.1.73 · SEC-20 · una letra, nada más
++  tamanoMB = Math.max(1, Math.min(1024, Number(tamanoMB) || 30)); // v0.1.73 · SEC-20 · tope: randomBytes(mb) sin tope era un DoS de memoria
+   const rutaTest = `${letra}:\\doel_test_velocidad_${Date.now()}.tmp`;
+   const bytes = tamanoMB * 1024 * 1024;
+ 
+@@ -918,6 +930,10 @@ function parsearSalidaDiskSpd(texto) {
+ // escritorio/SO), cola de E/S 8, 10 segundos — ajustable si hace falta.
+ // ---------------------------------------------------------------------------
+ async function diskspdBenchmark(letraUnidad, duracionSeg = 10) {
++  /* v0.1.73 · SEC-20 · letra y duración saneadas antes de tocar nada; el comando va sin shell */
++  letraUnidad = String(letraUnidad || '').replace(':', '').toUpperCase();
++  if (!/^[A-Z]$/.test(letraUnidad)) return { ok: false, error: 'Unidad no válida' };
++  duracionSeg = Math.max(1, Math.min(120, parseInt(duracionSeg, 10) || 10));
+   if (process.platform !== 'win32') return { ok: false, error: 'Solo disponible en Windows.' };
+   if (!diskspdDisponible()) {
+     return {
+@@ -933,9 +949,9 @@ async function diskspdBenchmark(letraUnidad, duracionSeg = 10) {
+   // -c1G: fichero de prueba de 1GB (suficiente para no medir solo caché en la mayoría de discos)
+   // -d<seg>: duración · -r: E/S aleatoria · -w30: 30% escrituras, 70% lecturas
+   // -t2: 2 hilos · -o8: cola de 8 · -b4K: bloque de 4KB · -L: mide latencia
+-  const cmd = `"${exe}" -c1G -d${duracionSeg} -r -w30 -t2 -o8 -b4K -L "${rutaTest}"`;
++  const args = ['-c1G', '-d' + duracionSeg, '-r', '-w30', '-t2', '-o8', '-b4K', '-L', rutaTest]; // v0.1.73 · SEC-20 · sin shell
+ 
+-  const { stdout, err, stderr } = await ejecutar(cmd);
++  const { stdout, err, stderr } = await ejecutarArchivo(exe, args, { timeout: (duracionSeg + 60) * 1000 });
+ 
+   // Limpieza del fichero de prueba, tanto si fue bien como si no
+   try { if (fs.existsSync(rutaTest)) fs.unlinkSync(rutaTest); } catch { /* best-effort */ }
+@@ -1031,8 +1047,23 @@ function generarAccesoMovil(minutos) {
+   return { codigo, expira, minutos: mins, expiraTexto: new Date(expira).toLocaleTimeString() };
+ }
+ 
++/* v0.1.73 · SEC-14 · la pareja de generarAccesoMovil: valida un código tecleado (lo llama el comandero en
++   /api/movil-validar). Comparación en tiempo constante; devuelve la caducidad para que la página la respete. */
++function validarAccesoMovil(codigo) {
++  const cod = String(codigo || '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
++  if (cod.length < 8) return { ok: false, error: 'Código demasiado corto.' };
++  const firma = cod.slice(-6); const expB36 = cod.slice(0, -6).toLowerCase(); const expMs = parseInt(expB36, 36);
++  if (!expMs || isNaN(expMs)) return { ok: false, error: 'Código no válido.' };
++  const esperada = crypto.createHmac('sha256', CLAVE_MOVIL).update(expB36).digest('hex').slice(0, 6).toUpperCase();
++  const a = Buffer.from(firma), b = Buffer.from(esperada);
++  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, error: 'Código incorrecto.' };
++  if (Date.now() > expMs) return { ok: false, error: 'El código ha caducado. Pide uno nuevo al técnico.' };
++  return { ok: true, expira: expMs };
++}
++
+ /* Alta en el registro */
+ Object.assign(N.API, {
++  validarAccesoMovil, // v0.1.73 · SEC-14
+   historialPorSerie, // v0.1.29
+   mandoSerieUsb, mandosDePnp, diagnosticoGuardar, diagnosticosDe, diagnosticosPanel, kbPropuestaDesdeDiagnostico,
+   parsearBatteryReportXml, parsearEnergyHtml, energiaInforme, parsearTemperaturasCim, cpuTemperatura, ejecutar, bateriaInforme, discoSalud, impresoras3dListar, impresoras3dResumen, impresoras3dAmortizacion, net, consultarEscPos, interpretarEstadoImpresora, interpretarEstadoOffline, interpretarEstadoError, interpretarEstadoPapel, impresoraTpvEstado, impresoraTpvTest, ps, usbPuertosListar, usbDiscosUsb, usbTestVelocidad, SCRIPT_PS1, usbHistorialNativo, rutaDiskSpd, diskspdDisponible, parsearSalidaDiskSpd, diskspdBenchmark, discoVelocidadNativa, CLAVE_MOVIL, generarAccesoMovil, os,
+diff --git a/electron/db/taller-ordenes.cjs b/electron/db/taller-ordenes.cjs
+index 94a7b13..0a53be8 100644
+--- a/electron/db/taller-ordenes.cjs
++++ b/electron/db/taller-ordenes.cjs
+@@ -216,9 +216,12 @@ function ordenCrear(o) {
+ }
+ 
+ 
++/* v0.1.73 · SEC-04 · la contraseña cifrada del equipo no viaja con la orden: solo la lee taller:pass-ver (con rastro) */
++const ordenPasswordCifrada = (id) => (N.db.prepare('SELECT password_cifrada FROM ordenes WHERE id = ?').get(id) || {}).password_cifrada || null;
+ function ordenGet(id) {
+   const o = N.db.prepare('SELECT * FROM ordenes WHERE id = ?').get(id);
+   if (!o) return null;
++  o.tiene_password = !!o.password_cifrada; delete o.password_cifrada; // v0.1.73 · SEC-04
+   o.cliente = o.cliente_id ? N.db.prepare('SELECT id, nombre, nif, quiere_factura, telefono, email FROM clientes WHERE id = ?').get(o.cliente_id) : null; // v5.0.13 · teléfono: la reimpresión del parte lo necesita
+   o.equipo = o.equipo_id ? N.db.prepare('SELECT * FROM equipos WHERE id = ?').get(o.equipo_id) : null;
+   o.lineas = N.db.prepare('SELECT * FROM ordenes_lineas WHERE orden_id = ? ORDER BY COALESCE(orden, id), id').all(id); // v0.1.6 · en el orden que se les dio
+@@ -603,7 +606,7 @@ function checklistAprender(tipo, item) {
+ 
+ 
+ function portalClaveGenerar(clienteId) {
+-  const clave = String(Math.floor(10000000 + Math.random() * 90000000)); // 8 dígitos, sin ceros a la izquierda
++  const clave = String(crypto.randomInt(10000000, 100000000)); // 8 dígitos, sin ceros a la izquierda · v0.1.73 · SEC-25 · aleatorio criptográfico, no Math.random
+   const hash = crypto.createHash('sha256').update('doel-portal|' + clave).digest('hex');
+   // v4.0.36 · el claro se guarda CIFRADO (AES de la casa, como las contraseñas de equipos):
+   // si el cliente la pierde, el taller la VE — con rastro en el historial, no a hurtadillas
+@@ -1130,5 +1133,6 @@ function ordenUbicaciones(ordenId) {
+ 
+ /* Alta en el registro */
+ Object.assign(N.API, {
++  ordenPasswordCifrada, // v0.1.73 · SEC-04
+   TALLER_ESTADOS, marcaModeloAprender, marcasSugerir, modelosSugerir, equipoGuardar, equipoBuscar, informeCrear, informeGet, informesDeOrden, RMA_ESTADOS, rmaCrear, rmaEstado, rmaGet, rmaDeOrden, rmaVivos, ordenLog, ordenCrear, ordenGet, ordenEstado, ordenLineaAdd, ordenLineaDel, ordenLineaSet, ordenParteSet, ordenKitAdd, ordenAnticipoAdd, ordenFotoGuardar, fotoRutaAbs, ordenFotoLeer, ordenFotoBorrar, ordenFirmas, ordenFirmaGuardar, ordenFirmaPng, ordenFirmaAnular, ordenFirmasConPng, validarDniNie, normalizarDni, MOMENTOS_FIRMA, checklistQuitar, checklistAprender, portalClaveGenerar, colClavePortal, clienteContactoSet, portalClaveVer, ordenesBuscar, ordenCompromisoSet, tallerServicios, tallerCierreDia, tallerDashboard, chatIaResponder, ordenMensajeAdd, ordenMensajeIa, ordenMensajesLeidos, portalSnapshot, portalImportar, ordenACuenta, ordenAvisoAdd, ordenAvisoTexto, ordenPresupuestoTexto, ordenLineasOrdenar, ordenTextoSet, ordenPresupuestoEmitir, ordenPresupuestos, ordenPresupuestoGet, ordenPresupuestoEstado, ordenPresupuestoCargar, ordenPresupuestoActualizar, ordenPresupuestoBorrar, presupuestoAjustes, presupuestoAjustesSet, CONDICIONES_DEFECTO, ordenesAbandonoBarrer, ordenesTablero, cpMunicipio, clienteFiscalSet, ordenEnEstadoDesde, ordenUbicaciones,
+ });
+diff --git a/electron/diagnostico-movil.html b/electron/diagnostico-movil.html
+index 779d765..e9a387f 100644
+--- a/electron/diagnostico-movil.html
++++ b/electron/diagnostico-movil.html
+@@ -303,15 +303,10 @@ más abajo con el botón "Activar sensores".
+   </div>
+ 
+ <script>
+-// v5.0.72 · validación del código de acceso temporal (misma clave/algoritmo que el TPV)
+-const CLAVE_MOVIL_WEB = 'DoelTPV-Movil-2026-LosRealejos-AccesoTemporal';
+-async function hmac6(msg){
+-  const enc = new TextEncoder();
+-  const key = await crypto.subtle.importKey('raw', enc.encode(CLAVE_MOVIL_WEB), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+-  const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+-  return hex.slice(0,6).toUpperCase();
+-}
++// v0.1.73 · SEC-14 · el código se valida en el servidor (/api/movil-validar): la clave ya no viaja en el HTML
++// v0.1.73 · SEC-24 · lo que viene de fuera (nombre de un dispositivo Bluetooth, mensajes de error) se pinta escapado
++function escHtml(s){ return String(s == null ? '' : s).replace(/[<>&"']/g, function(c){ return { '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' }[c]; }); }
++const RUTA_VALIDAR_CODIGO = '/api/movil-validar';
+ // v5.0.77 · avisa a la nube (best-effort) de que el código se ha usado / sigue en uso, para
+ // que el panel pueda mostrar "en uso ahora". Si no hay internet, o el código se generó
+ // offline en el TPV y no está en la nube, no pasa nada: el diagnóstico sigue funcionando
+@@ -343,9 +338,10 @@ async function validarAcceso(){
+   var expB36 = cod.slice(0, -6).toLowerCase();
+   var expMs = parseInt(expB36, 36);
+   if (!expMs || isNaN(expMs)) { msj.textContent = 'Código no válido.'; return; }
+-  var firmaOk = await hmac6(expB36);
+-  if (firma !== firmaOk) { msj.textContent = 'Código incorrecto.'; return; }
+-  if (Date.now() > expMs) { msj.textContent = 'El código ha caducado. Pide uno nuevo al técnico.'; return; }
++  var v = null;
++  try { v = await (await fetch(RUTA_VALIDAR_CODIGO, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ codigo: cod }) })).json(); } catch (e) { v = null; }
++  if (!v || !v.ok) { msj.textContent = (v && v.error) || 'No se pudo comprobar el código: sin conexión con el servidor.'; return; }
++  expMs = Number(v.expira) || expMs; // la caducidad la dice el servidor
+   // válido: ocultar login y guardar la expiración para cortar el acceso al caducar
+   window.__accesoExpira = expMs;
+   document.getElementById('loginMovil').style.display = 'none';
+@@ -485,7 +481,7 @@ function probarGPS(){
+         2: 'Posición no disponible — el chip GPS podría no estar respondiendo, o no hay visibilidad de satélites/red.',
+         3: 'Tiempo de espera agotado buscando señal.',
+       };
+-      el.innerHTML = '<span class="err">✕ ' + (mensajes[err.code] || err.message) + '</span>';
++      el.innerHTML = '<span class="err">✕ ' + escHtml(mensajes[err.code] || err.message) + '</span>';
+     },
+     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+   );
+@@ -685,7 +681,7 @@ function probarAltavoz(){
+     osc.connect(ctx.destination);
+     osc.start(); osc.stop(ctx.currentTime + 1);
+     el.innerHTML = '<span class="ok">▶ Sonando 1s a 1kHz — ¿lo has oído?</span>';
+-  } catch(e) { el.innerHTML = '<span class="err">Error: ' + e.message + '</span>'; }
++  } catch(e) { el.innerHTML = '<span class="err">Error: ' + escHtml(e.message) + '</span>'; }
+ }
+ 
+ // v5.0.61 · limpieza por frecuencia: tono grave pulsado que expulsa agua/polvo del altavoz
+@@ -713,7 +709,7 @@ function limpiarAltavoz(){
+     btn.textContent = '⏹ Parar';
+     el.innerHTML = '<span class="ok">💧 Limpiando… móvil con el altavoz hacia abajo. Repite 2-3 veces.</span>';
+     osc.onended = function(){ limpiezaOsc = null; btn.textContent = '💧 Limpiar 30s'; el.innerHTML = '<span class="ok">✓ Limpieza terminada.</span>'; };
+-  } catch(e) { el.innerHTML = '<span class="err">Error: ' + e.message + '</span>'; }
++  } catch(e) { el.innerHTML = '<span class="err">Error: ' + escHtml(e.message) + '</span>'; }
+ }
+ 
+ // -------------------- Micrófono --------------------
+@@ -735,7 +731,7 @@ function probarMicrofono(){
+       requestAnimationFrame(medir);
+     }
+     medir();
+-  }).catch(e => el.innerHTML = '<span class="err">No se pudo acceder: ' + e.message + '</span>');
++  }).catch(e => el.innerHTML = '<span class="err">No se pudo acceder: ' + escHtml(e.message) + '</span>');
+ }
+ 
+ // -------------------- Cámara --------------------
+@@ -747,7 +743,7 @@ function cambiarCamara(cual){
+   navigator.mediaDevices.getUserMedia({video:{facingMode:cual}}).then(function(stream){
+     camStream = stream; video.srcObject = stream; video.style.display = 'block';
+     el.innerHTML = '<span class="ok">✓ Cámara ' + (cual === 'user' ? 'frontal' : 'trasera') + ' activa. ¿Se ve nítida?</span>';
+-  }).catch(function(e){ el.innerHTML = '<span class="err">No se pudo abrir esta cámara: ' + e.message + '</span>'; });
++  }).catch(function(e){ el.innerHTML = '<span class="err">No se pudo abrir esta cámara: ' + escHtml(e.message) + '</span>'; });
+ }
+ function probarCamara(){
+   document.getElementById('camBtns').hidden = false;
+@@ -815,11 +811,11 @@ function probarBluetooth(){
+   }
+   el.innerHTML = 'Buscando… elige un dispositivo en la ventana (vale cualquiera cercano encendido).';
+   navigator.bluetooth.requestDevice({ acceptAllDevices: true }).then(function(dev){
+-    el.innerHTML = '<span class="ok">✓ Bluetooth funciona. Detectado: ' + (dev.name || 'dispositivo sin nombre') + '</span>' +
++    el.innerHTML = '<span class="ok">✓ Bluetooth funciona. Detectado: ' + escHtml(dev.name || 'dispositivo sin nombre') + '</span>' +
+       '<div class="muted" style="font-size:12px;margin-top:4px">La antena Bluetooth capta señal correctamente.</div>';
+   }).catch(function(e){
+     if (/cancel|user/i.test(e.message)) el.innerHTML = '<span class="muted">Búsqueda cancelada. Si viste dispositivos en la lista, el Bluetooth funciona.</span>';
+-    else el.innerHTML = '<span class="err">No se pudo buscar: ' + e.message + '</span>';
++    else el.innerHTML = '<span class="err">No se pudo buscar: ' + escHtml(e.message) + '</span>';
+   });
+ }
+ 
+diff --git a/electron/licencia.cjs b/electron/licencia.cjs
+index bfca72e..6dc62eb 100644
+--- a/electron/licencia.cjs
++++ b/electron/licencia.cjs
+@@ -20,7 +20,7 @@ function validar(codigo) {
+     const [datos, firma] = String(codigo || '').trim().split('.');
+     if (!datos || !firma) return null;
+     const esperada = crypto.createHmac('sha256', SECRETO).update(datos).digest('hex').slice(0, 24);
+-    if (firma !== esperada) return null;
++    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null; // v0.1.73 · SEC-26 · comparación en tiempo constante
+     const payload = JSON.parse(Buffer.from(datos, 'base64url').toString('utf8'));
+     if (payload.e !== equipoId()) return null; // ligada a ESTE equipo
+     return { cliente: payload.c };
+@@ -309,21 +309,64 @@ function cifrarArchivo(origen, destino, clave) {
+   return destino;
+ }
+ 
++/* v0.1.73 · SEC-11 · CLAVE POR INSTALACIÓN para lo que se cifra dentro de la base (contraseñas de los equipos
++   de los clientes, claves del portal, claves web de distribuidores, frase de las copias). Hasta la 0.1.72
++   todo eso iba con CLAVE_BAK, derivada del secreto de la app: la misma en todos los Doel y extraíble del
++   instalador, así que una base robada se descifraba entera. Ahora cada instalación genera 32 bytes al
++   azar la primera vez, guardados en <datos>/clave-instalacion.bin; en Windows van protegidos con
++   safeStorage (DPAPI: solo los lee el mismo usuario en el mismo PC). Lo cifrado con la clave antigua se
++   sigue leyendo (formato sin prefijo); lo nuevo lleva «v2:». Si la base se restaura en OTRO PC, lo
++   cifrado con «v2:» no se puede abrir allí: las contraseñas de equipos de las órdenes abiertas hay que
++   pedírselas otra vez al cliente y la frase de las copias se vuelve a poner en Ajustes (la restauración
++   la pide al momento, como siempre). */
++let CLAVE_INST_DIR = null; let SAFE = null; let CLAVE_INST = null;
++function configurarClaveInstalacion(dir, safeStorage) { CLAVE_INST_DIR = dir || null; SAFE = safeStorage || null; CLAVE_INST = null; }
++function claveInstalacion() {
++  if (CLAVE_INST) return CLAVE_INST;
++  const fs = require('fs'); const path = require('path');
++  const dir = CLAVE_INST_DIR || path.join(require('os').tmpdir(), 'doel-taller-pruebas'); // sin configurar (baterías): temporal
++  const ruta = path.join(dir, 'clave-instalacion.bin');
++  const safeOk = () => { try { return !!(SAFE && SAFE.isEncryptionAvailable()); } catch (e) { return false; } };
++  try {
++    const raw = fs.readFileSync(ruta);
++    const marca = raw.subarray(0, 4).toString('latin1');
++    if (marca === 'SAFE') {
++      if (!safeOk()) throw new Error('La clave de instalación está protegida por Windows y este usuario no puede abrirla');
++      CLAVE_INST = Buffer.from(SAFE.decryptString(raw.subarray(4)), 'hex');
++    } else if (marca === 'PLAN') CLAVE_INST = Buffer.from(raw.subarray(4));
++    else throw new Error('clave-instalacion.bin no tiene un formato conocido');
++    if (CLAVE_INST.length !== 32) throw new Error('clave-instalacion.bin corrupta');
++    return CLAVE_INST;
++  } catch (e) {
++    if (e.code !== 'ENOENT') throw e;
++  }
++  const k = crypto.randomBytes(32);
++  fs.mkdirSync(dir, { recursive: true });
++  const cuerpo = safeOk() ? Buffer.concat([Buffer.from('SAFE', 'latin1'), SAFE.encryptString(k.toString('hex'))])
++    : Buffer.concat([Buffer.from('PLAN', 'latin1'), k]);
++  fs.writeFileSync(ruta, cuerpo, { mode: 0o600 });
++  CLAVE_INST = k;
++  return k;
++}
++
+ // v4.0.2 · Taller: la contraseña del equipo viaja y duerme CIFRADA (GCM detecta manipulación)
+ function cifrarTexto(txt) {
+   if (!txt) return null;
+   const iv = crypto.randomBytes(12);
+-  const c = crypto.createCipheriv('aes-256-gcm', CLAVE_BAK, iv);
++  const c = crypto.createCipheriv('aes-256-gcm', claveInstalacion(), iv); // v0.1.73 · SEC-11 · clave por instalación
+   const cuerpo = Buffer.concat([c.update(String(txt), 'utf8'), c.final()]);
+-  return Buffer.concat([iv, c.getAuthTag(), cuerpo]).toString('base64');
++  return 'v2:' + Buffer.concat([iv, c.getAuthTag(), cuerpo]).toString('base64');
+ }
+ function descifrarTexto(b64) {
+   if (!b64) return null;
+-  const buf = Buffer.from(b64, 'base64');
+-  const d = crypto.createDecipheriv('aes-256-gcm', CLAVE_BAK, buf.subarray(0, 12));
++  const s = String(b64);
++  const v2 = s.startsWith('v2:');
++  const buf = Buffer.from(v2 ? s.slice(3) : s, 'base64');
++  const d = crypto.createDecipheriv('aes-256-gcm', v2 ? claveInstalacion() : CLAVE_BAK, buf.subarray(0, 12)); // sin prefijo = cifrado antes de la 0.1.73
+   d.setAuthTag(buf.subarray(12, 28));
+   return Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString('utf8');
+ }
++const textoCifradoLegado = (b64) => !!b64 && !String(b64).startsWith('v2:');
+ 
+ /* 'doel' (DOELBAK1) · 'clave' (DOELBAK2, hace falta la frase) · null (no está cifrada: .db suelto) */
+ function formatoBackup(ruta) {
+@@ -368,4 +411,5 @@ function descifrarArchivo(origen, destino, clave) {
+ 
+ module.exports = {
+   cifrarArchivo, descifrarArchivo, esBackupCifrado, formatoBackup, claveDerivar, cifrarTexto, descifrarTexto,
++  configurarClaveInstalacion, claveInstalacion, textoCifradoLegado, // v0.1.73 · SEC-11
+   sellar, selloCalcular, equipoId, validar, estado, activar, activarConTotp, totpValido, totpEn, marcaEquipo, SECRETO, TOTP_SECRET_B32, MODULOS, codigoModulos, codigoModulosSeguro, mascaraValida, SELLO_CLAVES_V3 };
+diff --git a/electron/main.cjs b/electron/main.cjs
+index eccebb0..00794d6 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -1,5 +1,5 @@
+ // Doel TPV — Proceso principal Electron
+-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, MenuItem } = require('electron');
++const { app, BrowserWindow, ipcMain, dialog, shell, Menu, MenuItem, safeStorage } = require('electron');
+ const fs = require('fs');
+ const path = require('path');
+ const db = require('./db.cjs');
+@@ -30,6 +30,9 @@ let win;
+ 
+ let permitirSalir = false;
+ 
++// v0.1.73 · SEC-12/20 · ventanas, puerta del Panel Dev, claves protegidas y freno de códigos: electron/seguridad-app.cjs
++const { endurecerVentana, exigirDev, devAbrir, devCerrar, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL } = require('./seguridad-app.cjs');
++
+ function createWindow() {
+   const cfg = db.configAll();
+   win = new BrowserWindow({
+@@ -45,9 +48,11 @@ function createWindow() {
+       preload: path.join(__dirname, 'preload.cjs'),
+       contextIsolation: true,
+       nodeIntegration: false,
++      devTools: !!process.env.VITE_DEV, // v0.1.73 · SEC-21 · en producción Ctrl+Shift+I no abre nada
+       plugins: true // v5.0.82 · visor PDF de Chromium (biblioteca de diagramas)
+     }
+   });
++  endurecerVentana(win); // v0.1.73 · SEC-20
+   // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que
+   // aprobarla explícitamente o getGamepads() devuelve siempre vacío (el mando va en la web
+   // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID).
+@@ -115,8 +120,9 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+     width: 1100, height: 760, minWidth: 900, minHeight: 600,
+     backgroundColor: '#082947', autoHideMenuBar: true,
+     icon: path.join(__dirname, '..', 'build', 'icon.ico'),
+-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, plugins: true },
++    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, devTools: !!process.env.VITE_DEV, plugins: true },
+   });
++  endurecerVentana(v); // v0.1.73 · SEC-20
+   ventanasHerramienta.set(ficha, { herramienta: id, usuario: usuario || null, win: v });
+   v.on('closed', () => ventanasHerramienta.delete(ficha));
+   const query = { herramienta: id, v: ficha };
+@@ -136,6 +142,10 @@ function abrirVentanaHerramienta(herramienta, usuario) {
+ async function pulsoCajon(deviceName, ajuste = null) {
+   const dev = (deviceName || '').trim();
+   if (!dev) return { ok: false, error: 'No hay impresora del cajón configurada (Ajustes → Impresoras)' };
++  /* v0.1.73 · SEC-22 · el respaldo «copy /b» pasa por cmd.exe, que vuelve a interpretar comillas y «&»:
++     un nombre de impresora con esos caracteres ejecutaba lo que llevara detrás. Solo letras, cifras y
++     los signos que Windows admite en un nombre de impresora. */
++  if (!/^[\p{L}\p{N} _.#()\-]{1,64}$/u.test(dev)) return { ok: false, error: 'Nombre de impresora no válido: ' + dev.slice(0, 40) };
+   /* v0.0.82 · pin y duración del pulso configurables: el cajón puede estar cableado al
+      pin 5 y hay solenoides que necesitan más de 50 ms para saltar. */
+   const aj = ajuste || cajon.desdeConfig(db.configAll());
+@@ -194,15 +204,20 @@ async function enviarRawImpresora(nombreImpresora, archivoBytes) {
+    mostrador y este registro para el puesto en red, que lo llama por HTTP. Una sola
+    implementación: lo que se arregla aquí queda arreglado en los dos sitios. */
+ const HANDLERS = new Map();
+-function handle(canal, fn) {
++function handle(canal, fn0, fnLocal) { // v0.1.73 · fnLocal: variante solo para IPC (el puesto en red usa fn0)
++  // v0.1.73 · SEC-12 · los canales del Panel Dev que renuevan, borran o restauran exigen la puerta abierta;
++  // SEC-01 · los que validan un código (licencia, autenticador) pasan por el freno de 5 fallos / 5 min
++  const fn1 = DEV_PUERTA.has(canal) ? (...args) => { exigirDev(); return fn0(...args); } : fn0;
++  const fn = FRENO_CANAL[canal] ? (...args) => conFreno(FRENO_CANAL[canal], () => fn1(...args)) : fn1;
+   HANDLERS.set(canal, async (...args) => {
+     try { return { ok: true, data: await fn(...args) }; }
+     catch (err) { return { ok: false, error: err.message }; }
+   });
++  const fnIpc = fnLocal ? (FRENO_CANAL[canal] ? (...args) => conFreno(FRENO_CANAL[canal], () => fnLocal(...args)) : fnLocal) : fn;
+   ipcMain.handle(canal, async (_e, ...args) => {
+     try {
+       // await: soporta handlers síncronos y async (cierre con backup, copia manual…)
+-      return { ok: true, data: await fn(...args) };
++      return { ok: true, data: await fnIpc(...args) };
+     } catch (err) {
+       return { ok: false, error: err.message };
+     }
+@@ -211,6 +226,7 @@ function handle(canal, fn) {
+ 
+ app.whenReady().then(() => {
+   const userData = app.getPath('userData'); // v0.1.3 · ya redirigido arriba a la carpeta del usuario
++  licencia.configurarClaveInstalacion(userData, safeStorage); // v0.1.73 · SEC-11 · clave por instalación (DPAPI) para lo cifrado en la base
+   db.init(userData);
+   if (RUTAS.migrado) {
+     dialog.showMessageBox({ type: 'info', title: 'Doel Taller — tus datos han cambiado de sitio',
+@@ -233,7 +249,8 @@ app.whenReady().then(() => {
+     }
+   } catch (e) { /* nunca bloquear el arranque por el chequeo */ }
+ 
+-  handle('auth:login', (pin) => db.login(pin));
++  handle('auth:login', (pin) => db.login(pin), (pin) => db.login(pin, { frenoLocal: true })); // v0.1.73 · SEC-10 · freno local solo en IPC
++  handle('auth:logout', () => true); // v0.1.73 · SEC-16 · en Electron no hay sesión que cerrar; en el puesto en red lo intercepta /rpc
+ 
+   /* v0.1.68 · AUD-04: los dominios grandes viven en electron/main/*.cjs y reciben este contexto.
+      `ventana()` y no `win`: la ventana se reasigna al recrearla y hay que leerla viva. */
+@@ -323,6 +340,7 @@ app.whenReady().then(() => {
+   handle('catalogo:deleteSubfamilia', (id) => db.deleteSubfamilia(id));
+   handle('config:all', () => db.configAll());
+   handle('config:set', (clave, valor) => {
++    if (CLAVE_PROTEGIDA(clave)) exigirDev(); // v0.1.73 · SEC-12 · licencia, módulos, activación y reloj: solo con el Panel Dev abierto
+     const r = db.configSet(clave, valor);
+     // Claves protegidas por el sello de licencia: re-firmar tras un cambio legítimo desde la app.
+     // Lista ÚNICA (SELLO_CLAVES_V3): la vieja de 4 módulos dejaba fuera domicilio/agenda/comisiones/
+@@ -721,8 +739,8 @@ app.whenReady().then(() => {
+   handle('taller:ia-sugerir', (ordenId, pregunta) => require('./ia.cjs').texto(db, ordenId, pregunta)); // v4.0.18 · 🤖 externo→reglas
+   handle('taller:pass-ver', (ordenId, uid) => {
+     db.ordenLog(ordenId, uid, 'pass-vista', 'Contraseña consultada'); // v4.0.18 · hasta esto deja rastro
+-    const o = db.ordenGet(ordenId);
+-    return o && o.password_cifrada ? licencia.descifrarTexto(o.password_cifrada) : null;
++    const pc = db.ordenPasswordCifrada(ordenId); // v0.1.73 · SEC-04 · la orden ya no la lleva
++    return pc ? licencia.descifrarTexto(pc) : null;
+   });
+   handle('taller:orden-get', (id) => db.ordenGet(id));
+   handle('taller:orden-estado', (id, estado, uid) => db.ordenEstado(id, estado, uid));
+@@ -866,6 +884,11 @@ app.whenReady().then(() => {
+          actual; fotos del espejo; reinicio. */
+   const restaurarCopia = async ({ ruta, clave } = {}) => {
+     let elegida = ruta;
++    /* v0.1.73 · SEC-11 · una ruta que venga del puente solo vale si es una copia de las carpetas configuradas
++       (las mismas que lista backup:listar); cualquier otro archivo entra solo por el diálogo nativo. */
++    if (elegida && !db.copiasDisponibles(dirsBackup()).some((c) => c.ruta === elegida)) {
++      return { ok: false, error: 'Esa ruta no es una copia de las carpetas configuradas. Elige el archivo con el botón «Buscar…».' };
++    }
+     if (!elegida) {
+       const sel = await dialog.showOpenDialog(win, {
+         title: 'Restaurar copia de seguridad (sustituye TODO lo actual)',
+@@ -1020,6 +1043,10 @@ app.whenReady().then(() => {
+     // el recordatorio de cita, el aviso de hueco a la lista de espera y compartir
+     // el enlace de reservas. Lista blanca estrecha a propósito: nada más entra.
+     const cfg = db.configAll();
++    /* v0.1.73 · SEC-23 · esquema antes que lista: file://, \\\\servidor\\x.exe o ms-*: nunca llegan a ShellExecute,
++       aunque alguien los haya guardado como web de un proveedor o como url_contacto. */
++    let proto = null; try { proto = new URL(String(url || '')).protocol; } catch (e) { /* no es una URL */ }
++    if (!['https:', 'http:', 'mailto:'].includes(proto)) throw new Error('URL no permitida');
+     const permitidas = ['https://doelitcard.netlify.app', 'https://doel-tpv-restaurante.netlify.app',
+       'https://wa.me/', 'https://api.whatsapp.com/', 'https://web.whatsapp.com/',
+       'mailto:', // v0.1.4 · el presupuesto (y el aviso de listo) por correo: abre el cliente de correo del PC, nada más
+@@ -1050,10 +1077,12 @@ app.whenReady().then(() => {
+       : licencia.activar(c, db.configSet);
+   });
+   // ===== Panel de Desarrollador (solo con el código del autenticador de Doel) =====
+-  handle('dev:acceso', (codigo) => {
++  handle('dev:acceso', (codigo) => { // v0.1.73 · SEC-12 · abre la puerta 30 min en main (el freno lo pone handle())
+     if (!licencia.totpValido(codigo)) throw new Error('Código no válido');
++    devAbrir();
+     return true;
+   });
++  handle('dev:cerrar', () => { devCerrar(); return true; }); // v0.1.73 · al salir del panel
+   handle('dev:info', () => {
+     const fs = require('fs');
+     const dbPath = db.rutaBD();
+diff --git a/electron/main/fichaje.cjs b/electron/main/fichaje.cjs
+index 0449de7..467fd7a 100644
+--- a/electron/main/fichaje.cjs
++++ b/electron/main/fichaje.cjs
+@@ -4,7 +4,7 @@
+    principal viva (en main.cjs `win` se reasigna, por eso va como función). */
+ module.exports = function registrar({ handle, db }) {
+ // ===== Módulo Fichaje =====
+-handle('fichaje:login', (pin) => db.fichajeLogin(pin));
++handle('fichaje:login', (pin) => db.fichajeLogin(pin), (pin) => db.fichajeLogin(pin, { frenoLocal: true })); // v0.1.73 · SEC-10
+ handle('fichaje:fichar', (empleadoId, tipo, opts) => db.fichajeFichar(empleadoId, tipo, opts || {}));
+ handle('fichaje:estado', (empleadoId) => db.fichajeEstadoDe(empleadoId));
+ handle('fichaje:hoy', () => db.fichajeHoy());
+diff --git a/electron/main/impresion.cjs b/electron/main/impresion.cjs
+index ec5b8bb..3907be9 100644
+--- a/electron/main/impresion.cjs
++++ b/electron/main/impresion.cjs
+@@ -13,7 +13,9 @@ ipcMain.handle('print:pdf', async (_e, html, nombreSugerido) => {
+       filters: [{ name: 'PDF', extensions: ['pdf'] }]
+     });
+     if (canceled || !filePath) return { ok: true, data: null };
+-    const pw = new BrowserWindow({ show: false, width: 400, height: 600 });
++    const pw = new BrowserWindow({ show: false, width: 400, height: 600, webPreferences: { sandbox: true, contextIsolation: true } });
++    pw.webContents.setWindowOpenHandler(() => ({ action: 'deny' })); // v0.1.73 · SEC-24
++    pw.webContents.on('will-navigate', (e) => e.preventDefault());
+     await pw.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+     const buf = await pw.webContents.printToPDF({ printBackground: true, pageSize: 'A4' });
+     pw.close();
+@@ -39,7 +41,11 @@ handle('print:printers', async () => {
+ // de hostelería 'barra' y 'cocina' ya no existen: caen a 'ticket' por si queda alguna llamada.
+ // Compartido: impresión silenciosa de HTML a una impresora concreta (o diálogo si vacía)
+ const imprimirHtml = async (html, device) => {
+-    const pw = new BrowserWindow({ show: false, width: 420, height: 640 });
++    /* v0.1.73 · SEC-24 · el HTML que se imprime puede venir del puesto en red o del comandero: sin
++       preload (ya era así), en sandbox y sin poder abrir ventanas ni navegar a otro sitio. */
++    const pw = new BrowserWindow({ show: false, width: 420, height: 640, webPreferences: { sandbox: true, contextIsolation: true } });
++    pw.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
++    pw.webContents.on('will-navigate', (e) => e.preventDefault());
+     await pw.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+     return await new Promise((resolve) => {
+       const opts = { printBackground: true, margins: { marginType: 'none' } };
+diff --git a/electron/permisos-canal.cjs b/electron/permisos-canal.cjs
+index 82a0415..6081da2 100644
+--- a/electron/permisos-canal.cjs
++++ b/electron/permisos-canal.cjs
+@@ -36,6 +36,9 @@ const EXACTOS = {
+   'stock:alta': 'stock', 'stock:inventario': 'stock', 'stock:distribuidor-guardar': 'stock', 'stock:distribuidor-borrar': 'stock', 'stock:prod-distribuidor': 'stock',
+   /* 💶 Caja y tickets */
+   'caja:abrir': 'cierre', 'caja:cerrar': 'cierre', 'caja:cajon': 'cajon', 'caja:cajonAbrir': 'cajon',
++  /* v0.1.73 · SEC-19 · otras puertas del cajón y del mostrador que no figuraban */
++  'caja:cajonProbar': 'cajon', 'sat:cajon-raw': 'cajon', 'taller:tpv-impresora-test': 'cajon',
++  'salud:mantenimiento': 'ajustes', 'docs:borrar': 'ajustes', 'fichaje:export': 'ajustes',
+   'tickets:anular': 'anular', 'tickets:rectificar-parcial': 'anular',
+   /* 🛒 Compras */
+   'compras:subir': 'compras', 'compras:aplicar': 'compras', 'compras:borrar': 'compras',
+@@ -50,7 +53,7 @@ const EXACTOS = {
+ /* Prefijos: lo que no está arriba. Solo los grupos que son una pantalla con permiso propio. */
+ const PREFIJOS = [
+   ['informes:', 'informes'], ['central:', 'informes'], ['fiscal:', 'informes'],
+-  ['dev:', 'ajustes'], ['sistema:', 'ajustes'], ['backup:', 'ajustes'], ['perfiles:', 'ajustes'], ['puesto:', 'ajustes'], ['lan:', 'ajustes'],
++  ['dev:', 'ajustes'], ['sistema:', 'ajustes'], ['sat:', 'ajustes'], // v0.1.73 · SEC-19 · Kit SAT lanza instaladores y pnputil elevado ['backup:', 'ajustes'], ['perfiles:', 'ajustes'], ['puesto:', 'ajustes'], ['lan:', 'ajustes'],
+ ];
+ 
+ /* Lecturas del catálogo que necesita el mostrador y el taller: nunca exigen permiso, aunque el
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index 16e6a91..e49729b 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
+ const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
+ 
+ contextBridge.exposeInMainWorld('doel', {
+-  auth: { login: call('auth:login') },
++  auth: { login: call('auth:login'), logout: call('auth:logout') }, // v0.1.73 · SEC-16
+   catalogo: { catBorrar: call('catalogo:catBorrar'), catBorrarConArticulos: call('catalogo:cat-borrar-con-articulos'), exportarCsv: call('catalogo:exportar-csv'), exportarArchivo: call('catalogo:exportar-archivo'), vaciar: call('catalogo:vaciar'), importarArticulos: call('catalogo:importar-articulos'), catOrdenar: call('catalogo:cat-ordenar'), articulosMover: call('catalogo:articulos-mover'),
+     categorias: call('catalogo:categorias'),
+     productos: call('catalogo:productos'),
+diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
+index e497d4f..10fa758 100644
+--- a/electron/puesto-red.cjs
++++ b/electron/puesto-red.cjs
+@@ -35,9 +35,27 @@ let certActual = null;        // { cert, key, fingerprint, ips, ruta }
+ let HANDLERS = new Map();     // canal → función, prestado por main.cjs
+ const sesiones = new Map();   // token → { usuarioId, nombre, ip, desde }
+ const VIDA_MS = 12 * 3600000; // 12 h: una jornada larga, y a volver a entrar
++const VIDA_MAX_MS = 24 * 3600000; // v0.1.73 · SEC-16 · tope absoluto: por mucho uso que tenga, a las 24 h de abrirla caduca
+ // v0.0.85 · SEC-03 · el PIN que abre este puesto es el mismo de cuatro cifras del
+ // comandero, así que merece el mismo freno: cinco fallos por IP y a esperar.
+ const freno = seg.crearFreno();
++/* v0.1.73 · SEC-10 · canales que validan un PIN además de auth:login: pasan por el mismo freno.
++   Sin esto, fichaje:login por /rpc permitía probar los 10 000 PIN de todos los usuarios. */
++const CANALES_PIN = new Set(['fichaje:login', 'fichaje:admin', 'app:salir', 'caja:cajonAbrir']);
++/* v0.1.73 · SEC-11 · el usuario que firma el rastro (log de la orden, caja, anulaciones) es el de
++   la sesión del puesto, no el que mande el cliente: posición del argumento por canal. */
++const POS_USUARIO = { 'taller:pass-ver': 1, 'taller:orden-estado': 2, 'taller:linea-set': 2,
++  'caja:movimiento': 3, 'tickets:anular': 1, 'fid:canjear': 2 };
++/* v0.1.73 · SEC-12 · claves de config que no salen por la red a quien no tenga «ajustes» */
++const SECRETAS = /(_token|_clave|_key|_hash|_pin|_hmac|_sello)$/;
++/* v0.1.73 · SEC-13 · el Host de la petición debe ser el mostrador (DNS rebinding) */
++function hostPermitido(host) {
++  const h = String(host || '').toLowerCase().replace(/^\[|\]$/g, '');
++  const nombre = h.replace(/:\d+$/, '');
++  if (!nombre) return false;
++  if (nombre === 'localhost' || nombre === '127.0.0.1' || nombre === '::1') return true;
++  return ipsLocales().includes(nombre);
++}
+ 
+ /* Canales prohibidos en remoto: abren diálogos del sistema en el PC del mostrador.
+    El aviso dice DÓNDE hacerlo, que es lo que el usuario necesita saber. */
+@@ -180,18 +198,20 @@ function certificado(dirDatos) {
+   const meta = path.join(dir, 'meta.json');
+   try {
+     const m = JSON.parse(fs.readFileSync(meta, 'utf8'));
+-    if (m && m.formato === 2 && Array.isArray(m.ips) && ips.every((ip) => m.ips.includes(ip)) && m.caduca > Date.now() + 30 * 86400000) { // formato 2 = nombre ASCII (v0.1.34); los anteriores se regeneran
++    if (m && m.formato === 3 && Array.isArray(m.ips) && ips.every((ip) => m.ips.includes(ip)) && m.caduca > Date.now() + 30 * 86400000) { // formato 2 = nombre ASCII (v0.1.34); los anteriores se regeneran
+       return { cert: fs.readFileSync(path.join(dir, 'cert.pem'), 'utf8'), key: fs.readFileSync(path.join(dir, 'key.pem'), 'utf8'), fingerprint: m.fingerprint, ips: m.ips, ruta: dir, nuevo: false };
+     }
+   } catch (e) { /* no hay o no cuadra: se genera */ }
+-  const dias = 3650;
++  const dias = 825; // v0.1.73 · SEC-14 · tope que aceptan Chrome y Apple para certificados de servidor
+   /* v0.1.34 · SOLO ASCII en el nombre: node-forge lo codifica como PrintableString, y con el
+      «·» (UTF-8 C2 B7) Chrome tiraba el certificado entero: ERR_SSL_SERVER_CERT_BAD_FORMAT. */
+   const p = selfsigned.generate([{ name: 'commonName', value: 'Doel Taller - puesto en red' }, { name: 'organizationName', value: 'Doel IT Solutions' }], {
+     days: dias, keySize: 2048, algorithm: 'sha256',
+     extensions: [
+-      { name: 'basicConstraints', cA: true },
+-      { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
++      /* v0.1.73 · SEC-14 · certificado de HOJA: hasta la 0.1.72 era una CA con keyCertSign instalada en
++         el almacén raíz del otro PC, y con su key.pem se podían firmar certificados de cualquier dominio. */
++      { name: 'basicConstraints', cA: false },
++      { name: 'keyUsage', digitalSignature: true, keyEncipherment: true },
+       { name: 'extKeyUsage', serverAuth: true },
+       { name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }, ...ips.map((ip) => ({ type: 7, ip }))] },
+     ],
+@@ -199,7 +219,7 @@ function certificado(dirDatos) {
+   fs.mkdirSync(dir, { recursive: true });
+   fs.writeFileSync(path.join(dir, 'cert.pem'), p.cert);
+   fs.writeFileSync(path.join(dir, 'key.pem'), p.private, { mode: 0o600 });
+-  fs.writeFileSync(meta, JSON.stringify({ formato: 2, ips, fingerprint: p.fingerprint, creado: Date.now(), caduca: Date.now() + dias * 86400000 }));
++  fs.writeFileSync(meta, JSON.stringify({ formato: 3, ips, fingerprint: p.fingerprint, creado: Date.now(), caduca: Date.now() + dias * 86400000 }));
+   return { cert: p.cert, key: p.private, fingerprint: p.fingerprint, ips, ruta: dir, nuevo: true };
+ }
+ 
+@@ -216,7 +236,7 @@ function esLocal(ip) {
+ 
+ function limpiarSesiones() {
+   const ahora = Date.now();
+-  for (const [t, s] of sesiones) if (ahora - s.ts > VIDA_MS) sesiones.delete(t);
++  for (const [t, s] of sesiones) if (ahora - s.ts > VIDA_MS || ahora - (s.creada || s.ts) > VIDA_MAX_MS) sesiones.delete(t);
+ }
+ 
+ /* v0.1.38 · versión del proceso en marcha (package.json leído al arrancar y cacheado). El
+@@ -269,8 +289,9 @@ function shim(puente) {
+          Ajustes cuando cambias la configuración: vuelve a pedirlo todo. */
+       try { window.dispatchEvent(new Event('doel:cfg')); } catch (e) { /* sin window */ }
+     }
+-    if (r.status === 401) {
++    if (r.status === 401 || canal === 'auth:logout') { // v0.1.73 · SEC-16 · al salir, el token se olvida también aquí
+       TK = null; try { sessionStorage.removeItem('doel-puesto-token'); } catch (e) { /* modo privado */ }
++      if (canal === 'auth:logout') { try { return await r.json(); } catch (e) { return { ok: true, data: true }; } }
+       return { ok: false, error: 'La sesión ha caducado: vuelve a entrar con tu PIN' };
+     }
+     var j;
+@@ -352,12 +373,26 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+       }
+ 
+       if (req.method === 'POST' && ruta === '/rpc') {
+-        // v0.0.85 · SEC-05 · tope de 256 KB, cortado según llega
++        // v0.1.73 · SEC-13 · solo con el Host del mostrador (una web ajena con DNS rebinding no entra)
++        if (!hostPermitido(req.headers.host)) return json(421, { ok: false, error: 'Entra por la IP del mostrador (Ajustes › Puesto en red)' });
++        // v0.1.73 · SEC-18 · solo JSON: una petición «simple» de otro origen (text/plain) no llega a auth:login
++        if (!/^application\/json/i.test(String(req.headers['content-type'] || ''))) return json(415, { ok: false, error: 'El puesto en red solo habla JSON' });
++        // v0.1.73 · SEC-15 · la sesión se mira ANTES de leer el cuerpo: sin sesión caben 256 KB (el login);
++        // con sesión, 16 MB (fotos). Antes cualquiera de la Wi-Fi podía mandar 16 MB por conexión sin PIN.
++        limpiarSesiones();
++        const token = req.headers['x-token'];
++        const sesion = token ? sesiones.get(token) : null;
++        // v0.0.85 · SEC-05 · tope de cuerpo, cortado según llega
+         let peticion;
+-        try { peticion = seg.parsearCuerpo(await seg.leerCuerpo(req, seg.CUERPO_MAX_RPC)); } // v0.1.44 · 16 MB: fotos desde el puesto
++        try { peticion = seg.parsearCuerpo(await seg.leerCuerpo(req, sesion ? seg.CUERPO_MAX_RPC : seg.CUERPO_MAX)); } // v0.1.44 · 16 MB: fotos desde el puesto
+         catch (e) { return json(413, { ok: false, error: e.message }); }
+         const { canal, args } = peticion;
+         if (!canal || typeof canal !== 'string') return json(400, { ok: false, error: 'Llamada sin canal' });
++        /* v0.1.73 · SEC-16 · cerrar sesión de verdad: el token muere en el servidor, no solo en la pantalla */
++        if (canal === 'auth:logout') {
++          if (sesion) { sesiones.delete(token); try { logEvento && logEvento('puesto-red', 'Salió ' + sesion.nombre, sesion.usuarioId); } catch (e) { /* nada */ } }
++          return json(200, { ok: true, data: true });
++        }
+         if (prohibido(canal)) {
+           return json(200, { ok: false, error: 'Esto abre una ventana en el PC del mostrador: hazlo allí' });
+         }
+@@ -368,10 +403,6 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+         const fn = HANDLERS.get(canal);
+         if (!fn) return json(200, { ok: false, error: 'El mostrador no conoce «' + canal + '»' });
+ 
+-        limpiarSesiones();
+-        const token = req.headers['x-token'];
+-        const sesion = token ? sesiones.get(token) : null;
+-
+         if (canal === 'auth:login') {          // única puerta abierta: valida el PIN ella misma
+           const limpio = ip.replace('::ffff:', '');
+           const parado = freno.bloqueo(limpio);
+@@ -383,26 +414,49 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+           if (!r || !r.ok || !r.data) { freno.fallo(limpio); return json(200, r || { ok: false, error: 'PIN incorrecto' }); }
+           freno.acierto(limpio);
+           const tk = crypto.randomBytes(32).toString('hex');
+-          sesiones.set(tk, { usuarioId: r.data.id, nombre: r.data.nombre, rol: r.data.rol, permisos: r.data.permisos || null, ip: ip.replace('::ffff:', ''), ts: Date.now() }); // v0.1.50 · el perfil viaja con la sesión
++          sesiones.set(tk, { usuarioId: r.data.id, nombre: r.data.nombre, rol: r.data.rol, permisos: r.data.permisos || null, ip: ip.replace('::ffff:', ''), ts: Date.now(), creada: Date.now() }); // v0.1.50 · el perfil viaja con la sesión · v0.1.73 · creada: tope absoluto
+           try { logEvento && logEvento('puesto-red', 'Entró ' + r.data.nombre + ' desde ' + ip.replace('::ffff:', ''), r.data.id); } catch (e) { /* nada */ }
+           return json(200, r, { 'x-token': tk });
+         }
+         if (!sesion) return json(401, { ok: false, error: 'Entra con tu PIN' });
+         sesion.ts = Date.now();
++        /* v0.1.73 · SEC-16 · el perfil se relee en cada llamada: baja o cambio de permisos → efecto inmediato */
++        try {
++          const vivo = db.usuarioVivo ? db.usuarioVivo(sesion.usuarioId) : null;
++          if (db.usuarioVivo && !vivo) { sesiones.delete(token); return json(401, { ok: false, error: 'Tu usuario ya no está activo' }); }
++          if (vivo) { sesion.permisos = vivo.permisos || null; sesion.rol = vivo.rol; sesion.nombre = vivo.nombre; }
++        } catch (e) { /* base ocupada: se sigue con lo que tenía la sesión */ }
+         /* v0.1.50 · AUD-01 · la barra esconde lo que el perfil no tiene; el servidor lo niega.
+            Antes bastaba la sesión: un técnico sin Ajustes podía llamar a config:set con curl. */
+         if (!permisos.autorizado(sesion, canal)) {
+           try { logEvento && logEvento('puesto-red', 'Denegado ' + canal + ' a ' + sesion.nombre + ' (sin permiso «' + permisos.permisoDeCanal(canal) + '»)', sesion.usuarioId); } catch (e) { /* nada */ }
+           return json(403, { ok: false, error: 'Tu perfil no tiene permiso «' + permisos.permisoDeCanal(canal) + '» para esto' });
+         }
+-        return json(200, await fn(...(args || [])));
++        /* v0.1.73 · SEC-10 · un PIN que se valida por aquí pasa por el mismo freno que auth:login */
++        if (CANALES_PIN.has(canal)) {
++          const limpio = ip.replace('::ffff:', '');
++          const parado = freno.bloqueo(limpio);
++          if (parado) return json(429, { ok: false, error: 'Demasiados intentos desde este PC. Espera ' + parado.segundos + ' s y vuelve a probar.' });
++          const r = await fn(...(args || []));
++          if (!r || !r.ok || !r.data) freno.fallo(limpio); else freno.acierto(limpio);
++          return json(200, r);
++        }
++        /* v0.1.73 · SEC-11 · el rastro lo firma quien tiene la sesión, no quien diga el cliente */
++        const argsFinal = Array.isArray(args) ? args.slice() : [];
++        if (Object.prototype.hasOwnProperty.call(POS_USUARIO, canal)) argsFinal[POS_USUARIO[canal]] = sesion.usuarioId;
++        const r = await fn(...argsFinal);
++        /* v0.1.73 · SEC-12 · tokens de la nube, claves y hashes solo para quien puede verlos en Ajustes */
++        if (canal === 'config:all' && r && r.ok && r.data && !permisos.autorizado(sesion, 'config:set')) {
++          for (const k of Object.keys(r.data)) if (SECRETAS.test(k)) delete r.data[k];
++        }
++        return json(200, r);
+       }
+ 
+       /* La aplicación de verdad, servida desde dist/. En index.html se cuela el
+          puente ANTES del bundle: cuando React arranca, window.doel ya existe. */
+       let f = ruta === '/' ? '/index.html' : ruta;
+       const destino = path.normalize(path.join(raiz, f));
+-      if (!destino.startsWith(raiz)) return json(403, { ok: false, error: 'Ruta no permitida' });
++      if (destino !== raiz && !destino.startsWith(raiz + path.sep)) return json(403, { ok: false, error: 'Ruta no permitida' }); // v0.1.73 · SEC-16 · «dist-otra/» no vale
+       if (!fs.existsSync(destino) || fs.statSync(destino).isDirectory()) {
+         if (!fs.existsSync(path.join(raiz, 'index.html'))) {
+           res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+@@ -424,7 +478,9 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+         'content-type': (tipos[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8' });
+       return res.end(fs.readFileSync(path.join(raiz, f)));
+     } catch (e) {
+-      return json(500, { ok: false, error: e.message });
++      // v0.1.73 · SEC-17 · el detalle (rutas, tablas) va al registro; a la red solo «Error interno»
++      try { logEvento && logEvento('puesto-red', 'Error interno en ' + req.url.split('?')[0] + ': ' + e.message, null); } catch (x) { /* nada */ }
++      return json(500, { ok: false, error: 'Error interno del mostrador' });
+     }
+   };
+ 
+@@ -462,4 +518,4 @@ const estado = (db) => {
+     sesiones: [...sesiones.values()].map((s) => ({ nombre: s.nombre, ip: s.ip })) };
+ };
+ 
+-module.exports = { iniciar, detener, estado, versionProceso, leerPuente, esLocal, prohibido, mideElMostrador, MIDEN_ESTE_PC, shim, certificado, ipsLocales };
++module.exports = { iniciar, detener, estado, versionProceso, leerPuente, esLocal, hostPermitido, prohibido, mideElMostrador, MIDEN_ESTE_PC, shim, certificado, ipsLocales };
+diff --git a/electron/seguridad-app.cjs b/electron/seguridad-app.cjs
+new file mode 100644
+index 0000000..2e7fee1
+--- /dev/null
++++ b/electron/seguridad-app.cjs
+@@ -0,0 +1,56 @@
++/* v0.1.73 · Seguridad del PROCESO PRINCIPAL (lo que no es red): ventanas, Panel de Desarrollador y
++   claves de configuración protegidas. seguridad-lan.cjs cubre los dos servidores de la LAN; esto cubre
++   al propio mostrador. Sacado de main.cjs para que no vuelva a pasar de 1 400 líneas (auditoría #4). */
++const { shell } = require('electron');
++const seg = require('./seguridad-lan.cjs');
++
++/* SEC-20 · ninguna ventana con preload navega fuera de la app ni abre hijas con el puente.
++   Sin setWindowOpenHandler, window.open / target=_blank creaban una ventana con las MISMAS
++   webPreferences (preload incluido): la web remota recibía window.doel entero. Ahora los enlaces
++   https se abren en el navegador del sistema y el resto se niega. */
++function endurecerVentana(w) {
++  const wc = w.webContents;
++  wc.setWindowOpenHandler(({ url }) => {
++    if (/^https:\/\//.test(url)) { try { shell.openExternal(url); } catch (e) { /* sin navegador: nada */ } }
++    return { action: 'deny' };
++  });
++  wc.on('will-navigate', (e, url) => {
++    if (!/^file:/.test(url) && !(process.env.VITE_DEV && /^http:\/\/localhost:5173/.test(url))) e.preventDefault();
++  });
++  wc.on('will-attach-webview', (e) => e.preventDefault());
++}
++
++/* SEC-12 · la puerta del Panel de Desarrollador vive AQUÍ, no en la pantalla.
++   Hasta la 0.1.72 `dev:acceso` solo devolvía true y era la pantalla la que decidía: desde DevTools o desde
++   cualquier cosa que hablara con el puente se llamaba a dev:renovar, dev:desactivar o dev:reset-operativa
++   sin código. Ahora un código válido abre el panel 30 minutos en el proceso principal, y los canales
++   peligrosos lo comprueban antes de hacer nada. */
++const PUERTA_MS = 30 * 60000;
++let devHasta = 0;
++const devAbierto = () => Date.now() < devHasta;
++const devAbrir = () => { devHasta = Date.now() + PUERTA_MS; };
++const devCerrar = () => { devHasta = 0; };
++const exigirDev = () => { if (!devAbierto()) throw new Error('Panel de Desarrollador cerrado: entra con el código del autenticador'); };
++const DEV_PUERTA = new Set(['dev:renovar', 'dev:desactivar', 'dev:reset-operativa', 'dev:reset-carta', 'dev:restaurar', 'dev:restaurar-todo', 'dev:reloj-reset', 'dev:guardar-todo']);
++
++/* Claves de config que solo escribe el Panel Dev con la puerta abierta: las del sello de licencia, la
++   activación, el arranque de la demo, el reloj y las credenciales que ya tienen su propio canal. Hasta
++   ahora `config:set('licencia_caduca', '2099-12-31')` desde el puente quedaba legitimado porque la app
++   volvía a sellar ella misma. `modulo_taller_lan` lo activa el admin desde Ajustes → Taller y no está
++   en el sello: queda fuera. */
++const CLAVE_PROTEGIDA = (k) => /^(licencia_|modulo_|activacion_|primer_arranque|reloj_|backup_clave|fichaje_admin_)/.test(String(k || ''))
++  && String(k) !== 'modulo_taller_lan';
++
++/* SEC-01 (parcial) · los códigos de licencia y del autenticador tienen un espacio pequeño (6 dígitos):
++   cinco fallos seguidos y cinco minutos sin aceptar más. Un acierto limpia el historial. */
++const frenoCodigos = seg.crearFreno(5, 5 * 60000);
++const conFreno = async (clave, fn) => {
++  const parado = frenoCodigos.bloqueo(clave);
++  if (parado) throw new Error('Demasiados intentos. Espera ' + parado.segundos + ' s y vuelve a probar');
++  try { const r = await fn(); frenoCodigos.acierto(clave); return r; }
++  catch (e) { frenoCodigos.fallo(clave); throw e; }
++};
++/* canal → clave del freno: lo aplica handle() de main.cjs, así el cuerpo de cada handler queda tal cual */
++const FRENO_CANAL = { 'licencia:activar': 'licencia', 'dev:acceso': 'dev' };
++
++module.exports = { endurecerVentana, devAbierto, devAbrir, devCerrar, exigirDev, DEV_PUERTA, CLAVE_PROTEGIDA, conFreno, FRENO_CANAL, frenoCodigos, PUERTA_MS };
+diff --git a/electron/seguridad-lan.cjs b/electron/seguridad-lan.cjs
+index c49433d..72a5686 100644
+--- a/electron/seguridad-lan.cjs
++++ b/electron/seguridad-lan.cjs
+@@ -178,6 +178,12 @@ function crearFreno(intentos, ventanaMs) {
+   const tope = Number(intentos) > 0 ? Number(intentos) : FRENO_INTENTOS;
+   const ventana = Number(ventanaMs) > 0 ? Number(ventanaMs) : FRENO_VENTANA_MS;
+   const mapa = new Map();  // ip → [ts, ts, ...]
++  /* v0.1.73 · SEC-17 · además del tope por IP, un tope GLOBAL (6× el de IP en la misma ventana): un portátil
++     con veinte IP alias conseguía 20 × 5 intentos cada 5 minutos. Un acierto no lo borra (si lo borrara, el
++     atacante con un PIN válido lo reiniciaría a voluntad); caduca solo con la ventana. */
++  const topeGlobal = tope * 6;
++  let global = [];
++  const globalVigente = (ahora) => { global = global.filter((t) => ahora - t < ventana); return global; };
+ 
+   const vigentes = (ip, ahora) => {
+     const l = (mapa.get(ip) || []).filter((t) => ahora - t < ventana);
+@@ -191,6 +197,8 @@ function crearFreno(intentos, ventanaMs) {
+     /* ¿Está bloqueada esta IP? Devuelve null o los segundos que le quedan, para
+        poder decírselo al técnico en vez de un «PIN incorrecto» que le vuelve loco. */
+     bloqueo(ip, ahora = Date.now()) {
++      const g = globalVigente(ahora);
++      if (g.length >= topeGlobal) return { intentos: g.length, segundos: Math.max(1, Math.ceil((ventana - (ahora - g[0])) / 1000)), global: true }; // v0.1.73 · SEC-17
+       const l = vigentes(ip, ahora);
+       if (l.length < tope) return null;
+       const espera = Math.ceil((ventana - (ahora - l[0])) / 1000);
+@@ -200,10 +208,12 @@ function crearFreno(intentos, ventanaMs) {
+       const l = vigentes(ip, ahora);
+       l.push(ahora);
+       mapa.set(ip, l);
++      globalVigente(ahora).push(ahora); // v0.1.73 · SEC-17
+       return l.length;
+     },
+     acierto(ip) { mapa.delete(ip); },
+-    olvidar() { mapa.clear(); },
++    olvidar() { mapa.clear(); global = []; },
++    topeGlobal,
+     get tamano() { return mapa.size; },
+   };
+ }
+diff --git a/electron/taller-python.cjs b/electron/taller-python.cjs
+index 604bc55..c2fee03 100644
+--- a/electron/taller-python.cjs
++++ b/electron/taller-python.cjs
+@@ -100,6 +100,10 @@ function desplegarScripts() {
+   for (const f of fs.readdirSync(dirScriptsOrigen())) {
+     if (/\.(py|png)$/.test(f) || f === 'HUELLAS.json') fs.writeFileSync(path.join(dst, f), fs.readFileSync(path.join(dirScriptsOrigen(), f))); // v0.1.40 · + png
+   }
++  /* v0.1.73 · SEC-22 · se verifican LOS BYTES QUE SE VAN A EJECUTAR (la copia), no solo el origen: cierra la
++     ventana entre verificar y ejecutar en una carpeta de %TEMP% que cualquier proceso del usuario puede tocar. */
++  const v2 = verificarScripts(dst);
++  if (!v2.ok) { const e = new Error('La copia de los scripts no coincide con el manifiesto: ' + v2.error); e.codigo = 'SCRIPT_ALTERADO'; throw e; }
+   return dst;
+ }
+ 
+@@ -157,7 +161,7 @@ function ejecutarScript(id, opciones = {}, { execFile = require('child_process')
+     let dir;
+     try { dir = desplegarScripts(); }
+     catch (e) { return { ok: false, error: e.message, codigo: e.codigo || 'SCRIPT_ALTERADO' }; }
+-    const args = [...py.prefijo, path.join(dir, def.archivo), ...def.args(opciones || {}), '--json'];
++    const args = [...py.prefijo, '-I', path.join(dir, def.archivo), ...def.args(opciones || {}), '--json']; // v0.1.73 · SEC-22 · -I: modo aislado (ni sys.path[0] ni variables PYTHON*): un json.py plantado en la carpeta no se importa
+     const t0 = Date.now();
+     if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
+     return new Promise((resolve) => {
+diff --git a/package.json b/package.json
+index 8df4662..e3a8ca3 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.72",
++  "version": "0.1.73",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/reserva-online/HUELLAS-NUBE.json b/reserva-online/HUELLAS-NUBE.json
+index 675839d..9522454 100644
+--- a/reserva-online/HUELLAS-NUBE.json
++++ b/reserva-online/HUELLAS-NUBE.json
+@@ -1,11 +1,11 @@
+ {
+- "version": "0.1.63",
+- "fecha": "2026-10-03T08:04:58.429Z",
++ "version": "0.1.73",
++ "fecha": "2026-10-17T15:37:58.508Z",
+  "ficheros": {
+   "reserva-online/CARACTERISTICAS.txt": "7d7b2a593cffdccd2c3677e744172e106d9ff45e9912815f7d732ee837036d10",
+-  "reserva-online/netlify.toml": "d13072f4e3caf8157bd0f56263105d5d9d4feb954bdbd6d1b2d0fa5809c7094a",
+-  "reserva-online/netlify/functions/api.mjs": "53a20b6db0b1004c62b3d6368b9bb84c7f14dd897450e61a1bf718007c3ccb6a",
+-  "reserva-online/netlify/functions/crm-productos.mjs": "911f5f9a3a222539f525176ebfbcddd22b72e141451d3dc7eb34ad2dc3895933",
++  "reserva-online/netlify.toml": "89a1bc38bac47f5193c2b76ac3e9024537544fd50cc81e7c4282ad39fae7bddc",
++  "reserva-online/netlify/functions/api.mjs": "df32f457364535e30130268ce4714de6de824f4f58642d8a651e6f84e66b5f3d",
++  "reserva-online/netlify/functions/crm-productos.mjs": "2d8ee16c80b99edcf9d786d1d68242d5e9d894bdc1afb0d2f1d707f55093de7f",
+   "reserva-online/netlify/functions/crm-proforma.mjs": "3541c1674932a683fbd408d38d973e183a12e08c95f25b191500fe58dbb5a65b",
+   "reserva-online/netlify/functions/doelprod.mjs": "bb56d1db787895238a60456e012028c4646073c2861cf670755c024a2377249d",
+   "reserva-online/package.json": "87359b95058fece0ba5deecbe8233cbf4c0099633556029ee522ec292a67230b",
+@@ -24,13 +24,13 @@
+   "reserva-online/public/demos/taller/chat-ia.html": "52247d21b99c39bc8342d30a7474432213477063749a3d2b3ae8ceadff60892e",
+   "reserva-online/public/demos/taller/ordenes.html": "1f1c5e21abe6b0de2feb1663ee31a4e0320441a077b308021969d26de901199f",
+   "reserva-online/public/demos/taller/peritajes.html": "4c93e47378cd0e9f2152e4554a60bb9a30b2873cad1042cbfe1be29f6a220247",
+-  "reserva-online/public/grupo.html": "80585c456be2e6dd1a5257ab723aede387a106d45aa167c847de79c866afe791",
++  "reserva-online/public/grupo.html": "0c58b669da7b3d0ae39f7c80870a1c63b9457c602a8c49f2e23958296db63cb4",
+   "reserva-online/public/hotel.html": "2a560ac85a78333195dd7daba8c78304c6dc602ec8f051b37ded86cbf3fc94f2",
+-  "reserva-online/public/index.html": "e088f6e16499c23af25dd9d947b71d0ac7357a6ddb751893debc847b0a5df7e0",
+-  "reserva-online/public/movil.html": "7d67944311722fff6df385efc36361c17c963a83584787ad42faa8504c141983",
++  "reserva-online/public/index.html": "c163b986893e600295523f5c0b1204eec577c561ff9ed5c229e718b89f096e13",
++  "reserva-online/public/movil.html": "b267a8bdc907276a5d21f19ece57df8af204a451fe0c00514885f036af432b6b",
+   "reserva-online/public/outlet.html": "c485d999c7baeddcf12f1d88455bfa758919e2312be9fab9cadde027c62b754b",
+-  "reserva-online/public/panel.html": "47345da25d96b6bde67e431161e3ba15b63587a49317038393bf0f383016197f",
++  "reserva-online/public/panel.html": "37966ef2a25514f64ebbfd495dd15748a786f6a8c2b00768bf99190130001a9f",
+   "reserva-online/public/portal.html": "322015e22edbdf97f6a6598be74c66bcdb9c2676e2fa44de8ce264707f362fd4",
+-  "reserva-online/public/taller.html": "aa9aa0a108473931323cb1773ad020aacc74c86af2a2a5fd3a2131873886f196"
++  "reserva-online/public/taller.html": "73671d72f10e7741ee8b424e63b3174be92157f12fd2e773007bf50cd2b69616"
+  }
+ }
+diff --git a/reserva-online/netlify.toml b/reserva-online/netlify.toml
+index f94c485..02fba79 100644
+--- a/reserva-online/netlify.toml
++++ b/reserva-online/netlify.toml
+@@ -3,3 +3,15 @@
+ 
+ [functions]
+   node_bundler = "esbuild"
++
++# v0.1.73 · SEC-28 · cabeceras de seguridad en todo el sitio. CSP queda para una entrega aparte:
++# las páginas llevan onclick= y estilos en línea, y movil.html habla con speed.cloudflare.com;
++# hay que probarla página a página antes de activarla.
++[[headers]]
++  for = "/*"
++  [headers.values]
++    X-Frame-Options = "DENY"
++    X-Content-Type-Options = "nosniff"
++    Referrer-Policy = "no-referrer"
++    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
++    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+diff --git a/reserva-online/netlify/functions/api.mjs b/reserva-online/netlify/functions/api.mjs
+index d07ebd4..126d783 100644
+--- a/reserva-online/netlify/functions/api.mjs
++++ b/reserva-online/netlify/functions/api.mjs
+@@ -3,7 +3,40 @@
+ // las reservas nuevas y las anulaciones. La página pública solo LEE el snapshot y
+ // CREA reservas contra los huecos publicados. La agenda local siempre manda.
+ import { getStore } from '@netlify/blobs';
+-import { createHash, createHmac } from 'node:crypto';
++import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
++
++/* v0.1.73 · SEC-19 · comparación de tokens en tiempo constante (antes `!==`) */
++const iguales = (a, b) => { const A = Buffer.from(String(a || '')), B = Buffer.from(String(b || '')); return A.length === B.length && A.length > 0 && timingSafeEqual(A, B); };
++const bearerOk = (req, tok) => !!tok && iguales(req.headers.get('authorization') || '', 'Bearer ' + tok);
++/* IP del cliente tal como la ve Netlify (x-nf-client-connection-ip); sin ella, la primera de x-forwarded-for */
++const ipDe = (req) => (req.headers.get('x-nf-client-connection-ip') || String(req.headers.get('x-forwarded-for') || '').split(',')[0] || '').trim() || 'desconocida';
++/* v0.1.73 · SEC-19 · FRENO POR IP en un blob aparte: cuenta intentos por ámbito+IP en una ventana de 10 min.
++   Antes el portal (clave de 8 dígitos), las demos y multitienda se podían probar a lo bruto sin límite,
++   y en modo hotel el único freno era global al negocio (diez fallos de cualquiera cerraban la puerta a
++   todos los técnicos). Un acierto borra el contador de esa IP. */
++const F_VENTANA = 10 * 60000;
++const frenoStore = () => getStore('doel-freno');
++const frenoClave = (ambito, req) => ambito + ':' + ipDe(req).replace(/[^0-9a-zA-Z.:]/g, '').slice(0, 64);
++const frenoLeer = async (k) => { try { const f = (await frenoStore().get(k, { type: 'json' })) || { n: 0, desde: 0 }; return (Date.now() - f.desde > F_VENTANA) ? { n: 0, desde: 0 } : f; } catch (e) { return { n: 0, desde: 0 }; } };
++const frenoBloqueado = async (ambito, req, tope = 10) => (await frenoLeer(frenoClave(ambito, req))).n >= tope;
++const frenoApuntar = async (ambito, req) => { try { const k = frenoClave(ambito, req); const f = await frenoLeer(k); await frenoStore().setJSON(k, { n: f.n + 1, desde: f.desde || Date.now() }); } catch (e) { /* el freno nunca tumba el servicio */ } };
++const frenoLimpiar = async (ambito, req) => { try { await frenoStore().setJSON(frenoClave(ambito, req), { n: 0, desde: 0 }); } catch (e) { /* nada */ } };
++const RESP_FRENO = () => json({ error: 'Demasiados intentos desde esta conexión: espera diez minutos' }, 429);
++/* v0.1.73 · SEC-19 · SESIONES FIRMADAS CON CADUCIDAD (12 h). Antes la sesión era un sha256 determinista de
++   (slug|teléfono|hash): no caducaba nunca y robarla era acceso permanente. Ahora lleva la caducidad dentro y
++   va firmada con un secreto DEL SERVIDOR (DOEL_SESION_SECRETO, o en su defecto la clave de sync). */
++const SESION_MS = 12 * 3600000;
++const sesionFirmar = (secreto, partes, exp = Date.now() + SESION_MS) => {
++  const e = exp.toString(36);
++  return e + '.' + createHmac('sha256', String(secreto || '')).update(partes.join('|') + '|' + e).digest('hex');
++};
++const sesionValida = (secreto, sesion, partes) => {
++  const s = String(sesion || ''); const i = s.indexOf('.');
++  if (i < 1) return false;
++  const exp = parseInt(s.slice(0, i), 36);
++  if (!exp || Date.now() > exp) return false;
++  return iguales(s, sesionFirmar(secreto, partes, exp));
++};
+ 
+ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type,authorization', 'access-control-allow-methods': 'GET,POST,OPTIONS' };
+ const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', ...CORS } });
+@@ -112,10 +145,11 @@ export default async (req) => {
+   const store = getStore(slug ? 'doel-reserva-' + slug : 'doel-reserva');
+   // Clave de sync: por negocio si existe DOEL_SYNC_TOKEN_<SLUG> (guiones → _); si no, la global.
+   const TOKEN = (slug && process.env['DOEL_SYNC_TOKEN_' + slug.toUpperCase().replace(/-/g, '_')]) || process.env.DOEL_SYNC_TOKEN || '';
++  const SECRETO_SESION = process.env.DOEL_SESION_SECRETO || TOKEN || CLAVE_MOVIL; // v0.1.73 · SEC-19 · firma de las sesiones del portal y multitienda
+ 
+   if (ruta === 'sync' && req.method === 'POST') {
+-    if (!TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + TOKEN) return json({ error: 'no autorizado' }, 401);
+-    const body = await req.json();
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
++    const body = await req.json().catch(() => ({}));
+     if (body.snapshot) await store.setJSON('snapshot', body.snapshot);
+     const reservas = (await store.get('reservas', { type: 'json' })) || [];
+     const importadas = new Set(body.importadas || []);
+@@ -163,7 +197,9 @@ export default async (req) => {
+   }
+ 
+   if (ruta === 'reservar' && req.method === 'POST') {
+-    const b = await req.json();
++    if (await frenoBloqueado('reservar', req, 20)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 20 reservas / 10 min por IP
++    await frenoApuntar('reservar', req);
++    const b = await req.json().catch(() => ({}));
+     const snap = (await store.get('snapshot', { type: 'json' })) || {};
+     let recursoId = Number(b.recursoId) || null;
+     const hora = String(b.hora || ''), fecha = String(b.fecha || '');
+@@ -196,6 +232,11 @@ export default async (req) => {
+     await store.setJSON('snapshot', snap);
+     const token = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+     const reservas = (await store.get('reservas', { type: 'json' })) || [];
++    /* v0.1.73 · SEC-19 · un mismo teléfono no acumula más de 3 reservas vivas sin que el local las vea */
++    const telNuevo = String(b.telefono || '').replace(/\D/g, '').slice(0, 15);
++    if (telNuevo && reservas.filter((r) => r.estado === 'nueva' && r.telefono === telNuevo).length >= 3) {
++      return json({ error: 'Ya tienes varias reservas pendientes con ese teléfono: espera a que el local las confirme' }, 429);
++    }
+     reservas.push({
+       token, estado: 'nueva', creada: new Date().toISOString(),
+       fecha, hora, recursoId, servicioId: ids[0] || null, servicioIds: ids, duracion: dur,
+@@ -208,7 +249,7 @@ export default async (req) => {
+   }
+ 
+   if (ruta === 'anular' && req.method === 'POST') {
+-    const { token } = await req.json();
++    const { token } = await req.json().catch(() => ({}));
+     const reservas = (await store.get('reservas', { type: 'json' })) || [];
+     const r = reservas.find((x) => x.token === token);
+     if (!r) return json({ error: 'Reserva no encontrada' }, 404);
+@@ -223,7 +264,7 @@ export default async (req) => {
+   if (ruta === 'negocios' && req.method === 'GET') {
+     const ADMIN = process.env.DOEL_ADMIN_TOKEN || '';
+     if (!ADMIN) return json({ error: 'panel sin configurar: falta DOEL_ADMIN_TOKEN en Netlify' }, 503);
+-    if ((req.headers.get('authorization') || '') !== 'Bearer ' + ADMIN) return json({ error: 'clave incorrecta' }, 401);
++    if (!bearerOk(req, ADMIN)) return json({ error: 'clave incorrecta' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const lista = Object.values(await idxLeer())
+       .sort((a, b) => String(b.ultima_sync || '').localeCompare(String(a.ultima_sync || '')));
+     const ahora = Date.now();
+@@ -263,11 +304,13 @@ export default async (req) => {
+   const pStore = () => getStore('doel-portal-' + (slug || 'defecto'));
+   const pDatos = async () => (await pStore().get('datos', { type: 'json' })) || { ordenes: [] };
+   const pCola = async () => (await pStore().get('cola', { type: 'json' })) || { aceptaciones: [], mensajes: [] };
+-  const pSesion = (tel, hash) => createHash('sha256').update('doel-psesion|' + (slug || '') + '|' + tel + '|' + (hash || '')).digest('hex');
++  // v0.1.73 · SEC-19 · sesión firmada con caducidad (antes: sha256 determinista sin fecha)
++  const pSesion = (tel, hash) => sesionFirmar(SECRETO_SESION, ['doel-psesion', slug || '', tel, hash || '']);
++  const pSesionOk = (sesion, tel, hash) => sesionValida(SECRETO_SESION, sesion, ['doel-psesion', slug || '', tel, hash || '']);
+ 
+   // el TPV sube el snapshot y DRENA la cola (Bearer del sync de siempre)
+   if (ruta === 'portal-sync' && req.method === 'POST') {
+-    if (!TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + TOKEN) return json({ error: 'no autorizado' }, 401);
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const body = await req.json().catch(() => ({}));
+     await pStore().setJSON('datos', { negocio: body.negocio || {}, ordenes: body.ordenes || [], generado: body.generado || new Date().toISOString() });
+     const cola = await pCola();
+@@ -277,6 +320,7 @@ export default async (req) => {
+   // login del CLIENTE: teléfono + clave de 8 dígitos (solo se compara el hash)
+   if (ruta === 'portal-login' && req.method === 'POST') {
+     // v4.0.30 · entra con su TELÉFONO o con el Nº DE ORDEN del resguardo (lo que tenga a mano)
++    if (await frenoBloqueado('portal', req)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 10 fallos / 10 min por IP
+     const { telefono, clave } = await req.json().catch(() => ({}));
+     const entrada = String(telefono || '').trim();
+     const h = createHash('sha256').update('doel-portal|' + String(clave || '')).digest('hex');
+@@ -290,7 +334,8 @@ export default async (req) => {
+       const tel = entrada.replace(/\D/g, '');
+       if (tel.length >= 9) suya = (d.ordenes || []).find((o) => String(o.telefono || '').replace(/\D/g, '') === tel && o.pass_hash === h);
+     }
+-    if (!suya) return json({ error: 'Teléfono/nº de orden o clave incorrectos (ambos vienen en su resguardo)' }, 401);
++    if (!suya) { await frenoApuntar('portal', req); return json({ error: 'Teléfono/nº de orden o clave incorrectos (ambos vienen en su resguardo)' }, 401); }
++    await frenoLimpiar('portal', req);
+     const telOk = String(suya.telefono || '').replace(/\D/g, '');
+     return json({ ok: true, sesion: pSesion(telOk, suya.pass_hash), telefono: telOk, negocio: d.negocio || {} });
+   }
+@@ -300,7 +345,7 @@ export default async (req) => {
+     const tel = String(telefono || '').replace(/\D/g, '');
+     const d = await pDatos();
+     const mias = (d.ordenes || []).filter((o) => String(o.telefono || '').replace(/\D/g, '') === tel);
+-    if (!mias.length || pSesion(tel, mias[0].pass_hash) !== sesion) return json({ error: 'Sesión no válida' }, 401);
++    if (!mias.length || !pSesionOk(sesion, tel, mias[0].pass_hash)) return json({ error: 'Sesión no válida' }, 401);
+     /* Lo que el cliente ya aceptó y el taller aún no ha bajado se marca: si no, tras
+        aceptar seguía viendo el botón y podía creer que no había funcionado. */
+     const enCola = new Set(((await pCola()).aceptaciones || []).map((a) => a.token));
+@@ -313,7 +358,7 @@ export default async (req) => {
+     const tel = String(telefono || '').replace(/\D/g, '');
+     const d = await pDatos();
+     const mia = (d.ordenes || []).find((o) => String(o.telefono || '').replace(/\D/g, '') === tel && o.token === String(orden || ''));
+-    if (!mia || pSesion(tel, mia.pass_hash) !== sesion) return json({ error: 'Sesión no válida' }, 401);
++    if (!mia || !pSesionOk(sesion, tel, mia.pass_hash)) return json({ error: 'Sesión no válida' }, 401);
+     const cola = await pCola();
+     if (ruta === 'portal-aceptar') {
+       if (mia.estado !== 'esp_aceptacion') return json({ error: 'Este presupuesto ya no espera aceptación' }, 409);
+@@ -343,7 +388,7 @@ export default async (req) => {
+   const aPublico = (a) => Object.fromEntries(PUBLICO.filter((k) => k in a).map((k) => [k, a[k]]));
+ 
+   if (ruta === 'outlet-sync' && req.method === 'POST') {
+-    if (!TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + TOKEN) return json({ error: 'no autorizado' }, 401);
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const body = await req.json().catch(() => ({}));
+     const st = oStore();
+     /* Fotos primero: si una falla, el catálogo no llega a apuntar a un hueco. */
+@@ -389,7 +434,7 @@ export default async (req) => {
+       const tel = String(telefono || '').replace(/\D/g, '');
+       const d = await pDatos();
+       const mias = (d.ordenes || []).filter((o) => String(o.telefono || '').replace(/\D/g, '') === tel);
+-      conSesion = !!mias.length && pSesion(tel, mias[0].pass_hash) === sesion;
++      conSesion = !!mias.length && pSesionOk(sesion, tel, mias[0].pass_hash);
+       if (!conSesion) return json({ error: 'Sesión no válida' }, 401);
+     }
+     const visibles = (c.articulos || []).filter((a) => conSesion || a.visibilidad !== 'privado');
+@@ -405,18 +450,25 @@ export default async (req) => {
+     const art = (c.articulos || []).find((a) => a.id === b.outlet_id);
+     if (!art) return json({ error: 'Esa unidad ya no está en el catálogo' }, 404);
+     if (art.estado !== 'publicado') return json({ error: 'Esa unidad ya está reservada' }, 409);
+-    const nombre = String(b.nombre || '').trim();
+-    const telefono = String(b.telefono || '').replace(/[^0-9+]/g, '');
++    if (await frenoBloqueado('outlet', req, 20)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 20 solicitudes / 10 min por IP
++    const nombre = String(b.nombre || '').trim().slice(0, 80); // v0.1.73 · SEC-19 · recortes: el blob no crece sin tope
++    const telefono = String(b.telefono || '').replace(/[^0-9+]/g, '').slice(0, 20);
++    const emailBruto = String(b.email || '').trim().slice(0, 120);
++    const email = /^[^\s@]{1,64}@[^\s@]{1,120}$/.test(emailBruto) ? emailBruto : null;
+     if (nombre.length < 2) return json({ error: 'Falta el nombre' }, 400);
+     if (telefono.length < 6) return json({ error: 'Falta un teléfono al que llamarle' }, 400);
+     const st = oStore();
+     const sol = (await st.get('solicitudes', { type: 'json' })) || [];
++    const vivas = sol.filter((x) => x.estado === 'nueva');
++    if (vivas.length >= 500) return json({ error: 'El escaparate tiene demasiadas solicitudes pendientes: llame al taller' }, 429);
++    if (vivas.filter((x) => x.telefono === telefono).length >= 5) return json({ error: 'Ya tiene varias solicitudes pendientes: le llamamos enseguida' }, 429);
++    await frenoApuntar('outlet', req);
+     if (sol.some((x) => x.outlet_id === art.id && x.estado === 'nueva' && x.telefono === telefono)) {
+       return json({ error: 'Ya nos llegó su solicitud: le llamamos enseguida' }, 409);
+     }
+     const token = (globalThis.crypto?.randomUUID?.() || String(Date.now() + Math.random())).replace(/-/g, '').slice(0, 16);
+     sol.push({ token, outlet_id: art.id, titulo: art.titulo, senal: art.senal, nombre, telefono,
+-      email: String(b.email || '').trim() || null, nota: String(b.nota || '').trim().slice(0, 300) || null,
++      email, nota: String(b.nota || '').trim().slice(0, 300) || null,
+       estado: 'nueva', creada: new Date().toISOString() });
+     await st.setJSON('solicitudes', sol);
+     return json({ ok: true, token, senal: art.senal });
+@@ -447,7 +499,7 @@ export default async (req) => {
+      puerta diez minutos: una clave de seis letras no se prueba a lo bruto. */
+   const hStore = () => getStore('doel-hotel-' + (slug || 'defecto'));
+   const hDatos = async () => (await hStore().get('datos', { type: 'json' })) || null;
+-  const H_FALLOS = 10, H_VENTANA = 10 * 60000;
++  const H_FALLOS = 50, H_VENTANA = 10 * 60000; // v0.1.73 · SEC-19 · el global sube a 50; el freno fino es por IP
+   // fallos en la ventana; pasada la ventana, se cuenta desde cero
+   const hFreno = async () => ((f) => (Date.now() - f.desde > H_VENTANA ? { n: 0, desde: 0 } : f))(
+     (await hStore().get('freno', { type: 'json' })) || { n: 0, desde: 0 });
+@@ -456,16 +508,18 @@ export default async (req) => {
+     if (!d || !d.clave_hash) return json({ error: 'El taller aún no ha subido el Modo hotel a la web' }, 503);
+     const f = await hFreno();
+     if (f.n >= H_FALLOS) return json({ error: 'Demasiados intentos: espera diez minutos' }, 429);
+-    const ok = /^[0-9a-f]{64}$/.test(String(k || '')) && String(k) === d.clave_hash;
++    if (await frenoBloqueado('hotel', req)) return RESP_FRENO(); // v0.1.73 · SEC-19 · 10 fallos / 10 min por IP
++    const ok = /^[0-9a-f]{64}$/.test(String(k || '')) && iguales(String(k), d.clave_hash);
+     if (!ok) {
+       await hStore().setJSON('freno', { n: f.n + 1, desde: f.desde || Date.now() });
++      await frenoApuntar('hotel', req);
+       return json({ error: 'Clave de acceso incorrecta' }, 401);
+     }
+     return null; // autorizado: los handlers hacen `if (mal) return mal`
+   };
+ 
+   if (ruta === 'hotel-sync' && req.method === 'POST') {
+-    if (!TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + TOKEN) return json({ error: 'no autorizado' }, 401);
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     const body = await req.json().catch(() => ({}));
+     if (!/^[0-9a-f]{64}$/.test(String(body.clave_hash || ''))) return json({ error: 'falta la clave de acceso (clave_hash)' }, 400);
+     const st = hStore();
+@@ -512,7 +566,7 @@ export default async (req) => {
+   const esAdmin = () => {
+     const ADMIN = process.env.DOEL_ADMIN_TOKEN || '';
+     if (!ADMIN) return json({ error: 'panel sin configurar: falta DOEL_ADMIN_TOKEN en Netlify' }, 503);
+-    if ((req.headers.get('authorization') || '') !== 'Bearer ' + ADMIN) return json({ error: 'clave incorrecta' }, 401);
++    if (!bearerOk(req, ADMIN)) return json({ error: 'clave incorrecta' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     return null; // autorizado: los handlers hacen `if (err) return err`
+   };
+   const sha = (t) => createHash('sha256').update(t).digest('hex');
+@@ -623,6 +677,23 @@ export default async (req) => {
+   // (con Web Crypto, sin este servidor) para avisar de que se ha usado / sigue en uso. No
+   // crea ni borra nada, solo actualiza un apunte de actividad de un código YA EXISTENTE —
+   // riesgo mínimo: el código en sí ya es el secreto compartido con el cliente.
++  /* v0.1.73 · SEC-14 · el código de acceso temporal se valida AQUÍ. Hasta ahora movil.html y taller.html lo
++     comprobaban en el navegador con la misma clave HMAC pegada en el HTML («ver código fuente» = fabricar
++     códigos). La clave queda solo en el servidor (y en el TPV, que genera los códigos). Con freno por IP. */
++  if (ruta === 'diag-validar' && req.method === 'POST') {
++    if (await frenoBloqueado('diag', req, 20)) return RESP_FRENO();
++    const { codigo } = await req.json().catch(() => ({}));
++    const cod = String(codigo || '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
++    const mal = async (msg) => { await frenoApuntar('diag', req); return json({ ok: false, error: msg }, 401); };
++    if (cod.length < 8) return mal('Código demasiado corto.');
++    const firma = cod.slice(-6); const expB36 = cod.slice(0, -6).toLowerCase(); const expMs = parseInt(expB36, 36);
++    if (!expMs || isNaN(expMs)) return mal('Código no válido.');
++    const esperada = createHmac('sha256', CLAVE_MOVIL).update(expB36).digest('hex').slice(0, 6).toUpperCase();
++    if (!iguales(firma, esperada)) return mal('Código incorrecto.');
++    if (Date.now() > expMs) return json({ ok: false, error: 'El código ha caducado. Pide uno nuevo al técnico.' }, 401);
++    return json({ ok: true, expira: expMs });
++  }
++
+   if (ruta === 'diag-actividad' && req.method === 'POST') {
+     const { codigo } = await req.json().catch(() => ({}));
+     const cod = String(codigo || '').trim().toUpperCase();
+@@ -644,12 +715,13 @@ export default async (req) => {
+   if (ruta === 'demo-login' && req.method === 'POST') {
+     const { usuario, clave } = await req.json().catch(() => ({}));
+     const u = String(usuario || '').trim().toLowerCase();
++    if (await frenoBloqueado('demo', req)) return RESP_FRENO(); // v0.1.73 · SEC-19
+     const todos = await accLeer();
+     const d = todos[u];
+-    // arranque en frío: sin usuarios dados de alta, vale el acceso maestro demo/doel2026
+-    if (!Object.keys(todos).length && u === 'demo' && sha(u + '|' + String(clave || '')) === sha('demo|doel2026'))
+-      return json({ ok: true, exp: Date.now() + 60 * 60000, minutos: 60 });
+-    if (!d || sha(u + '|' + String(clave || '')) !== d.hash) return json({ error: 'usuario o clave incorrectos' }, 401);
++    /* v0.1.73 · SEC-19 · fuera el acceso maestro de arranque (estaba en el código y en panel.html): el primer
++       acceso de demo se crea desde el panel de Doel (demo-usuario, con la clave de administración). */
++    if (!d || !iguales(sha(u + '|' + String(clave || '')), d.hash)) { await frenoApuntar('demo', req); return json({ error: 'usuario o clave incorrectos' }, 401); }
++    await frenoLimpiar('demo', req);
+     if (d.caduca && Date.now() > Date.parse(d.caduca)) return json({ error: 'este acceso ha caducado: pide uno nuevo a Doel' }, 403);
+     d.usos = (d.usos || 0) + 1; d.ultimo_uso = new Date().toISOString();
+     await accStore().setJSON('usuarios', todos);
+@@ -663,11 +735,13 @@ export default async (req) => {
+   const mtSlugOk = (g) => /^[a-z0-9-]{2,40}$/.test(g);
+   const mtStore = (g) => getStore('doel-mt-' + g);
+   const mtLeer = async (g) => (await mtStore(g).get('locales', { type: 'json' })) || {};
+-  const mtSesion = (g, hash) => createHash('sha256').update('doel-mt-sesion|' + g + '|' + (hash || '')).digest('hex');
++  // v0.1.73 · SEC-19 · sesión firmada con caducidad (antes: sha256 determinista sin fecha)
++  const mtSesion = (g, hash) => sesionFirmar(SECRETO_SESION, ['doel-mt-sesion', g, hash || '']);
++  const mtSesionOk = (sesion, g, hash) => sesionValida(SECRETO_SESION, sesion, ['doel-mt-sesion', g, hash || '']);
+ 
+   // el TPV sube su resumen (identificado por su slug de local ?n=)
+   if (ruta === 'mt-sync' && req.method === 'POST') {
+-    if (!TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + TOKEN) return json({ error: 'no autorizado' }, 401);
++    if (!bearerOk(req, TOKEN)) return json({ error: 'no autorizado' }, 401); // v0.1.73 · SEC-19 · tiempo constante
+     if (!slug) return json({ error: 'falta el slug del local (?n=)' }, 400);
+     const body = await req.json().catch(() => ({}));
+     const grupo = String(body.grupo || '').trim().toLowerCase();
+@@ -686,10 +760,12 @@ export default async (req) => {
+     const { grupo, clave } = await req.json().catch(() => ({}));
+     const g = String(grupo || '').trim().toLowerCase();
+     if (!mtSlugOk(g)) return json({ error: 'grupo no válido' }, 400);
++    if (await frenoBloqueado('mt', req)) return RESP_FRENO(); // v0.1.73 · SEC-19
+     const h = createHash('sha256').update('doel-mt|' + String(clave || '')).digest('hex');
+     const locales = await mtLeer(g);
+-    const vale = Object.values(locales).some((l) => l.clave_hash && l.clave_hash === h);
+-    if (!vale) return json({ error: 'Grupo o clave incorrectos (la clave la fija Doel en cada TPV del grupo)' }, 401);
++    const vale = Object.values(locales).some((l) => l.clave_hash && iguales(l.clave_hash, h));
++    if (!vale) { await frenoApuntar('mt', req); return json({ error: 'Grupo o clave incorrectos (la clave la fija Doel en cada TPV del grupo)' }, 401); }
++    await frenoLimpiar('mt', req);
+     return json({ ok: true, sesion: mtSesion(g, h) });
+   }
+   // tarjetas del grupo (sesión del login; sin huellas ni nada nominal en la respuesta)
+@@ -698,7 +774,7 @@ export default async (req) => {
+     const g = String(grupo || '').trim().toLowerCase();
+     if (!mtSlugOk(g)) return json({ error: 'grupo no válido' }, 400);
+     const locales = await mtLeer(g);
+-    const vale = Object.values(locales).some((l) => l.clave_hash && mtSesion(g, l.clave_hash) === String(sesion || ''));
++    const vale = Object.values(locales).some((l) => l.clave_hash && mtSesionOk(sesion, g, l.clave_hash));
+     if (!vale) return json({ error: 'sesión no válida: vuelve a entrar' }, 401);
+     return json({ ok: true, grupo: g, locales: Object.entries(locales).map(([sl, l]) => ({ slug: sl, resumen: l.resumen, subido: l.subido })) });
+   }
+diff --git a/reserva-online/netlify/functions/crm-productos.mjs b/reserva-online/netlify/functions/crm-productos.mjs
+index beb06a4..808dee9 100644
+--- a/reserva-online/netlify/functions/crm-productos.mjs
++++ b/reserva-online/netlify/functions/crm-productos.mjs
+@@ -47,9 +47,10 @@ async function upsert(URL_SB, cab, tabla, filas, conflicto) {
+ }
+ async function subirFoto(URL_SB, cab, uid, foto) {
+   try {
++    if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(uid || ''))) return null; // v0.1.73 · SEC-19 · el uid forma la ruta del objeto
+     const bin = Buffer.from(foto.base64, 'base64');
+     const ruta = `productos/${uid}.jpg`;
+-    const r = await fetch(`${URL_SB}/storage/v1/object/${ruta}`, { method: 'POST', headers: { apikey: cab.apikey, authorization: cab.authorization, 'content-type': foto.tipo || 'image/jpeg', 'x-upsert': 'true' }, body: bin });
++    const r = await fetch(`${URL_SB}/storage/v1/object/${ruta}`, { method: 'POST', headers: { apikey: cab.apikey, authorization: cab.authorization, 'content-type': /^image\/(jpeg|png|webp)$/.test(String(foto.tipo || '')) ? foto.tipo : 'image/jpeg' /* v0.1.73 · SEC-19 · bucket público: nunca text/html */, 'x-upsert': 'true' }, body: bin });
+     if (!r.ok) return null;
+     return `${URL_SB}/storage/v1/object/public/${ruta}`;
+   } catch (e) { return null; }
+diff --git a/reserva-online/public/grupo.html b/reserva-online/public/grupo.html
+index 33926c9..e49190b 100644
+--- a/reserva-online/public/grupo.html
++++ b/reserva-online/public/grupo.html
+@@ -88,13 +88,13 @@
+     var barras = d7.map(function (d, i) {
+       var h = max > 0 ? Math.max(4, Math.round((d.total / max) * 44)) : 2;
+       return '<i style="height:' + h + 'px"' + (i === d7.length - 1 ? ' class="hoy"' : '') +
+-        ' title="' + (d.dia || '') + ' · ' + eur(d.total) + '"></i>';
++        ' title="' + esc(d.dia || '') + ' · ' + eur(d.total) + '"></i>';
+     }).join('');
+     var min = l.subido ? Math.round((Date.now() - Date.parse(l.subido)) / 60000) : null;
+     var viejo = min === null || min > 15;
+     return '<div class="card' + (rk === 1 ? ' top' : '') + '">' +
+-      '<h2><span class="rk">#' + rk + '</span>' + (loc.nombre || l.slug) + '</h2>' +
+-      '<div class="tipo">' + (loc.tipo || '') + ' · ' + l.slug + '</div>' +
++      '<h2><span class="rk">#' + rk + '</span>' + esc(loc.nombre || l.slug) + '</h2>' +
++      '<div class="tipo">' + esc(loc.tipo || '') + ' · ' + esc(l.slug) + '</div>' +
+       '<div class="num">' +
+         '<div><b>' + eur(hoy.total) + '</b><small>hoy</small></div>' +
+         '<div><b>' + (hoy.n || 0) + '</b><small>tickets hoy · medio ' + eur(hoy.ticketMedio) + '</small></div>' +
+@@ -109,6 +109,8 @@
+   }
+ 
+   var PALETA = ['#62E70E', '#FFC24D', '#8FC7F5', '#FF7A7A', '#92FF4E', '#b28cf5'];
++  // v0.1.73 · SEC-19 · lo que sube cada local (nombre, tipo, slug, días) se pinta escapado: otro local del grupo no inyecta HTML aquí
++  function esc(s) { return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+ 
+   // M2 · comparativas del grupo: cuota, 7 días lado a lado y mes contra mes (mismo día)
+   function comparativas(ls) {
+@@ -120,11 +122,11 @@
+     var cuota = ls.map(function (l, i) {
+       var m = ((l.resumen || {}).mes || {}).total || 0;
+       var pct = totMes > 0 ? (m / totMes) * 100 : 0;
+-      return '<i style="width:' + pct.toFixed(1) + '%;background:' + col(i) + '" title="' + l.slug + ' · ' + eur(m) + '"></i>';
++      return '<i style="width:' + pct.toFixed(1) + '%;background:' + col(i) + '" title="' + esc(l.slug) + ' · ' + eur(m) + '"></i>';
+     }).join('');
+     var leyenda = ls.map(function (l, i) {
+       var n = ((l.resumen || {}).local || {}).nombre || l.slug;
+-      return '<span><b style="background:' + col(i) + '"></b>' + n + '</span>';
++      return '<span><b style="background:' + col(i) + '"></b>' + esc(n) + '</span>';
+     }).join('');
+     // 2 · 7 días lado a lado (por día, una barrita por local)
+     var dias = ((ls[0].resumen || {}).dias7 || []).map(function (d) { return d.dia; });
+@@ -154,7 +156,7 @@
+         } else { dif = (m.total || 0) > 0 ? '<span class="sube">▲ nuevo</span>' : '—'; }
+       }
+       return '<tr><td><b style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + col(i) + ';margin-right:6px;vertical-align:-1px"></b>' +
+-        (((r.local || {}).nombre) || l.slug) + '</td>' +
++        esc(((r.local || {}).nombre) || l.slug) + '</td>' +
+         '<td>' + eur(h.ticketMedio) + '</td><td>' + pctTj + ' %</td>' +
+         '<td>' + eur(m.total) + '</td><td>' + (ma ? eur(ma.mismoDia) : '—') + '</td><td>' + dif + '</td></tr>';
+     }).join('');
+@@ -177,7 +179,7 @@
+     });
+     var totalHoy = 0, nHoy = 0;
+     ls.forEach(function (l) { var h = l.resumen && l.resumen.hoy || {}; totalHoy += h.total || 0; nHoy += h.n || 0; });
+-    var html = '<div class="card"><h2>Grupo ' + datos.grupo + ' — hoy</h2>' +
++    var html = '<div class="card"><h2>Grupo ' + esc(datos.grupo) + ' — hoy</h2>' +
+       '<div class="num">' +
+         '<div><b>' + eur(totalHoy) + '</b><small>venta total del grupo</small></div>' +
+         '<div><b>' + nHoy + '</b><small>tickets</small></div>' +
+diff --git a/reserva-online/public/index.html b/reserva-online/public/index.html
+index 3de7b92..b7c5086 100644
+--- a/reserva-online/public/index.html
++++ b/reserva-online/public/index.html
+@@ -164,7 +164,11 @@ async function cargar() {
+   } catch (e) { $('cargando').textContent = '✗ ' + e.message; }
+ }
+ 
+-const token = new URLSearchParams(location.search).get('token');
++/* v0.1.73 · SEC-27 · el token viene de la URL: solo hex de 20 (como los genera la función) y escapado al pintarlo.
++   Antes, con /api/estado en 404, se metía crudo en innerHTML: XSS reflejado desde un enlace. */
++const esc = (t) => String(t == null ? '' : t).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
++const tokenBruto = new URLSearchParams(location.search).get('token');
++const token = /^[0-9a-f]{8,64}$/i.test(tokenBruto || '') ? tokenBruto : null;
+ async function verEstado() {
+   $('cargando').classList.add('oculto');
+   $('anular').classList.remove('oculto');
+@@ -189,7 +193,7 @@ async function verEstado() {
+     // está desplegada con una versión antigua, sin la ruta /api/estado).
+     cab = `<div style="color:#e0a852;font-weight:700;margin-bottom:4px">No he podido comprobar el estado de tu cita</div>
+       <div style="color:var(--muted);font-size:13px">Tu reserva está hecha; si tienes dudas, llama al salón.<br>
+-      Código: <span class="tok">${token}</span><br><small style="color:#5d7e99">(${err.message})</small></div><br>`;
++      Código: <span class="tok">${esc(token)}</span><br><small style="color:#5d7e99">(${esc(err.message)})</small></div><br>`;
+   }
+   $('anular').innerHTML = `<div class="aviso">${cab}<br>¿No puedes venir?<br><br>
+     <button class="btn" style="background:#FF7A7A;color:#3d0a0a" id="si">Anular la cita</button></div>`;
+diff --git a/reserva-online/public/movil.html b/reserva-online/public/movil.html
+index 4ccca6f..81f99da 100644
+--- a/reserva-online/public/movil.html
++++ b/reserva-online/public/movil.html
+@@ -303,15 +303,8 @@ más abajo con el botón "Activar sensores".
+   </div>
+ 
+ <script>
+-// v5.0.72 · validación del código de acceso temporal (misma clave/algoritmo que el TPV)
+-const CLAVE_MOVIL_WEB = 'DoelTPV-Movil-2026-LosRealejos-AccesoTemporal';
+-async function hmac6(msg){
+-  const enc = new TextEncoder();
+-  const key = await crypto.subtle.importKey('raw', enc.encode(CLAVE_MOVIL_WEB), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+-  const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+-  return hex.slice(0,6).toUpperCase();
+-}
++// v0.1.73 · SEC-14 · el código se valida en el servidor (/api/diag-validar): la clave ya no viaja en el HTML
++const RUTA_VALIDAR_CODIGO = '/api/diag-validar';
+ // v5.0.77 · avisa a la nube (best-effort) de que el código se ha usado / sigue en uso, para
+ // que el panel pueda mostrar "en uso ahora". Si no hay internet, o el código se generó
+ // offline en el TPV y no está en la nube, no pasa nada: el diagnóstico sigue funcionando
+@@ -343,9 +336,10 @@ async function validarAcceso(){
+   var expB36 = cod.slice(0, -6).toLowerCase();
+   var expMs = parseInt(expB36, 36);
+   if (!expMs || isNaN(expMs)) { msj.textContent = 'Código no válido.'; return; }
+-  var firmaOk = await hmac6(expB36);
+-  if (firma !== firmaOk) { msj.textContent = 'Código incorrecto.'; return; }
+-  if (Date.now() > expMs) { msj.textContent = 'El código ha caducado. Pide uno nuevo al técnico.'; return; }
++  var v = null;
++  try { v = await (await fetch(RUTA_VALIDAR_CODIGO, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ codigo: cod }) })).json(); } catch (e) { v = null; }
++  if (!v || !v.ok) { msj.textContent = (v && v.error) || 'No se pudo comprobar el código: sin conexión con el servidor.'; return; }
++  expMs = Number(v.expira) || expMs; // la caducidad la dice el servidor
+   // válido: ocultar login y guardar la expiración para cortar el acceso al caducar
+   window.__accesoExpira = expMs;
+   document.getElementById('loginMovil').style.display = 'none';
+diff --git a/reserva-online/public/panel.html b/reserva-online/public/panel.html
+index 5cc36f5..1617647 100644
+--- a/reserva-online/public/panel.html
++++ b/reserva-online/public/panel.html
+@@ -399,7 +399,7 @@ async function cargarDemos(esperando) {
+         <button class="sec" style="padding:3px 9px;font-size:12px" title="Reenviar: clave nueva automática + tira de compartir" data-u="${esc(u.nombre)}" data-accion="reenviar">📤 Reenviar</button>
+         <button class="sec" style="padding:3px 9px;font-size:12px;border-color:#7a3030;color:#FF7A7A" data-u="${esc(u.nombre)}" data-accion="borrar">🗑</button></td>
+       </tr>`).join('')
+-    : '<tr><td colspan="7" style="color:#9DB6C6">Sin accesos. Vale el maestro demo/doel2026 hasta que crees el primero.</td></tr>';
++    : '<tr><td colspan="7" style="color:#9DB6C6">Sin accesos: crea el primero aquí (desde la 0.1.73 no hay acceso maestro de arranque).</td></tr>';
+ }
+ $('dAlta').onclick = async () => {
+   const cuerpo = { usuario: $('dU').value, clave: $('dP').value, minutos: $('dM').value, dias: $('dD').value };
+diff --git a/reserva-online/public/taller.html b/reserva-online/public/taller.html
+index 97ce198..f46cfea 100644
+--- a/reserva-online/public/taller.html
++++ b/reserva-online/public/taller.html
+@@ -313,15 +313,8 @@
+   </div>
+ 
+   <script>
+-  // v5.0.73 · validación del código de acceso temporal (misma clave/algoritmo que el TPV y movil.html)
+-  const CLAVE_MOVIL_WEB = 'DoelTPV-Movil-2026-LosRealejos-AccesoTemporal';
+-  async function hmac6(msg){
+-    const enc = new TextEncoder();
+-    const key = await crypto.subtle.importKey('raw', enc.encode(CLAVE_MOVIL_WEB), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+-    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+-    const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+-    return hex.slice(0,6).toUpperCase();
+-  }
++  // v0.1.73 · SEC-14 · el código se valida en el servidor (/api/diag-validar): la clave ya no viaja en el HTML
++  const RUTA_VALIDAR_CODIGO = '/api/diag-validar';
+   // v5.0.77 · avisa a la nube (best-effort) de que el código se ha usado / sigue en uso, para
+   // que el panel pueda mostrar "en uso ahora". Si no hay internet, o el código se generó
+   // offline en el TPV y no está en la nube, no pasa nada: el diagnóstico sigue funcionando
+@@ -352,9 +345,10 @@
+     var expB36 = cod.slice(0, -6).toLowerCase();
+     var expMs = parseInt(expB36, 36);
+     if (!expMs || isNaN(expMs)) { msj.textContent = 'Código no válido.'; return; }
+-    var firmaOk = await hmac6(expB36);
+-    if (firma !== firmaOk) { msj.textContent = 'Código incorrecto.'; return; }
+-    if (Date.now() > expMs) { msj.textContent = 'El código ha caducado. Pide uno nuevo al técnico.'; return; }
++    var v = null;
++    try { v = await (await fetch(RUTA_VALIDAR_CODIGO, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ codigo: cod }) })).json(); } catch (e) { v = null; }
++    if (!v || !v.ok) { msj.textContent = (v && v.error) || 'No se pudo comprobar el código: sin conexión con el servidor.'; return; }
++    expMs = Number(v.expira) || expMs; // la caducidad la dice el servidor
+     document.getElementById('loginMovil').style.display = 'none';
+     iniciarLatidoDiag(cod, expMs);
+     var restante = expMs - Date.now();
+diff --git a/reserva-online/public/version.txt b/reserva-online/public/version.txt
+index ee13bd6..3c3bb37 100644
+--- a/reserva-online/public/version.txt
++++ b/reserva-online/public/version.txt
+@@ -1,6 +1,6 @@
+ Doel TPV — nube de reservas
+-version: 0.1.63
+-empaquetado: 2026-10-03T08:04:58.124Z
++version: 0.1.73
++empaquetado: 2026-10-17T15:37:58.427Z
+ 
+ Si esta URL no muestra la version que esperas, el sitio esta desplegado
+ con un paquete anterior: vuelve a arrastrar la carpeta reserva-online/.
+diff --git a/src/App.jsx b/src/App.jsx
+index 9ab7746..a87b5ac 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -327,7 +327,7 @@ export default function App() {
+ 
+         <div className="sb-pie">
+           <button className="sb-btn" title={barraPlegada ? 'Desplegar' : 'Contraer'} onClick={() => setBarraPlegada((x) => !x)}>{barraPlegada ? '»' : '«'}</button>
+-          <button className="sb-btn salir" title="Cerrar sesión" onClick={() => setUsuario(null)}>🔒{!barraPlegada && <span> Cerrar sesión</span>}</button>
++          <button className="sb-btn salir" title="Cerrar sesión" onClick={() => { api.auth.logout().catch(() => { /* sin red: la pantalla sale igual */ }); setUsuario(null); }}>🔒{!barraPlegada && <span> Cerrar sesión</span>}</button>
+           <button className="sb-btn" title="Salir de la aplicación"
+             onClick={async () => { try { setModalSalir(await api.app.estadoSalida()); } catch { setModalSalir({ cajaAbierta: false, backupPendiente: false }); } }}>⏻{!barraPlegada && <span> Salir</span>}</button>
+           {!barraPlegada && <small className="sb-version">v{version || ''}</small>}
+diff --git a/src/components/Login.jsx b/src/components/Login.jsx
+index 86610bd..013e468 100644
+--- a/src/components/Login.jsx
++++ b/src/components/Login.jsx
+@@ -26,9 +26,12 @@ export default function Login({ onLogin, avisoLicencia = null, onSalir = null })
+     const nuevo = pin + d;
+     setPin(nuevo);
+     if (nuevo.length === 4) {
+-      const u = await api.auth.login(nuevo);
+-      if (u) onLogin(u);
+-      else { setError('PIN incorrecto'); setPin(''); }
++      /* v0.1.73 · SEC-10 · el freno local responde con un error («Demasiados intentos…»): se enseña, no se traga */
++      try {
++        const u = await api.auth.login(nuevo);
++        if (u) onLogin(u);
++        else { setError('PIN incorrecto'); setPin(''); }
++      } catch (e) { setError(e.message || 'PIN incorrecto'); setPin(''); }
+     }
+   };
+ 
+diff --git a/src/components/TallerPresupuestos.jsx b/src/components/TallerPresupuestos.jsx
+index d268410..5920efe 100644
+--- a/src/components/TallerPresupuestos.jsx
++++ b/src/components/TallerPresupuestos.jsx
+@@ -377,7 +377,7 @@ export function ModalPresupuestos({ orden, usuario, cfgM = {}, onCambio, onCerra
+                 </div>
+               : <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 6 }}>
+                   {!sel && <div style={{ fontSize: 12.5, color: '#FFC24D' }}>Borrador con las líneas que tiene el editor ahora ({o.lineas.length}). Al emitir se le pone número; el PDF y la impresión de un borrador salen como «Borrador · {o.numero}».</div>}
+-                  <iframe title="Vista previa del presupuesto" srcDoc={html} style={{ width: '100%', flex: 1, minHeight: 520, border: '1px solid rgba(255,255,255,.15)', borderRadius: 8, background: '#fff' }} />
++                  <iframe title="Vista previa del presupuesto" srcDoc={html} sandbox="" style={{ width: '100%', flex: 1, minHeight: 520, border: '1px solid rgba(255,255,255,.15)', borderRadius: 8, background: '#fff' }} />
+                 </div>}
+           </div>
+         </div>
+diff --git a/src/components/VistaPrevia.jsx b/src/components/VistaPrevia.jsx
+index 39fc2c3..e12ebdc 100644
+--- a/src/components/VistaPrevia.jsx
++++ b/src/components/VistaPrevia.jsx
+@@ -60,7 +60,7 @@ export default function VistaPrevia({ titulo, html, nombrePdf, destino = null, l
+             })}
+           </div>
+         )}
+-        <iframe title={titulo} srcDoc={html}
++        <iframe title={titulo} srcDoc={html} sandbox=""
+           style={{ flex: 1, background: '#fff', border: 'none', borderRadius: 12, width: '100%' }} />
+       </div>
+     </div>
+diff --git a/src/components/ajustes/impresoras.jsx b/src/components/ajustes/impresoras.jsx
+index b232c1c..30d58ce 100644
+--- a/src/components/ajustes/impresoras.jsx
++++ b/src/components/ajustes/impresoras.jsx
+@@ -31,7 +31,7 @@ function TicketPreview({ cfg, empresa, qr, resena = {} }) {
+   };
+   const ancho = cfg && cfg.ticket_ancho === '58' ? 220 : 300;
+   return (
+-    <iframe title="Vista previa del ticket" ref={ref} onLoad={ajustar} scrolling="no"
++    <iframe title="Vista previa del ticket" ref={ref} onLoad={ajustar} scrolling="no" sandbox="allow-same-origin"
+       srcDoc={htmlTicket(TICKET_DEMO, empresa, { ...cfg, _qr: qr, ...resena })}
+       style={{ width: ancho, minHeight: 200, background: '#fff', border: 'none', borderRadius: 10, display: 'block', overflow: 'hidden' }} />
+   );
+diff --git a/src/print.js b/src/print.js
+index 7095461..ba377e7 100644
+--- a/src/print.js
++++ b/src/print.js
+@@ -535,11 +535,11 @@ export function htmlCierreTaller(c, cfg) {
+   </style></head><body>
+   <h1>🧾 CIERRE DEL TALLER</h1><div class="c">${esc3(cfg.empresa_nombre || 'Doel Taller')} · ${c.fecha}</div>
+   <h2>📥 ENTRADAS (${c.entradas.length})</h2>
+-  ${c.entradas.map((e) => `<div class="f"><span>${e.numero}</span><span class="mut">${esc3((e.equipo || '').trim())}</span></div>`).join('') || '<div class="mut">— ninguna —</div>'}
++  ${c.entradas.map((e) => `<div class="f"><span>${esc3(e.numero)}</span><span class="mut">${esc3((e.equipo || '').trim())}</span></div>`).join('') || '<div class="mut">— ninguna —</div>'}
+   <h2>✅ PASADAS A LISTO (${c.listos.length})</h2>
+-  <div class="mut">${c.listos.join(' · ') || '— ninguna —'}</div>
++  <div class="mut">${esc3(c.listos.join(' · ')) || '— ninguna —'}</div>
+   <h2>📤 ENTREGADAS (${c.entregadas.length})</h2>
+-  ${c.entregadas.map((e) => `<div class="f"><span>${e.numero}</span><span>${eur(e.importe)}</span></div>`).join('') || '<div class="mut">— ninguna —</div>'}
++  ${c.entregadas.map((e) => `<div class="f"><span>${esc3(e.numero)}</span><span>${eur(e.importe)}</span></div>`).join('') || '<div class="mut">— ninguna —</div>'}
+   <div class="f tot"><span>Facturado en entregas</span><span>${eur(c.entregado_total)}</span></div>
+   <h2>📊 SITUACIÓN</h2>
+   <div class="f"><span>Órdenes vivas</span><span>${c.vivas}</span></div>
+@@ -565,7 +565,7 @@ export function htmlInformeTecnico(inf, o, cfg, fotos = []) {
+   const imgs = (fotos || []).map((f, i) =>
+     `<div class="img"><img src="${f.dataUrl}"><div class="pie">Imagen ${i + 1}. ${esc2(f.nota || f.momento)} · huella sha256 verificada ✓</div></div>`).join('');
+   const filasHuella = (o.fotos || []).map((f) =>
+-    `<tr><td>${f.momento}</td><td>${f.creada}</td><td class="mono">${f.hash}</td></tr>`).join('');
++    `<tr><td>${esc2(f.momento)}</td><td>${esc2(f.creada)}</td><td class="mono">${esc2(f.hash)}</td></tr>`).join('');
+   const emp = `${cfg.empresa_nombre || 'Doel Taller'} · NIF ${cfg.empresa_nif || '—'} · ${cfg.empresa_direccion || ''} · ${cfg.empresa_telefono || ''}`;
+   return `<!doctype html><html><head><meta charset="utf-8"><style>
+   @page{size:A4;margin:14mm} body{font-family:'Segoe UI',Arial,sans-serif;font-size:11.5px;color:#111;line-height:1.45}
+@@ -582,10 +582,10 @@ export function htmlInformeTecnico(inf, o, cfg, fotos = []) {
+   .firma{margin-top:24px;display:flex;gap:30px} .firma div{flex:1;border-top:1px solid #333;padding-top:5px;font-size:10.5px}
+   .tot td{font-weight:700;background:#eaf2ee}
+   </style></head><body>
+-  <div class="cab"><div><h1>INFORME TÉCNICO <span class="num">${inf.numero}</span></h1><div>${esc2(emp)}</div></div>
+-  <div style="text-align:right;font-size:10.5px">Orden origen: <b>${o.numero}</b><br>
++  <div class="cab"><div><h1>INFORME TÉCNICO <span class="num">${esc2(inf.numero)}</span></h1><div>${esc2(emp)}</div></div>
++  <div style="text-align:right;font-size:10.5px">Orden origen: <b>${esc2(o.numero)}</b><br>
+   ${inf.fecha_incidencia ? 'Incidencia: ' + esc2(inf.fecha_incidencia) + '<br>' : ''}
+-  ${inf.fecha_inspeccion ? 'Inspección: ' + esc2(inf.fecha_inspeccion) + '<br>' : ''}Emisión: ${inf.emitido_en}</div></div>
++  ${inf.fecha_inspeccion ? 'Inspección: ' + esc2(inf.fecha_inspeccion) + '<br>' : ''}Emisión: ${esc2(inf.emitido_en)}</div></div>
+   <h2>1 · Solicitante / destinatario</h2><div class="caja">${esc2(inf.destinatario) || '— El titular del equipo —'}</div>
+   <h2>2 · Identificación del equipo</h2><div class="caja">${o.equipo ? `${esc2(o.equipo.tipo)} · <b>${esc2(o.equipo.marca)} ${esc2(o.equipo.modelo)}</b> · Nº serie ${esc2(o.equipo.num_serie) || '—'}` : '—'}
+   <br>Avería declarada: ${esc2(o.averia_declarada) || '—'} · Recibido en taller: ${o.recibido || '—'}</div>
+@@ -607,7 +607,7 @@ export function htmlInformeTecnico(inf, o, cfg, fotos = []) {
+   ${despl > 0 ? `<tr><td>Desplazamiento${inf.desplazamiento_txt ? ' (' + esc2(inf.desplazamiento_txt) + ')' : ''}</td><td>${eur(despl)}</td></tr>` : ''}
+   <tr class="tot"><td>TOTAL DE LA INTERVENCIÓN (sin impuestos)</td><td>${eur(inf.precio)}</td></tr></table>`
+   : `<div class="caja">Honorarios del informe: <b>${eur(inf.precio)}</b> + IGIC</div>`}
+-  <div class="pie" style="margin-top:3px">El importe no incluye impuestos indirectos (IGIC), que se repercuten en la factura correspondiente — emitida en la orden ${o.numero}.</div>
++  <div class="pie" style="margin-top:3px">El importe no incluye impuestos indirectos (IGIC), que se repercuten en la factura correspondiente — emitida en la orden ${esc2(o.numero)}.</div>
+   ${inf.conclusion ? `<h2>8 · Conclusión técnica</h2><div class="caja">${parr(inf.conclusion)}</div>` : ''}
+   <p style="margin-top:14px">Y para que así conste, se firma y sella el presente informe.<br>
+   En ${esc2(cfg.empresa_municipio || 'Los Realejos')}, a ${new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+@@ -902,6 +902,8 @@ const ESTADO_TXT = { recibido: 'Recibido', diagnostico: 'Diagnóstico', presupue
+ const TIPO_LINEA_TXT = { pieza: 'Pieza', servicio: 'Servicio', mano_obra: 'Mano de obra', diagnostico: 'Diagnóstico', informe: 'Informe', almacenaje: 'Almacenaje' };
+ const TIPO_EQUIPO_TXT = { movil: 'Móvil', portatil: 'Portátil', torre: 'Torre', consola: 'Consola', electronica: 'Electrónica', impresora: 'Impresora', impresora3d: 'Impresora 3D', monitor: 'Monitor', tv: 'Televisor', otro: 'Otro' };
+ const fechaTxt = (f) => (f ? String(f).replace('T', ' ').slice(0, 16) : '—');
++/* v0.1.73 · SEC-21 · una imagen incrustada solo si es de verdad un PNG/JPEG en base64 (nunca una URL ni un script) */
++const imgDataOk = (s) => /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(String(s || ''));
+ export function htmlParteCompleto(o, cfg = {}, extra = {}) {
+   const eq = o.equipo || {}; const cli = o.cliente || {};
+   const cro = leerCroquis(o.croquis, eq.tipo, [eq.tipo, eq.marca, eq.modelo].join(' '));
+@@ -912,7 +914,7 @@ export function htmlParteCompleto(o, cfg = {}, extra = {}) {
+   const fotos = extra.fotos || []; const firmas = extra.firmas || o.firmas || {}; const diags = extra.diagnosticos || [];
+   const seccion = (t, cuerpo) => `<h2>${t}</h2>${cuerpo}`;
+   const nada = (t = 'Nada registrado') => `<div class="nada">${t}</div>`;
+-  const firmaTxt = (f, titulo) => f ? `<div class="firma-ok">${f.png ? `<img src="${f.png}" alt="firma">` : ''}<div><b>${esc(titulo)}</b>: ${esc(f.firmante || 'cliente')}${f.dni ? ' · DNI/NIE ' + esc(f.dni) : ''} · ${fechaTxt(f.creada)}</div></div>` : `<div class="nada">${esc(titulo)}: sin firmar</div>`;
++  const firmaTxt = (f, titulo) => f ? `<div class="firma-ok">${imgDataOk(f.png) ? `<img src="${f.png}" alt="firma">` : ''}<div><b>${esc(titulo)}</b>: ${esc(f.firmante || 'cliente')}${f.dni ? ' · DNI/NIE ' + esc(f.dni) : ''} · ${fechaTxt(f.creada)}</div></div>` : `<div class="nada">${esc(titulo)}: sin firmar</div>`;
+   return `<html><head><meta charset="utf-8"><style>
+     @page{size:A4;margin:12mm} body{font-family:'Segoe UI',Arial,sans-serif;font-size:11.5px;color:#111;margin:0}
+     h1{font-size:18px;margin:0} h2{font-size:12.5px;border-bottom:1px solid #333;padding-bottom:2px;margin:12px 0 5px;text-transform:uppercase;letter-spacing:.5px}
+@@ -989,7 +991,7 @@ export function htmlParteCompleto(o, cfg = {}, extra = {}) {
+ export function cajaFirma(titulo, f) {
+   if (!f || !f.png) return `<div class="firma">${esc(titulo)}<br><br><br>Fdo.</div>`;
+   return `<div class="firma"><div style="font-size:10px">${esc(titulo)}</div>
+-    <img src="${f.png}" alt="firma" style="max-height:52px;max-width:90%;display:block;margin:2px auto">
++    ${imgDataOk(f.png) ? `<img src="${f.png}" alt="firma" style="max-height:52px;max-width:90%;display:block;margin:2px auto">` : ''}
+     <div style="border-top:1px solid #333;margin-top:2px;padding-top:2px">Fdo. <b>${esc(f.firmante || '')}</b>${f.dni ? ' · DNI/NIE ' + esc(f.dni) : ''}<br><span style="color:#555">${esc(String(f.creada || '').slice(0, 16))} · firmado en pantalla</span></div></div>`;
+ }
+ 
+@@ -1154,7 +1156,7 @@ export function htmlJustificanteSenal(r, a, cfg = {}, qrDataUrl = null) {
+   </tr></table>
+   <div class="imp">
+     Recibido a cuenta: <b>${eur(r.senal)}</b> en ${esc(MEDIO[r.senal_medio] || r.senal_medio || 'efectivo')}
+-    <span style="color:#555">(base ${eur(base)} + IGIC ${tipo}% ${eur(cuota)})</span><br>
++    <span style="color:#555">(base ${eur(base)} + IGIC ${Number(tipo) || 0}% ${eur(cuota)})</span><br>
+     Precio total del equipo: <b>${eur(a.pvp)}</b> · Pendiente al recogerlo: <b>${eur(resto)}</b>
+   </div>
+   <div class="cond">
+diff --git a/tools/test-diag-actividad.cjs b/tools/test-diag-actividad.cjs
+index 85d4d04..b272f33 100644
+--- a/tools/test-diag-actividad.cjs
++++ b/tools/test-diag-actividad.cjs
+@@ -47,15 +47,24 @@ async function probar(archivo, url) {
+   t('3b. deja el temporizador guardado (para poder pararlo al caducar)', window.__latidoDiag !== null && window.__latidoDiag !== undefined);
+ 
+   // 4 · validarAcceso: código corto o con firma incorrecta NO arranca el latido
++  /* v0.1.73 · SEC-14 · la página ya no valida con la clave pegada en el HTML: llama al servidor (/api/diag-validar en la
++     nube, /api/movil-validar en el comandero). Aquí el servidor se simula con la MISMA función del TPV que usa el
++     comandero (validarAccesoMovil), que es la que api.mjs replica. */
++  const dbVal = require('../electron/db.cjs');
++  window.fetch = (u, opts) => {
++    llamadas.push({ u, opts });
++    if (/\/api\/(diag|movil)-validar$/.test(u)) { const r = dbVal.validarAccesoMovil(JSON.parse(opts.body).codigo); return Promise.resolve({ ok: r.ok, json: async () => r }); }
++    return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
++  };
+   llamadas.length = 0;
+   const inp = window.document.getElementById('codigoAcceso');
+   const msj = window.document.getElementById('loginMsj');
+   inp.value = 'CORTO';
+   await window.validarAcceso();
+-  t('4a. codigo demasiado corto: avisa y no llama a diag-actividad', /demasiado corto/.test(msj.textContent) && llamadas.length === 0);
++  t('4a. codigo demasiado corto: avisa y no llama a diag-actividad', /demasiado corto/.test(msj.textContent) && !llamadas.some((l) => l.u === '/api/diag-actividad'));
+   inp.value = 'ZZZZZZZZZZZZZZ'; // 14 caracteres, pasa el largo minimo pero la firma no cuadra
+   await window.validarAcceso();
+-  t('4b. firma incorrecta: avisa y no llama a diag-actividad', /incorrecto/.test(msj.textContent) && llamadas.length === 0);
++  t('4b. firma incorrecta: avisa y no llama a diag-actividad', /incorrecto/.test(msj.textContent) && !llamadas.some((l) => l.u === '/api/diag-actividad'));
+ 
+   // 5 · CÓDIGO VÁLIDO DE VERDAD (misma firma HMAC que genera el TPV/panel): oculta el
+   // login y dispara el latido con ESE código exacto — el caso de éxito real, de punta a punta
+diff --git a/tools/test-herramientas-diag.cjs b/tools/test-herramientas-diag.cjs
+index 98d9c14..1f11260 100644
+--- a/tools/test-herramientas-diag.cjs
++++ b/tools/test-herramientas-diag.cjs
+@@ -367,7 +367,7 @@ t('amortización devuelve algo coherente (horas medidas)', amort && typeof amort
+   /* ── 34 · v5.0.73: PWA del taller en la nube con login temporal, sin impresoras ── */
+   const tallerPwa = fs.existsSync('reserva-online/public/taller.html') ? fs.readFileSync('reserva-online/public/taller.html', 'utf8') : '';
+   t('la PWA del taller está en la nube con login temporal (mismo código que el móvil)',
+-    /loginMovil/.test(tallerPwa) && /validarAcceso/.test(tallerPwa) && /DoelTPV-Movil-2026/.test(tallerPwa));
++    /loginMovil/.test(tallerPwa) && /validarAcceso/.test(tallerPwa) && /diag-validar/.test(tallerPwa) && !/CLAVE_MOVIL_WEB/.test(tallerPwa)); // v0.1.73 · SEC-14 · la clave ya no va en el HTML
+   t('la PWA del taller ya NO tiene las secciones de impresoras',
+     tallerPwa.length > 1000 && !/module-print3d/.test(tallerPwa) && !/module-printers/.test(tallerPwa));
+ 
+diff --git a/tools/test-seguridad-lan.cjs b/tools/test-seguridad-lan.cjs
+index a3d62db..093f510 100644
+--- a/tools/test-seguridad-lan.cjs
++++ b/tools/test-seguridad-lan.cjs
+@@ -234,7 +234,7 @@ const rio = (trozos) => ({ async *[Symbol.asyncIterator]() { for (const x of tro
+   /* ── 9 · lo que NO se ha tocado, y que también importa ── */
+   console.log('\n9 · Lo que ya estaba bien y sigue estándolo');
+   t('9a. el puesto en red sigue siendo solo de la red local', /if \(!esLocal\(ip\)\)/.test(pst));
+-  t('9b. y sigue sin servir ficheros fuera de dist/', /if \(!destino\.startsWith\(raiz\)\)/.test(pst));
++  t('9b. y sigue sin servir ficheros fuera de dist/ (v0.1.73 · con separador: «dist-otra/» tampoco)', /!destino\.startsWith\(raiz \+ path\.sep\)/.test(pst));
+   t('9c. los canales que abren ventanas siguen prohibidos en remoto', /if \(prohibido\(canal\)\)/.test(pst));
+   t('9d. la zona del gerente sigue pidiendo nivel de encargado', /sesion\.nivel > 2/.test(cmd));
+ 
+diff --git a/tools/test-taller.cjs b/tools/test-taller.cjs
+index c514ce8..fe74492 100644
+--- a/tools/test-taller.cjs
++++ b/tools/test-taller.cjs
+@@ -59,7 +59,7 @@ const reintentar = async (fn, veces = 3) => {
+   // 9 · entregar BORRA la contraseña cifrada (regla del dossier) y sella fecha
+   raw.prepare("UPDATE ordenes SET password_cifrada = 'CIFRADA-XYZ' WHERE id = ?").run(o1.id);
+   const oEnt = db.ordenEstado(o1.id, 'entregado', admin.id);
+-  t('9. entregar borra password_cifrada y pone entregado_en', oEnt.password_cifrada === null && !!oEnt.entregado_en);
++  t('9. entregar borra password_cifrada y pone entregado_en', db.ordenPasswordCifrada(o1.id) === null && oEnt.tiene_password === false && !('password_cifrada' in oEnt) && !!oEnt.entregado_en); // v0.1.73 · SEC-04 · la orden ya no lleva la columna
+ 
+   // 10-11 · tablero: agrupa por estado, EXCLUYE entregadas, calcula días
+   const tab = db.ordenesTablero();
+@@ -110,7 +110,8 @@ const reintentar = async (fn, veces = 3) => {
+     JSON.parse(oT1.accesorios).includes('Bobina de filamento (PLA)')
+     && JSON.parse(oT1.croquis)[0].cara === 'delante'
+     && JSON.parse(oT1.croquis)[1].cara === 'detras'
+-    && lic.descifrarTexto(oT1.password_cifrada) === 'MiClave123');
++    && !('password_cifrada' in oT1) && oT1.tiene_password === true // v0.1.73 · SEC-04 · solo taller:pass-ver la lee
++    && lic.descifrarTexto(db.ordenPasswordCifrada(oT1.id)) === 'MiClave123');
+ 
+   t('19. la app es monovertical: ni zonas ni mesas que adaptar',
+     typeof db.mesasAdaptarEdicion !== 'function' && typeof db.cuentaGuardar !== 'function');
