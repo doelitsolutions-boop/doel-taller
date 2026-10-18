@@ -6,7 +6,9 @@
 | `0.1.74-licencia-v2.patch` | 0.1.73 | **SEC‑01**: licencia v2 (códigos DL2 firmados + semilla TOTP por instalación), 21 ficheros. Guía: `docs/LICENCIA_V2.md` |
 | `0.1.75-copias.patch` | 0.1.74 | **Punto 2**: paquete de copia DOELBAK3 (base + fotos + manifiesto cifrados; clave de instalación con frase propia), restauración completa, prueba en seco que cuenta fotos |
 | `0.1.76-dependencias.patch` | 0.1.75 | **Punto 3**: Electron 33 → 44, electron-builder 26, Vite 8, better-sqlite3 13, selfsigned 5 (asíncrono: `certificado()`/`iniciar()` del puesto en red y sus baterías), `npm audit --omit=dev` a cero. No incluye `package-lock.json`: tras aplicarlo, `npm install` lo regenera. Sin firma de código (coste 200‑400 €/año; uso interno) |
-| `0.1.76-acumulado-sobre-0.1.72.patch` | 0.1.72 | todos los anteriores juntos (sin `package-lock.json`) |
+| `0.1.77-canales.patch` | 0.1.76 | **Punto 4**: `electron/canales.cjs` única lista de canales (el preload se genera: `node tools/puente-generar.cjs`), `/rpc` deny‑by‑default, batería `test-canales.cjs` (28), 17 ficheros |
+| `0.1.78-permisos-ipc.patch` | 0.1.77 | **Punto 5**: sesión local en main y permiso por canal en cada llamada IPC (`electron/sesion-local.cjs`), `auth:verificar` para el TPV, batería `test-permisos-ipc.cjs` (19); `@babel/parser` como dependencia de desarrollo |
+| `0.1.78-acumulado-sobre-0.1.72.patch` | 0.1.72 | todos los anteriores juntos (sin `package-lock.json`) |
 
 Tras aplicar el de la 0.1.76 hay que **probar en Windows** lo que toca a Electron: WebHID y mando, visor PDF de diagramas, impresión silenciosa, safeStorage e instalador NSIS. El contenedor no puede arrancar Electron.
 

@@ -1,0 +1,313 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index 93635ad..5807792 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.77 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.78 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -100,7 +100,7 @@ se piden otra vez al cliente); la nube necesita redesplegar `reserva-online/` (n
+ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
+ 1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
+-`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
++`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
+ numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
+ 10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
+ 
+diff --git a/VERSION.md b/VERSION.md
+index 1b561d2..0242a17 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.78 | 🔐 **Permiso por canal también en el mostrador (punto 5 del plan).** Nuevo `electron/sesion-local.cjs`: `auth:login` desde la pantalla de Electron abre una **sesión local** en el proceso principal (quién entró con PIN) y `auth:logout` la cierra; `handle()` pregunta en **cada llamada IPC** si el perfil de esa sesión puede con el canal, con la misma tabla (`canales.cjs`) y la misma regla (`permisos-canal.autorizado`) que el puesto en red. Lo que no exige permiso pasa siempre (lo que la pantalla lee antes de entrar); lo que lo exige, sin nadie dentro, no (salvo `licencia:activar`, que se hace con la app bloqueada); el perfil se relee de la base en cada llamada (baja o cambio de permisos → efecto inmediato). Las negativas quedan en el registro (`Denegado canal a usuario: motivo`) y llegan a la pantalla como error legible. Hasta ahora lo tapaba solo la barra: cualquier cosa que hablara con el puente podía llamar a `config:set` o `usuarios:save` con un técnico dentro. Nuevo canal **`auth:verificar`** (comprueba un PIN sin cambiar de usuario) para «quién abre la caja» en el TPV: antes pasaba por `auth:login` y **en el puesto en red cambiaba la sesión al encargado para el resto del día**. Nueva batería `test-permisos-ipc.cjs` (19). `@babel/parser`, `eslint`, `jsdom`, `esbuild` y `@netlify/blobs` pasan a `devDependencies`: las baterías y `limpiar-muertos` los necesitan y un `npm install` los borraba (Vite 8 ya no arrastra el parser). Los arneses de `test-permisos-canal` y `test-puesto-catalogo` solo evalúan la primera función de cada `handle()` (la variante IPC usa la sesión local). |
+ | 0.1.77 | 🧭 **Una sola lista de canales (punto 4 del plan).** Nuevo `electron/canales.cjs`: 404 filas, una por canal, con el método de `window.doel`, la firma de los que reordenan argumentos, el permiso que exige, la marca del puesto en red (`local` = solo en el mostrador, `mide` = mide el PC del mostrador), si valida PIN y la posición del usuario de la sesión. `preload.cjs` se **genera** de ahí (`node tools/puente-generar.cjs`; `check-puente` falla si no coincide, si una fila no tiene `handle()` o si un `handle()` no tiene fila); `permisos-canal.cjs` y `puesto-red.cjs` la leen: fuera las cuatro listas que había que tocar a la vez (`PROHIBIDOS`, `MIDEN_ESTE_PC`, `CANALES_PIN`, `POS_USUARIO`) y el parseo del texto del preload en `leerPuente()`. **`/rpc` deny-by-default (SEC‑19)**: el puesto en red solo sirve lo declarado con método y sin marca; un handler interno (`dev:cerrar`) o un canal fuera de la tabla devuelve 403 «no está disponible desde el puesto en red» sin ejecutarse, con o sin sesión. Nueva batería `test-canales.cjs` (28). Seis baterías que leían las listas en el texto de `puesto-red.cjs` pasan a preguntar a la tabla. Para la pantalla no cambia nada: el preload generado es equivalente canal a canal y firma a firma al que había. |
+ | 0.1.76 | ⬆️ **Dependencias al día (punto 3 del plan).** Electron 33.4 → **44.9** (la 33 llevaba año y medio sin soporte: 40 avisos), electron-builder 25 → 26, Vite 6 → 8 (compila en menos de 1 s), plugin-react 4 → 6, concurrently 9 → 10, better-sqlite3 12 → 13, wait-on 9, cross-env 10 y **selfsigned 2 → 5** (criptografía nativa de Node, fuera node-forge). `npm audit --omit=dev` a **cero**. selfsigned 5 es asíncrono: `certificado()` e `iniciar()` del puesto en red pasan a `async` (main y las tres baterías del puesto lo esperan). **Sin firma de código** a propósito: cuesta 200‑400 €/año y para uso interno no hace falta. **Pendiente de probar en Windows** tras el salto de Electron: WebHID y mando (DualSense/Switch), visor PDF de diagramas, impresión silenciosa, safeStorage, instalador NSIS con electron-builder 26. |
+ | 0.1.75 | 📦 **Copias recuperables de verdad (punto 2 del plan).** Cada `.doelbak` es ahora un **paquete DOELBAK3**: un ZIP cifrado con la base, las fotos de órdenes/outlet/hotel y un manifiesto (antes la base iba cifrada y las fotos EN CLARO en una carpeta al lado del USB). Con frase propia el paquete lleva también la **clave de instalación**: restaurar en otro PC recupera contraseñas de equipos, claves de portal y la semilla de licencia. Restaurar extrae base + fotos (+ clave) y las copias antiguas (DOELBAK1/2 con su espejo) se siguen abriendo. La prueba en seco cuenta las fotos. Una base restaurada en otra instalación ya no sale como «manipulada»: pide volver a pegar el DL2. Las entradas del ZIP se validan (zip‑slip). `test-copias` 55 → 64 comprobaciones; `test-taller` 55 adaptado. Manual y Ajustes al día. |
+diff --git a/electron/canales.cjs b/electron/canales.cjs
+index 8afed92..5bcafcb 100644
+--- a/electron/canales.cjs
++++ b/electron/canales.cjs
+@@ -25,6 +25,7 @@ const CANALES = {
+   /* ── auth ── */
+   'auth:login': { api: 'auth.login' },
+   'auth:logout': { api: 'auth.logout' },
++  'auth:verificar': { api: 'auth.verificar', pin: true },
+   /* ── catalogo ── */
+   'catalogo:catBorrar': { api: 'catalogo.catBorrar', permiso: 'inventario' },
+   'catalogo:cat-borrar-con-articulos': { api: 'catalogo.catBorrarConArticulos', permiso: 'ajustes' },
+diff --git a/electron/main.cjs b/electron/main.cjs
+index fde4a2e..c942935 100644
+--- a/electron/main.cjs
++++ b/electron/main.cjs
+@@ -9,7 +9,8 @@ const portal = require('./portal.cjs'); // v4.0.15 · T4: sync del portal del cl
+ const outletNube = require('./outlet-nube.cjs'); // v0.0.71 · 🏷 Outlet: catálogo al portal
+ const hotelNube = require('./hotel-nube.cjs');   // v0.0.95 · 🏨 Modo hotel: teles a la web (hotel.html)
+ const crypto = require('crypto');                // v0.0.98 · ficha de las ventanas de herramienta
+-const puestoRed = require('./puesto-red.cjs'); // v0.0.78 · 🖥 el programa entero desde otro PC de la red
++const puestoRed = require('./puesto-red.cjs');
++const sesionLocal = require('./sesion-local.cjs'); // v0.1.78 · punto 5 · permiso por canal también en IPC // v0.0.78 · 🖥 el programa entero desde otro PC de la red
+ const cajon = require('./cajon.cjs'); // v0.0.82 · 💵 pulso del cajón: pin y duración configurables
+ const seg = require('./seguridad-lan.cjs'); // v0.0.85 · 🔒 permisos, sesiones, freno y escape
+ const tallerPython = require('./taller-python.cjs'); // v0.0.87 · 💾 agente portable (Python opcional)
+@@ -54,11 +55,8 @@ function createWindow() {
+   endurecerVentana(win); // v0.1.73 · SEC-20
+   // v5.0.37 · la Gamepad API de Chromium/Electron está tras Permissions Policy: hay que
+   // aprobarla explícitamente o getGamepads() devuelve siempre vacío (el mando va en la web
+-  // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID).
+-  // v0.0.85 · SEC-01 · hasta la 0.0.84 la lista blanca de permisos terminaba en un «o true»
+-  // que la anulaba entera: se concedía TODO, y cualquier permiso nuevo de Chromium entraba
+-  // solo. Ahora la lista manda de verdad y vive en seguridad-lan.cjs, donde una batería
+-  // comprueba una por una qué capacidad entra y cuál no.
++  // pero no en la app). Aprobamos gamepad + hid (algunos mandos se enumeran como HID). v0.0.85 · SEC-01 · hasta la 0.0.84 la lista blanca de permisos terminaba en un «o true» que la anulaba entera: se concedía TODO, y cualquier permis
++  // o nuevo de Chromium entraba solo. Ahora la lista manda de verdad y vive en seguridad-lan.cjs, donde una batería comprueba una por una qué capacidad entra y cuál no.
+   try {
+     const ses = win.webContents.session;
+     ses.setPermissionRequestHandler((wc, permiso, cb) => cb(seg.permisoConcedido(permiso)));
+@@ -212,8 +210,10 @@ function handle(canal, fn0, fnLocal) { // v0.1.73 · fnLocal: variante solo para
+   const fnIpc = fnLocal ? (FRENO_CANAL[canal] ? (...args) => conFreno(FRENO_CANAL[canal], () => fnLocal(...args)) : fnLocal) : fn;
+   ipcMain.handle(canal, async (_e, ...args) => {
+     try {
+-      // await: soporta handlers síncronos y async (cierre con backup, copia manual…)
+-      return { ok: true, data: await fnIpc(...args) };
++      /* v0.1.78 · punto 5 · el mismo permiso por canal que el puesto en red, con la sesión local (quién entró con PIN) */
++      const no = sesionLocal.autoriza(canal, db);
++      if (no) { try { const s = sesionLocal.actual(); db.logEvento('mostrador', 'Denegado ' + canal + (s ? ' a ' + s.nombre : ' sin sesión') + ': ' + no, s ? s.id : null); } catch (e) { /* nada */ } throw new Error(no); }
++      return { ok: true, data: await fnIpc(...args) }; // await: handlers síncronos y async
+     } catch (err) {
+       return { ok: false, error: err.message };
+     }
+@@ -228,8 +228,7 @@ app.whenReady().then(() => {
+     dialog.showMessageBox({ type: 'info', title: 'Doel Taller — tus datos han cambiado de sitio',
+       message: 'Los datos del taller están ahora en:\n' + RUTAS.userData,
+       detail: 'Se han copiado desde la carpeta antigua (' + RUTAS.viejo + '), que queda como copia y se puede borrar.\n\n' +
+-        'Motivo: los limpiadores de desinstalación tratan AppData como «archivos residuales» y borraban la base de datos al actualizar. ' +
+-        'En tu carpeta de usuario no la tocan, y además la ves y la puedes copiar a un pendrive.\n\nCopiado: ' + RUTAS.copiadas.join(', ') });
++        'Motivo: los limpiadores de desinstalación tratan AppData como «archivos residuales» y borraban la base de datos al actualizar. En tu carpeta de usuario no la tocan, y además la ves y la puedes copiar a un pendrive.\n\nCopiado: ' + RUTAS.copiadas.join(', ') });
+   } else if (RUTAS.error) {
+     dialog.showMessageBox({ type: 'warning', title: 'Doel Taller — no se pudieron mover los datos',
+       message: 'Se sigue usando la carpeta de siempre: ' + RUTAS.userData,
+@@ -245,11 +244,11 @@ app.whenReady().then(() => {
+     }
+   } catch (e) { /* nunca bloquear el arranque por el chequeo */ }
+ 
+-  handle('auth:login', (pin) => db.login(pin), (pin) => db.login(pin, { frenoLocal: true })); // v0.1.73 · SEC-10 · freno local solo en IPC
+-  handle('auth:logout', () => true); // v0.1.73 · SEC-16 · en Electron no hay sesión que cerrar; en el puesto en red lo intercepta /rpc
++  handle('auth:login', (pin) => db.login(pin), (pin) => sesionLocal.entrar(db.login(pin, { frenoLocal: true }))); // v0.1.73 · SEC-10 · freno local solo en IPC · v0.1.78 · abre la sesión local
++  handle('auth:logout', () => true, () => { sesionLocal.salir(); return true; }); // v0.1.73 · SEC-16 · en el puesto en red lo intercepta /rpc · v0.1.78 · cierra la sesión local
++  handle('auth:verificar', (pin) => db.login(pin), (pin) => db.login(pin, { frenoLocal: true })); // v0.1.78 · solo comprueba un PIN (quién abre la caja): NO cambia de usuario
+ 
+-  /* v0.1.68 · AUD-04: los dominios grandes viven en electron/main/*.cjs y reciben este contexto.
+-     `ventana()` y no `win`: la ventana se reasigna al recrearla y hay que leerla viva. */
++  /* v0.1.68 · AUD-04: los dominios grandes viven en electron/main/*.cjs y reciben este contexto. `ventana()` y no `win`: la ventana se reasigna al recrearla y hay que leerla viva. */
+   const ctx = { handle, HANDLERS, db, app, ipcMain, dialog, shell, fs, path, licencia, reserva, sat, cajon, psEjecutar, tallerPython, ventana: () => win, imprimirHtml: (...a) => imprimirHtml(...a) };
+ 
+   handle('catalogo:categorias', () => db.listCategorias());
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index bb46313..8feadf9 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -6,7 +6,7 @@ const { contextBridge, ipcRenderer } = require('electron');
+ const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
+ 
+ contextBridge.exposeInMainWorld('doel', {
+-  auth: { login: call('auth:login'), logout: call('auth:logout') },
++  auth: { login: call('auth:login'), logout: call('auth:logout'), verificar: call('auth:verificar') },
+   catalogo: { catBorrar: call('catalogo:catBorrar'), catBorrarConArticulos: call('catalogo:cat-borrar-con-articulos'),
+     exportarCsv: call('catalogo:exportar-csv'), exportarArchivo: call('catalogo:exportar-archivo'), vaciar: call('catalogo:vaciar'),
+     importarArticulos: call('catalogo:importar-articulos'), catOrdenar: call('catalogo:cat-ordenar'), articulosMover: call('catalogo:articulos-mover'),
+diff --git a/electron/sesion-local.cjs b/electron/sesion-local.cjs
+new file mode 100644
+index 0000000..2dd3967
+--- /dev/null
++++ b/electron/sesion-local.cjs
+@@ -0,0 +1,43 @@
++/* v0.1.78 · punto 5 del plan · Sesión LOCAL del mostrador: quién ha entrado con PIN en la pantalla de Electron.
++
++   Hasta la 0.1.77 el permiso por canal solo se comprobaba en el puesto en red (/rpc). En el propio mostrador
++   lo tapaba la pantalla: la barra esconde lo que el perfil no tiene, pero cualquier cosa que hable con el
++   puente (DevTools en desarrollo, una extensión, un fallo de la pantalla) podía llamar a config:set o
++   usuarios:save con un técnico dentro. Ahora handle() de main.cjs pregunta aquí en CADA llamada IPC, con la
++   misma tabla (canales.cjs) y la misma regla (permisos-canal.cjs) que el puesto en red.
++
++   Reglas:
++   · canal sin permiso → pasa siempre (lo que la pantalla lee antes de entrar: config, licencia, empresa…).
++   · canal con permiso y nadie dentro → no, salvo SIN_SESION: la activación de la licencia se hace con la
++     app bloqueada, antes de que haya con quién entrar.
++   · canal con permiso y alguien dentro → la regla de la barra; el perfil se relee de la base (baja o cambio
++     de permisos → efecto inmediato, como en el puesto en red).
++   · auth:login (variante IPC) abre la sesión; auth:logout la cierra. auth:verificar solo comprueba un PIN
++     (quién abre la caja en el TPV) y NO cambia de usuario: antes esa comprobación pasaba por auth:login
++     y en el puesto en red cambiaba la sesión al encargado para el resto del día. */
++const permisos = require('./permisos-canal.cjs');
++
++let sesion = null; // { id, nombre, rol, permisos }
++const SIN_SESION = new Set(['licencia:activar']);
++
++function entrar(u) {
++  sesion = u && u.id ? { id: u.id, nombre: u.nombre, rol: u.rol, permisos: u.permisos || null } : null;
++  return sesion;
++}
++function salir() { sesion = null; }
++const actual = () => sesion;
++
++/* null = adelante; texto = motivo de la negativa (handle() lo lanza como error y la pantalla lo enseña) */
++function autoriza(canal, db) {
++  const req = permisos.permisoDeCanal(canal);
++  if (!req) return null;
++  if (!sesion) return SIN_SESION.has(canal) ? null : 'Entra con tu PIN para hacer esto';
++  try {
++    const vivo = db && typeof db.usuarioVivo === 'function' ? db.usuarioVivo(sesion.id) : undefined;
++    if (vivo === null) { sesion = null; return 'Tu usuario ya no está activo'; }
++    if (vivo) { sesion.permisos = vivo.permisos || null; sesion.rol = vivo.rol; sesion.nombre = vivo.nombre; }
++  } catch (e) { /* base ocupada: se sigue con lo que tenía la sesión */ }
++  return permisos.autorizado(sesion, canal) ? null : 'Tu perfil no tiene permiso «' + req + '» para esto';
++}
++
++module.exports = { entrar, salir, actual, autoriza, SIN_SESION };
+diff --git a/package.json b/package.json
+index 89dd3e2..080631e 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.77",
++  "version": "0.1.78",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+@@ -25,11 +25,16 @@
+     "tesseract.js": "^7.0.0"
+   },
+   "devDependencies": {
++    "@babel/parser": "^7.29.9",
++    "@netlify/blobs": "^11.1.4",
+     "@vitejs/plugin-react": "^6.1.2",
+     "concurrently": "^10.0.6",
+     "cross-env": "^10.1.0",
+     "electron": "^44.9.0",
+     "electron-builder": "^26.15.3",
++    "esbuild": "^0.28.2",
++    "eslint": "^8.57.1",
++    "jsdom": "^29.1.1",
+     "vite": "^8.3.4",
+     "wait-on": "^9.5.1"
+   },
+diff --git a/src/components/TPV.jsx b/src/components/TPV.jsx
+index b691d4b..3e98418 100644
+--- a/src/components/TPV.jsx
++++ b/src/components/TPV.jsx
+@@ -1040,7 +1040,7 @@ function ModalAbrirCaja({ onCerrar, onAbierta }) {
+   const comprobar = async () => {
+     setOcupado(true);
+     try {
+-      const u = await api.auth.login(pin);
++      const u = await api.auth.verificar(pin); // v0.1.78 · comprueba el PIN sin cambiar de usuario
+       if (!u) { setAviso('✗ Código incorrecto'); setPin(''); }
+       else if ((u.nivel || 9) > 2) { setAviso(`✗ ${u.nombre} no tiene permiso para abrir caja`); setPin(''); }
+       else { setQuien(u); setAviso(''); }
+diff --git a/tools/test-canales.cjs b/tools/test-canales.cjs
+index 02f51bc..f5b4ede 100644
+--- a/tools/test-canales.cjs
++++ b/tools/test-canales.cjs
+@@ -36,7 +36,7 @@ t('2a. prohibidos en remoto (abren diálogos o ventanas en el mostrador)', local
+ t('2b. todos los dev:* son locales y exigen «ajustes»', filas.filter((c) => c.startsWith('dev:')).every((c) => C.prohibido(c) && C.permisoDeCanal(c) === 'ajustes'));
+ const miden = ['taller:bateria-informe', 'taller:energia-informe', 'taller:disco-salud', 'taller:disco-velocidad-nativa', 'taller:diskspd-disponible', 'taller:diskspd-benchmark', 'taller:usb-listar', 'taller:usb-discos', 'taller:usb-velocidad', 'taller:usb-historial', 'taller:mando-serie', 'taller:cpu-temperatura', 'taller:dispositivos', 'py:ejecutar'];
+ t('2c. los catorce que miden el PC del mostrador, ni uno más', miden.every(C.mideElMostrador) && C.MIDEN_ESTE_PC.length === miden.length && !C.mideElMostrador('taller:diag-guardar'));
+-t('2d. canales con PIN (freno por IP) y posición del usuario de la sesión', [...C.PIN].sort().join() === 'app:salir,caja:cajonAbrir,fichaje:admin,fichaje:login' && Object.keys(C.POS_USUARIO).sort().map((c) => c + '=' + C.POS_USUARIO[c]).join() === 'caja:movimiento=3,fid:canjear=2,taller:linea-set=2,taller:orden-estado=2,taller:pass-ver=1,tickets:anular=1', JSON.stringify(C.POS_USUARIO));
++t('2d. canales con PIN (freno por IP) y posición del usuario de la sesión', [...C.PIN].sort().join() === 'app:salir,auth:verificar,caja:cajonAbrir,fichaje:admin,fichaje:login' /* v0.1.78 · auth:verificar */ && Object.keys(C.POS_USUARIO).sort().map((c) => c + '=' + C.POS_USUARIO[c]).join() === 'caja:movimiento=3,fid:canjear=2,taller:linea-set=2,taller:orden-estado=2,taller:pass-ver=1,tickets:anular=1', JSON.stringify(C.POS_USUARIO));
+ t('2e. permisos: configuración «ajustes», artículos «inventario», caja «cierre»/«cajon», anular, compras, crm, outlet, informes',
+   ['config:set', 'usuarios:save', 'licencia:activar', 'catalogo:vaciar', 'backup:ahora', 'sistema:autostart', 'sat:instalar', 'jc:elegir'].every((c) => C.permisoDeCanal(c) === 'ajustes')
+   && ['catalogo:saveProducto', 'kits:guardar', 'productos:exportar'].every((c) => C.permisoDeCanal(c) === 'inventario') && C.permisoDeCanal('stock:alta') === 'stock'
+diff --git a/tools/test-permisos-canal.cjs b/tools/test-permisos-canal.cjs
+index 4e01772..75dc82a 100644
+--- a/tools/test-permisos-canal.cjs
++++ b/tools/test-permisos-canal.cjs
+@@ -41,7 +41,7 @@ const db = require('../electron/db.cjs'); db.init(dir);
+ const HANDLERS = new Map();
+ const handle = (c, fn) => HANDLERS.set(c, async (...a) => { try { return { ok: true, data: await fn(...a) }; } catch (e) { return { ok: false, error: e.message }; } });
+ for (const m of main.matchAll(/^\s*handle\('([^']+)',\s*(\([^)]*\)\s*=>\s*db\.[a-zA-Z]+\([^;]*\))\);\s*(?:\/\/.*)?$/gm)) {
+-  try { handle(m[1], new Function('db', 'return ' + m[2])(db)); } catch (e) { /* uno raro: fuera */ }
++  try { handle(m[1], new Function('db', 'return [' + m[2] + '][0]')(db) /* v0.1.78 · solo la 1ª función: la variante IPC (2º argumento) usa la sesión local */); } catch (e) { /* uno raro: fuera */ }
+ }
+ handle('config:set', (clave, valor) => db.configSet(clave, valor)); // en main.cjs tiene varias líneas (re-sella la licencia): aquí, el núcleo
+ const perfiles = db.listPerfiles();
+diff --git a/tools/test-permisos-ipc.cjs b/tools/test-permisos-ipc.cjs
+new file mode 100644
+index 0000000..e28efbd
+--- /dev/null
++++ b/tools/test-permisos-ipc.cjs
+@@ -0,0 +1,51 @@
++/* v0.1.78 · punto 5 del plan · el permiso por canal también se comprueba en el mostrador (IPC), con la sesión local.
++   1 · la regla, en seco   2 · con la base de verdad (perfil vivo)   3 · el cableado en main.cjs, canales.cjs y la pantalla */
++const fs = require('fs'); const os = require('os'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const S = require('../electron/sesion-local.cjs');
++
++console.log('1 · La regla');
++S.salir();
++t('1a. sin nadie dentro, lo que no exige permiso pasa (config:all, licencia:estado, taller:orden-crear, auth:login)', ['config:all', 'licencia:estado', 'empresa:get', 'taller:orden-crear', 'auth:login', 'fichaje:fichar'].every((c) => S.autoriza(c) === null));
++t('1b. sin nadie dentro, lo que exige permiso no pasa y lo dice', /Entra con tu PIN/.test(S.autoriza('config:set')) && /Entra con tu PIN/.test(S.autoriza('usuarios:save')) && /Entra con tu PIN/.test(S.autoriza('dev:acceso')));
++t('1c. …salvo activar la licencia: la app está bloqueada y no hay con quién entrar', S.autoriza('licencia:activar') === null && S.SIN_SESION.size === 1);
++S.entrar({ id: 7, nombre: 'Paco', rol: 'camarero', permisos: { ajustes: false, compras: false, inventario: true } });
++t('1d. un técnico (sin ajustes ni compras) → config:set y compras:aplicar negados con el nombre del permiso; artículos sí', /permiso «ajustes»/.test(S.autoriza('config:set')) && /permiso «compras»/.test(S.autoriza('compras:aplicar')) && S.autoriza('catalogo:saveProducto') === null && S.autoriza('taller:orden-crear') === null);
++S.entrar({ id: 1, nombre: 'Edmundo', rol: 'admin', permisos: null });
++t('1e. un administrador sin perfil (permisos null) pasa por rol', S.autoriza('config:set') === null && S.autoriza('dev:renovar') === null);
++S.entrar({ id: 2, nombre: 'Juan', rol: 'camarero', permisos: null });
++t('1f. un usuario sin perfil que no es admin solo hace lo que no exige permiso', /permiso «ajustes»/.test(S.autoriza('config:set')) && S.autoriza('tickets:crear') === null);
++t('1g. entrar con null (PIN malo) deja la sesión vacía y salir() la cierra', S.entrar(null) === null && S.actual() === null && (S.entrar({ id: 3, nombre: 'X', rol: 'admin' }), S.salir(), S.actual() === null));
++
++console.log('\n2 · Con la base de verdad: el perfil se relee en cada llamada');
++const dir = path.join(os.tmpdir(), 'doel-test-permisos-ipc'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
++const db = require('../electron/db.cjs'); db.init(dir);
++const perfiles = db.listPerfiles(); const tecnico = perfiles.find((p) => p.nombre === 'Técnico'), admin = perfiles.find((p) => p.nombre === 'Administrador');
++db.saveUsuario({ nombre: 'Paco Técnico', pin: '7777', perfil_id: tecnico.id });
++const u = db.login('7777', { frenoLocal: true });
++S.entrar(u);
++t('2a. el técnico entra por db.login y la sesión local lo recuerda', !!u && S.actual().nombre === 'Paco Técnico' && S.actual().permisos.ajustes === false);
++t('2b. config:set negado; catalogo:saveProducto permitido', /ajustes/.test(S.autoriza('config:set', db)) && S.autoriza('catalogo:saveProducto', db) === null);
++db.saveUsuario({ id: u.id, nombre: 'Paco Técnico', perfil_id: admin.id });
++t('2c. le cambian el perfil a Administrador → en la siguiente llamada ya puede, sin salir y entrar', S.autoriza('config:set', db) === null && S.actual().permisos.ajustes === true);
++db.usuarioBaja(u.id, 1);
++const baja = S.autoriza('config:set', db);
++t('2d. lo dan de baja → «Tu usuario ya no está activo» y la sesión se cierra', /ya no está activo/.test(String(baja)) && S.actual() === null, String(baja));
++t('2e. sin sesión, lo libre sigue pasando con la base delante', S.autoriza('config:all', db) === null);
++
++console.log('\n3 · El cableado');
++const main = fs.readFileSync('electron/main.cjs', 'utf8');
++const C = require('../electron/canales.cjs');
++t('3a. handle() pregunta a la sesión local en el camino IPC (ipcMain.handle), no en HANDLERS (el puesto en red tiene el suyo)', (() => { const i = main.indexOf('ipcMain.handle(canal, async (_e, ...args) => {'); const j = main.indexOf('HANDLERS.set(canal, async (...args) => {'); const k = main.indexOf('const no = sesionLocal.autoriza(canal, db);'); return i > 0 && j > 0 && k > i && !(k > j && k < i); })());
++t('3b. la negativa se apunta en el registro y llega a la pantalla como error', /db\.logEvento\('mostrador', 'Denegado ' \+ canal/.test(main) && /throw new Error\(no\)/.test(main));
++t('3c. auth:login (IPC) abre la sesión, auth:logout la cierra, auth:verificar solo comprueba el PIN', /handle\('auth:login', \(pin\) => db\.login\(pin\), \(pin\) => sesionLocal\.entrar\(db\.login\(pin, \{ frenoLocal: true \}\)\)\)/.test(main) && /handle\('auth:logout', \(\) => true, \(\) => \{ sesionLocal\.salir\(\); return true; \}\)/.test(main) && /handle\('auth:verificar', \(pin\) => db\.login\(pin\), \(pin\) => db\.login\(pin, \{ frenoLocal: true \}\)\)/.test(main));
++t('3d. auth:verificar está en la tabla con PIN (freno por IP en el puesto en red) y sin permiso, y el preload lo expone', C.CANALES['auth:verificar'] && C.CANALES['auth:verificar'].pin === true && !C.CANALES['auth:verificar'].permiso && C.PIN.has('auth:verificar') && /verificar: call\('auth:verificar'\)/.test(fs.readFileSync('electron/preload.cjs', 'utf8')));
++const tpv = fs.readFileSync('src/components/TPV.jsx', 'utf8'), login = fs.readFileSync('src/components/Login.jsx', 'utf8');
++t('3e. el TPV comprueba quién abre la caja con auth.verificar (no cambia de usuario); la pantalla de entrada sigue con auth.login', /api\.auth\.verificar\(pin\)/.test(tpv) && !/api\.auth\.login\(/.test(tpv) && /api\.auth\.login\(/.test(login));
++t('3f. el puesto en red no se ve afectado: /rpc sigue usando HANDLERS (fn0) y su propia sesión', /const fn = HANDLERS\.get\(canal\);/.test(fs.readFileSync('electron/puesto-red.cjs', 'utf8')) && !/sesionLocal/.test(fs.readFileSync('electron/puesto-red.cjs', 'utf8')));
++t('3g. la regla es la misma que la del puesto en red: permisos-canal.autorizado', /permisos\.autorizado\(sesion, canal\)/.test(fs.readFileSync('electron/sesion-local.cjs', 'utf8')));
++
++console.log(`\n${ko === 0 ? '✅' : '❌'}  Permisos por canal en IPC: ${ok} OK · ${ko} fallos`);
++process.exit(ko === 0 ? 0 : 1);
+diff --git a/tools/test-puesto-catalogo.cjs b/tools/test-puesto-catalogo.cjs
+index 469e28a..33b9a5c 100644
+--- a/tools/test-puesto-catalogo.cjs
++++ b/tools/test-puesto-catalogo.cjs
+@@ -16,7 +16,7 @@ const handle = (c, fn) => HANDLERS.set(c, async (...a) => { try { return { ok: t
+ const main = fs.readFileSync('electron/main.cjs', 'utf8');
+ let n = 0;
+ for (const m of main.matchAll(/^\s*handle\('([^']+)',\s*(\([^)]*\)\s*=>\s*db\.[a-zA-Z]+\([^;]*\))\);\s*(?:\/\/.*)?$/gm)) {
+-  try { handle(m[1], new Function('db', 'return ' + m[2])(db)); n++; } catch (e) { /* uno raro: fuera */ }
++  try { handle(m[1], new Function('db', 'return [' + m[2] + '][0]')(db) /* v0.1.78 · solo la 1ª función: la variante IPC (2º argumento) usa la sesión local */); n++; } catch (e) { /* uno raro: fuera */ }
+ }
+ t('1. de main.cjs salen > 200 handlers de una línea (los del catálogo entre ellos)', n > 200 && ['catalogo:productos', 'catalogo:categorias', 'catalogo:subfamilias', 'config:all', 'catalogo:saveProducto', 'catalogo:deleteProducto', 'catalogo:saveCategoria'].every((c) => HANDLERS.has(c)), String(n));
+ db.configSet('puesto_red_activo', '1'); db.configSet('puesto_red_puerto', '18991');

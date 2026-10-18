@@ -1,0 +1,1403 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index 0bfb00a..93635ad 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.76 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.77 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -100,7 +100,7 @@ se piden otra vez al cliente); la nube necesita redesplegar `reserva-online/` (n
+ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
+ 1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
+-`/rpc` · 5 permisos por canal también en IPC · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
++`/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
+ numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
+ 10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
+ 
+diff --git a/VERSION.md b/VERSION.md
+index 04050af..1b561d2 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.77 | 🧭 **Una sola lista de canales (punto 4 del plan).** Nuevo `electron/canales.cjs`: 404 filas, una por canal, con el método de `window.doel`, la firma de los que reordenan argumentos, el permiso que exige, la marca del puesto en red (`local` = solo en el mostrador, `mide` = mide el PC del mostrador), si valida PIN y la posición del usuario de la sesión. `preload.cjs` se **genera** de ahí (`node tools/puente-generar.cjs`; `check-puente` falla si no coincide, si una fila no tiene `handle()` o si un `handle()` no tiene fila); `permisos-canal.cjs` y `puesto-red.cjs` la leen: fuera las cuatro listas que había que tocar a la vez (`PROHIBIDOS`, `MIDEN_ESTE_PC`, `CANALES_PIN`, `POS_USUARIO`) y el parseo del texto del preload en `leerPuente()`. **`/rpc` deny-by-default (SEC‑19)**: el puesto en red solo sirve lo declarado con método y sin marca; un handler interno (`dev:cerrar`) o un canal fuera de la tabla devuelve 403 «no está disponible desde el puesto en red» sin ejecutarse, con o sin sesión. Nueva batería `test-canales.cjs` (28). Seis baterías que leían las listas en el texto de `puesto-red.cjs` pasan a preguntar a la tabla. Para la pantalla no cambia nada: el preload generado es equivalente canal a canal y firma a firma al que había. |
+ | 0.1.76 | ⬆️ **Dependencias al día (punto 3 del plan).** Electron 33.4 → **44.9** (la 33 llevaba año y medio sin soporte: 40 avisos), electron-builder 25 → 26, Vite 6 → 8 (compila en menos de 1 s), plugin-react 4 → 6, concurrently 9 → 10, better-sqlite3 12 → 13, wait-on 9, cross-env 10 y **selfsigned 2 → 5** (criptografía nativa de Node, fuera node-forge). `npm audit --omit=dev` a **cero**. selfsigned 5 es asíncrono: `certificado()` e `iniciar()` del puesto en red pasan a `async` (main y las tres baterías del puesto lo esperan). **Sin firma de código** a propósito: cuesta 200‑400 €/año y para uso interno no hace falta. **Pendiente de probar en Windows** tras el salto de Electron: WebHID y mando (DualSense/Switch), visor PDF de diagramas, impresión silenciosa, safeStorage, instalador NSIS con electron-builder 26. |
+ | 0.1.75 | 📦 **Copias recuperables de verdad (punto 2 del plan).** Cada `.doelbak` es ahora un **paquete DOELBAK3**: un ZIP cifrado con la base, las fotos de órdenes/outlet/hotel y un manifiesto (antes la base iba cifrada y las fotos EN CLARO en una carpeta al lado del USB). Con frase propia el paquete lleva también la **clave de instalación**: restaurar en otro PC recupera contraseñas de equipos, claves de portal y la semilla de licencia. Restaurar extrae base + fotos (+ clave) y las copias antiguas (DOELBAK1/2 con su espejo) se siguen abriendo. La prueba en seco cuenta las fotos. Una base restaurada en otra instalación ya no sale como «manipulada»: pide volver a pegar el DL2. Las entradas del ZIP se validan (zip‑slip). `test-copias` 55 → 64 comprobaciones; `test-taller` 55 adaptado. Manual y Ajustes al día. |
+ | 0.1.74 | 🔑 **Licencia v2: se cierra SEC‑01.** El instalador ya no lleva ningún secreto con el que fabricar licencias. La licencia es un **código DL2** firmado con Ed25519 (la app solo lleva la clave pública; la privada vive en `~/.doel/licencia-doel.json` del PC de Doel) que se pega una vez e incluye cliente, módulos, modo, caducidad y una **semilla TOTP propia de la instalación**; de ella salen los códigos por teléfono (6 dígitos renovación/Panel Dev, 12 dígitos módulos) y solo valen para ese equipo. Fuera los códigos cortos con máscara oculta (se aceptaban al azar un 2 %), `SECRETO`, `TOTP_SECRET_B32`, `generar-licencia.cjs`, `codigo-instalacion.cjs` y `codigo-renovacion.cjs`; nuevo `tools/licencia-v2.cjs` (claves · emitir · codigo · modulos · qr). Sello de integridad v11 con la clave de instalación. **Lo activado antes sigue activado** («heredada»): se re-sella al arrancar y Ajustes → Licencia pide pegar su DL2 para volver a renovar o cambiar módulos por teléfono. `check-puente` avisa si la compilación sale sin clave pública. La clave de las copias DOELBAK1 queda como constante derivada (solo lectura de lo antiguo). Batería nueva `test-licencia-v2.cjs` (43); `test-taller`, `test-taller-ubicaciones`, `test-multitienda` y `test-diagnostico` adaptadas. Manual al día. |
+diff --git a/electron/canales.cjs b/electron/canales.cjs
+new file mode 100644
+index 0000000..8afed92
+--- /dev/null
++++ b/electron/canales.cjs
+@@ -0,0 +1,539 @@
++/* v0.1.77 · Registro ÚNICO de canales del puente (punto 4 del plan de mejora).
++
++   Hasta la 0.1.76 el mismo canal vivía en cuatro sitios: preload.cjs (nombre del método en window.doel),
++   permisos-canal.cjs (qué permiso exige), puesto-red.cjs (prohibido / mide el mostrador / lleva PIN /
++   posición del usuario) y, de rebote, leerPuente() parseaba el texto del preload para fabricar el puente
++   remoto. Cuatro listas que había que acordarse de tocar a la vez. Ahora la fila de aquí lo dice todo:
++
++     api      'grupo.metodo' en window.doel. null = handler interno del mostrador: ni la pantalla ni el
++              puesto en red lo llaman por el puente (solo lo invoca el propio proceso principal).
++     firma    los métodos que reordenan argumentos en un objeto: ['ip', 'puerto'] genera
++              (ip, puerto) => call(canal)({ ip, puerto }) en el preload y en el puente remoto.
++     permiso  clave del perfil que exige el canal (la regla de la barra: ausente en el perfil = permitido,
++              false = vetado). Sin permiso = cualquiera con sesión. Las LECTURAS van sin permiso.
++     red      'local' = solo en el PC del mostrador (abre diálogos/ventanas allí); 'mide' = mide el PC donde
++              corre Doel Taller (batería, disco, USB…), desde otro PC daría el dato del equipo equivocado.
++              Sin `red` = disponible desde el puesto en red. Lo que no está en esta tabla NO existe para
++              /rpc (deny-by-default, SEC-19 de la auditoría 0.1.72).
++     pin      el canal valida un PIN además de auth:login: pasa por el freno por IP del puesto en red.
++     usuario  posición del argumento «usuario» que el servidor sustituye por el de la sesión (SEC-11).
++
++   El preload se GENERA de aquí: `node tools/puente-generar.cjs` (check-puente falla si no coincide).
++   La batería tools/test-canales.cjs comprueba que cada fila tiene su handle() y cada handle() su fila. */
++
++const CANALES = {
++  /* ── auth ── */
++  'auth:login': { api: 'auth.login' },
++  'auth:logout': { api: 'auth.logout' },
++  /* ── catalogo ── */
++  'catalogo:catBorrar': { api: 'catalogo.catBorrar', permiso: 'inventario' },
++  'catalogo:cat-borrar-con-articulos': { api: 'catalogo.catBorrarConArticulos', permiso: 'ajustes' },
++  'catalogo:exportar-csv': { api: 'catalogo.exportarCsv', permiso: 'inventario' },
++  'catalogo:exportar-archivo': { api: 'catalogo.exportarArchivo', permiso: 'inventario', red: 'local' },
++  'catalogo:vaciar': { api: 'catalogo.vaciar', permiso: 'ajustes' },
++  'catalogo:importar-articulos': { api: 'catalogo.importarArticulos', permiso: 'inventario' },
++  'catalogo:cat-ordenar': { api: 'catalogo.catOrdenar', permiso: 'inventario' },
++  'catalogo:articulos-mover': { api: 'catalogo.articulosMover', permiso: 'inventario' },
++  'catalogo:categorias': { api: 'catalogo.categorias' },
++  'catalogo:productos': { api: 'catalogo.productos' },
++  'catalogo:saveProducto': { api: 'catalogo.saveProducto', permiso: 'inventario' },
++  'catalogo:destino-familia': { api: 'catalogo.destinoFamilia', permiso: 'inventario' },
++  'catalogo:deleteProducto': { api: 'catalogo.deleteProducto', permiso: 'inventario' },
++  'catalogo:saveCategoria': { api: 'catalogo.saveCategoria', permiso: 'inventario' },
++  'catalogo:subfamilias': { api: 'catalogo.subfamilias' },
++  'catalogo:saveSubfamilia': { api: 'catalogo.saveSubfamilia', permiso: 'inventario' },
++  'catalogo:deleteSubfamilia': { api: 'catalogo.deleteSubfamilia', permiso: 'inventario' },
++  'catalogo:frecuentes': { api: 'catalogo.frecuentes' },
++  'catalogo:producto-imagen': { api: 'catalogo.productoImagen', permiso: 'inventario' },
++  /* ── config ── */
++  'config:all': { api: 'config.all' },
++  'config:set': { api: 'config.set', permiso: 'ajustes' },
++  /* ── empresa ── */
++  'empresa:get': { api: 'empresa.get' },
++  'empresa:save': { api: 'empresa.save', permiso: 'ajustes' },
++  /* ── stock ── */
++  'stock:listado': { api: 'stock.listado' },
++  'stock:alta': { api: 'stock.alta', permiso: 'stock' },
++  'stock:caducidades': { api: 'stock.caducidades' },
++  'stock:lotes': { api: 'stock.lotes' },
++  'stock:distribuidores': { api: 'stock.distribuidores' },
++  'stock:distribuidor-guardar': { api: 'stock.distribuidorGuardar', permiso: 'stock' },
++  'stock:distribuidor-borrar': { api: 'stock.distribuidorBorrar', permiso: 'stock' },
++  'stock:prod-distribuidor': { api: 'stock.prodDistribuidor', permiso: 'stock' },
++  'stock:pedido-hoy': { api: 'stock.pedidoHoy' },
++  'articulo:compras': { api: 'stock.compras' },
++  'articulo:compra-add': { api: 'stock.compraAdd', permiso: 'compras' },
++  'stock:inventario': { api: 'stock.inventario', permiso: 'stock' },
++  'stock:distribuidor-ficha': { api: 'stock.distribuidorFicha' },
++  'stock:distribuidor-clave': { api: 'stock.distribuidorClave', permiso: 'ajustes' },
++  /* ── clientes ── */
++  'clientes:list': { api: 'clientes.list' },
++  'clientes:save': { api: 'clientes.save', permiso: 'crm' },
++  'clientes:baja': { api: 'clientes.baja', permiso: 'crm' },
++  'clientes:factura-buscar': { api: 'clientes.facturaBuscar' },
++  'clientes:buscar-rapido': { api: 'clientes.buscarRapido' },
++  'clientes:alta-rapida': { api: 'clientes.altaRapida' },
++  /* ── fid ── */
++  'fid:acumular': { api: 'fid.acumular', permiso: 'crm' },
++  'fid:canjear': { api: 'fid.canjear', permiso: 'crm', usuario: 2 },
++  'fid:movimientos': { api: 'fid.movimientos' },
++  /* ── barra ── */
++  'barra:aparcadas': { api: 'barra.aparcadas' },
++  'barra:aparcar': { api: 'barra.aparcar' },
++  'barra:recuperar': { api: 'barra.recuperar' },
++  /* ── lan ── */
++  'lan:estado': { api: 'lan.estado' },
++  'lan:aplicar': { api: 'lan.aplicar', permiso: 'ajustes' },
++  /* ── puesto ── */
++  'puesto:estado': { api: 'puesto.estado' },
++  'puesto:aplicar': { api: 'puesto.aplicar', permiso: 'ajustes' },
++  'puesto:acceso-directo': { api: 'puesto.accesoDirecto', permiso: 'ajustes', red: 'local' },
++  /* ── ventana ── */
++  'ventana:herramienta': { api: 'ventana.herramienta', red: 'local' },
++  'ventana:contexto': { api: 'ventana.contexto', red: 'local' },
++  /* ── sat ── */
++  'sat:carpeta-estado': { api: 'sat.carpetaEstado', permiso: 'ajustes' },
++  'sat:inventario': { api: 'sat.inventario', permiso: 'ajustes' },
++  'sat:preparar': { api: 'sat.preparar', permiso: 'ajustes' },
++  'sat:guia': { api: 'sat.guia', permiso: 'ajustes' },
++  'sat:carpeta-abrir': { api: 'sat.carpetaAbrir', permiso: 'ajustes' },
++  'sat:copiar-desde': { api: 'sat.copiarDesde', permiso: 'ajustes' },
++  'sat:instalar': { api: 'sat.instalar', permiso: 'ajustes' },
++  'sat:cajon-raw': { api: 'sat.cajonRaw', permiso: 'cajon' },
++  'sat:exportar': { api: 'sat.exportar', permiso: 'ajustes' },
++  'sat:restaurar': { api: 'sat.restaurar', permiso: 'ajustes' },
++  /* ── py ── */
++  'py:disponible': { api: 'py.disponible' },
++  'py:ejecutar': { api: 'py.ejecutar', red: 'mide' },
++  'py:cancelar': { api: 'py.cancelar' },
++  'py:agente-exportar': { api: 'py.agenteExportar', red: 'local' },
++  'py:agente-importar': { api: 'py.agenteImportar', red: 'local' },
++  'py:tm-abrir': { api: 'py.tmAbrir', red: 'local' },
++  'py:tm-exportar': { api: 'py.tmExportar', red: 'local' },
++  'py:tm-setup-estado': { api: 'py.tmSetupEstado' },
++  'py:tm-instalar': { api: 'py.tmInstalar', red: 'local' },
++  'py:tm-setup-copiar': { api: 'py.tmSetupCopiar', red: 'local' },
++  /* ── hdmi ── */
++  'hdmi:leer-edid': { api: 'hdmi.leerEdid' },
++  /* ── hotel ── */
++  'hotel:tv-lista': { api: 'hotel.tvLista' },
++  'hotel:tv-guardar': { api: 'hotel.tvGuardar' },
++  'hotel:tv-borrar': { api: 'hotel.tvBorrar' },
++  'hotel:foto-add': { api: 'hotel.fotoAdd' },
++  'hotel:foto-ver': { api: 'hotel.fotoVer' },
++  'hotel:foto-borrar': { api: 'hotel.fotoBorrar' },
++  'hotel:nube-subir': { api: 'hotel.nubeSubir' },
++  'hotel:nube-clave': { api: 'hotel.nubeClave', permiso: 'ajustes' },
++  /* ── compras ── */
++  'compras:cola': { api: 'compras.cola' },
++  'compras:subir': { api: 'compras.subir', permiso: 'compras' },
++  'compras:revision': { api: 'compras.revision' },
++  'compras:aplicar': { api: 'compras.aplicar', permiso: 'compras' },
++  'compras:borrar': { api: 'compras.borrar', permiso: 'compras' },
++  /* ── kits ── */
++  'kits:list': { api: 'kits.list' },
++  'kits:get': { api: 'kits.get' },
++  'kits:guardar': { api: 'kits.guardar', permiso: 'inventario' },
++  'kits:baja': { api: 'kits.baja', permiso: 'inventario' },
++  'kits:items-set': { api: 'kits.itemsSet', permiso: 'inventario' },
++  'kits:lineas': { api: 'kits.lineas' },
++  /* ── pago ── */
++  'pago:qr': { api: 'pago.qr' },
++  /* ── util ── */
++  'util:qr': { api: 'util.qr' },
++  /* ── outlet ── */
++  'outlet:list': { api: 'outlet.list' },
++  'outlet:get': { api: 'outlet.get' },
++  'outlet:guardar': { api: 'outlet.guardar' },
++  'outlet:desde-orden': { api: 'outlet.desdeOrden' },
++  'outlet:cesion': { api: 'outlet.cesion' },
++  'outlet:borrado-datos': { api: 'outlet.borradoDatos' },
++  'outlet:checklist': { api: 'outlet.checklist' },
++  'outlet:publicar': { api: 'outlet.publicar', permiso: 'outlet' },
++  'outlet:retirar': { api: 'outlet.retirar', permiso: 'outlet' },
++  'outlet:borrador': { api: 'outlet.borrador' },
++  'outlet:costes': { api: 'outlet.costes' },
++  'outlet:pvp-sugerido': { api: 'outlet.pvpSugerido' },
++  'outlet:resumen': { api: 'outlet.resumen' },
++  'outlet:sync': { api: 'outlet.sync' },
++  'outlet:reservas': { api: 'outlet.reservas' },
++  'outlet:reserva-crear': { api: 'outlet.reservaCrear' },
++  'outlet:reserva-senal': { api: 'outlet.reservaSenal' },
++  'outlet:reserva-anular': { api: 'outlet.reservaAnular' },
++  'outlet:reserva-cobro': { api: 'outlet.reservaCobro' },
++  'outlet:reserva-entregar': { api: 'outlet.reservaEntregar' },
++  'outlet:senales-pendientes': { api: 'outlet.senalesPendientes' },
++  'outlet:vender': { api: 'outlet.vender', permiso: 'outlet' },
++  'outlet:borrar': { api: 'outlet.borrar', permiso: 'outlet' },
++  'outlet:familias': { api: 'outlet.familias' },
++  'outlet:familia-guardar': { api: 'outlet.familiaGuardar', permiso: 'outlet' },
++  'outlet:familia-borrar': { api: 'outlet.familiaBorrar', permiso: 'outlet' },
++  'outlet:foto-add': { api: 'outlet.fotoAdd' },
++  'outlet:foto-ver': { api: 'outlet.fotoVer' },
++  'outlet:foto-borrar': { api: 'outlet.fotoBorrar' },
++  /* ── pasarela ── */
++  'pasarela:crear': { api: 'pasarela.crear' },
++  'pasarela:sondear': { api: 'pasarela.sondear' },
++  'pasarela:anular': { api: 'pasarela.anular' },
++  'pasarela:por-cuenta': { api: 'pasarela.porCuenta' },
++  /* ── taller ── */
++  'taller:metricas': { api: 'taller.metricas' },
++  'taller:aviso-texto': { api: 'taller.avisoTexto' },
++  'taller:presupuesto-texto': { api: 'taller.presupuestoTexto' },
++  'taller:tablero': { api: 'taller.tablero' },
++  'taller:orden-crear': { api: 'taller.ordenCrear' },
++  'taller:orden-get': { api: 'taller.ordenGet' },
++  'taller:orden-estado': { api: 'taller.ordenEstado', usuario: 2 },
++  'taller:equipo-buscar': { api: 'taller.equipoBuscar' },
++  'taller:equipo-guardar': { api: 'taller.equipoGuardar' },
++  'taller:marcas': { api: 'taller.marcas' },
++  'taller:modelos': { api: 'taller.modelos' },
++  'taller:cp': { api: 'taller.cp' },
++  'taller:cliente-fiscal': { api: 'taller.clienteFiscal' },
++  'taller:pass-ver': { api: 'taller.passVer', usuario: 1 },
++  'taller:parte-set': { api: 'taller.parteSet' },
++  'taller:linea-add': { api: 'taller.lineaAdd' },
++  'taller:linea-del': { api: 'taller.lineaDel' },
++  'taller:linea-set': { api: 'taller.lineaSet', usuario: 2 },
++  'taller:kit-add': { api: 'taller.kitAdd' },
++  'taller:lineas-ordenar': { api: 'taller.lineasOrdenar' },
++  'taller:texto-set': { api: 'taller.textoSet' },
++  'taller:presupuesto-emitir': { api: 'taller.presupuestoEmitir' },
++  'taller:presupuestos': { api: 'taller.presupuestos' },
++  'taller:presupuesto-get': { api: 'taller.presupuestoGet' },
++  'taller:presupuesto-estado': { api: 'taller.presupuestoEstado' },
++  'taller:presupuesto-cargar': { api: 'taller.presupuestoCargar' },
++  'taller:presupuesto-actualizar': { api: 'taller.presupuestoActualizar' },
++  'taller:presupuesto-borrar': { api: 'taller.presupuestoBorrar' },
++  'taller:presupuesto-ajustes': { api: 'taller.presupuestoAjustes' },
++  'taller:presupuesto-ajustes-set': { api: 'taller.presupuestoAjustesSet', permiso: 'ajustes' },
++  'taller:anticipo-add': { api: 'taller.anticipoAdd' },
++  'taller:aviso-add': { api: 'taller.avisoAdd' },
++  'taller:a-cuenta': { api: 'taller.aCuenta' },
++  'dev:seed-taller': { api: 'taller.seed', permiso: 'ajustes', red: 'local' },
++  'taller:portal-clave': { api: 'taller.portalClave', permiso: 'ajustes' },
++  'taller:qr': { api: 'taller.qr' },
++  'taller:ubicaciones': { api: 'taller.ubicaciones' },
++  'taller:ubicacion-guardar': { api: 'taller.ubicacionGuardar' },
++  'taller:item-mover': { api: 'taller.itemMover' },
++  'taller:orden-ubicaciones': { api: 'taller.ordenUbicaciones' },
++  'taller:ubicacion-contenido': { api: 'taller.ubicacionContenido' },
++  'taller:repuesto-mover': { api: 'taller.repuestoMover' },
++  'taller:repuesto-ubicaciones': { api: 'taller.repuestoUbicaciones' },
++  'taller:movimientos': { api: 'taller.movimientos' },
++  'taller:kb-guardar': { api: 'taller.kbGuardar' },
++  'taller:kb-buscar': { api: 'taller.kbBuscar' },
++  'taller:kb-desde-orden': { api: 'taller.kbDesdeOrden' },
++  'taller:tiempos': { api: 'taller.tiempos' },
++  'taller:tiempos-guardar': { api: 'taller.tiemposGuardar', permiso: 'ajustes' },
++  'taller:tiempos-tipicos': { api: 'taller.tiemposTipicos', permiso: 'ajustes' },
++  'taller:retrasados': { api: 'taller.retrasados' },
++  'taller:almacenaje-cobrar': { api: 'taller.almacenajeCobrar' },
++  'taller:bateria-informe': { api: 'taller.bateriaInforme', red: 'mide' },
++  'taller:disco-salud': { api: 'taller.discoSalud', red: 'mide' },
++  'taller:impresoras3d-listar': { api: 'taller.impresoras3dListar' },
++  'taller:impresoras3d-resumen': { api: 'taller.impresoras3dResumen' },
++  'taller:impresoras3d-amortizacion': { api: 'taller.impresoras3dAmortizacion' },
++  'taller:tpv-impresora-estado': { api: 'taller.tpvImpresoraEstado', firma: ['ip', 'puerto'] },
++  'taller:tpv-impresora-test': { api: 'taller.tpvImpresoraTest', firma: ['ip', 'puerto', 'cajon'], permiso: 'cajon' },
++  'taller:mando-serie': { api: 'taller.mandoSerieUsb', red: 'mide' },
++  'taller:dispositivos': { api: 'taller.dispositivos', red: 'mide' },
++  'taller:historial-serie': { api: 'taller.historialSerie' },
++  'taller:usb-listar': { api: 'taller.usbPuertosListar', red: 'mide' },
++  'taller:usb-discos': { api: 'taller.usbDiscos', red: 'mide' },
++  'taller:usb-velocidad': { api: 'taller.usbVelocidad', firma: ['letra', 'mb'], red: 'mide' },
++  'taller:usb-historial': { api: 'taller.usbHistorialNativo', red: 'mide' },
++  'taller:diskspd-disponible': { api: 'taller.diskspdDisponible', red: 'mide' },
++  'taller:diskspd-benchmark': { api: 'taller.diskspdBenchmark', firma: ['letra', 'duracion'], red: 'mide' },
++  'taller:disco-velocidad-nativa': { api: 'taller.discoVelocidadNativa', firma: ['ruta', 'mb'], red: 'mide' },
++  'taller:acceso-movil': { api: 'taller.accesoMovil', firma: ['minutos'] },
++  'taller:diag-guardar': { api: 'taller.diagGuardar' },
++  'taller:diag-lista': { api: 'taller.diagLista' },
++  'taller:diag-panel': { api: 'taller.diagPanel' },
++  'taller:energia-informe': { api: 'taller.energiaInforme', red: 'mide' },
++  'taller:cpu-temperatura': { api: 'taller.cpuTemperatura', red: 'mide' },
++  'taller:diag-kb-propuesta': { api: 'taller.diagKbPropuesta' },
++  'taller:msj-add': { api: 'taller.msjAdd' },
++  'taller:msj-leidos': { api: 'taller.msjLeidos' },
++  'taller:checklist-aprender': { api: 'taller.checklistAprender' },
++  'taller:checklist-quitar': { api: 'taller.checklistQuitar' },
++  'taller:portal-sync': { api: 'taller.portalSync' },
++  'taller:foto-add': { api: 'taller.fotoAdd' },
++  'taller:foto-ver': { api: 'taller.fotoVer' },
++  'taller:foto-borrar': { api: 'taller.fotoBorrar' },
++  'taller:firma-guardar': { api: 'taller.firmaGuardar' },
++  'taller:firma-png': { api: 'taller.firmaPng' },
++  'taller:firma-anular': { api: 'taller.firmaAnular' },
++  'taller:firmas-png': { api: 'taller.firmasPng' },
++  'taller:ia-sugerir': { api: 'taller.iaSugerir' },
++  'taller:informe-crear': { api: 'taller.informeCrear' },
++  'taller:rma-crear': { api: 'taller.rmaCrear' },
++  'taller:rma-estado': { api: 'taller.rmaEstado' },
++  'taller:rma-vivos': { api: 'taller.rmaVivos' },
++  'taller:cierre-dia': { api: 'taller.cierreDia' },
++  'taller:buscar': { api: 'taller.buscar' },
++  'taller:seed-familias': { api: 'taller.seedFamilias', permiso: 'ajustes' },
++  'taller:seed-servicios': { api: 'taller.seedServicios', permiso: 'ajustes' },
++  'taller:servicios': { api: 'taller.servicios' },
++  'taller:tarifas-hora': { api: 'taller.tarifasHora' },
++  'taller:compromiso-set': { api: 'taller.compromisoSet' },
++  'taller:portal-clave-ver': { api: 'taller.portalClaveVer', permiso: 'ajustes' },
++  'taller:contacto-set': { api: 'taller.contactoSet' },
++  /* ── docs ── */
++  'docs:importar': { api: 'docs.importar', red: 'local' },
++  'docs:buscar': { api: 'docs.buscar' },
++  'docs:ficha': { api: 'docs.ficha' },
++  'docs:ver': { api: 'docs.ver' },
++  'docs:guardar-ficha': { api: 'docs.guardarFicha' },
++  'docs:borrar': { api: 'docs.borrar', permiso: 'ajustes' },
++  'docs:nota-add': { api: 'docs.notaAdd' },
++  'docs:nota-del': { api: 'docs.notaDel' },
++  'docs:resumen': { api: 'docs.resumen' },
++  'docs:abrir': { api: 'docs.abrir' },
++  'docs:carpeta': { api: 'docs.carpeta' },
++  'docs:carpeta-estado': { api: 'docs.carpetaEstado' },
++  /* ── mt ── */
++  'mt:sync': { api: 'mt.sync', permiso: 'ajustes' },
++  /* ── ci ── */
++  'ci:crear': { api: 'ci.crear' },
++  'ci:listar': { api: 'ci.listar' },
++  /* ── central ── */
++  'central:refrescar': { api: 'central.refrescar', permiso: 'informes' },
++  'central:tarjetas': { api: 'central.tarjetas', permiso: 'informes' },
++  'central:historial': { api: 'central.historial', permiso: 'informes' },
++  'central:rango': { api: 'central.rango', permiso: 'informes' },
++  'central:exportar-csv': { api: 'central.exportarCsv', permiso: 'informes', red: 'local' },
++  'central:mes-gestoria': { api: 'central.mesGestoria', permiso: 'informes' },
++  'central:alertas': { api: 'central.alertas', permiso: 'informes' },
++  /* ── carta ── */
++  'carta:precios-masivos': { api: 'carta.preciosMasivos', permiso: 'ajustes' },
++  /* ── crm ── */
++  'crm:clientes': { api: 'crm.clientes' },
++  'crm:cliente': { api: 'crm.cliente' },
++  'crm:proveedores': { api: 'crm.proveedores' },
++  /* ── crm26 ── */
++  'crm26:estado': { api: 'crm26.estado' },
++  'crm26:clientes': { api: 'crm26.clientes' },
++  'crm26:asignar': { api: 'crm26.asignar', permiso: 'ajustes' },
++  'crm26:sync': { api: 'crm26.sync' },
++  'crm26:pendientes': { api: 'crm26.pendientes' },
++  'crm26:probar': { api: 'crm26.probar' },
++  /* ── salud ── */
++  'salud:estado': { api: 'salud.estado' },
++  'salud:completa': { api: 'salud.completa' },
++  'salud:mantenimiento': { api: 'salud.mantenimiento', permiso: 'ajustes' },
++  /* ── usuarios ── */
++  'usuarios:list': { api: 'usuarios.list' },
++  'usuarios:save': { api: 'usuarios.save', permiso: 'ajustes' },
++  'usuarios:baja': { api: 'usuarios.baja', permiso: 'ajustes' },
++  'usuarios:profesional': { api: 'usuarios.profesional', permiso: 'ajustes' },
++  /* ── perfiles ── */
++  'perfiles:list': { api: 'perfiles.list' },
++  'perfiles:save': { api: 'perfiles.save', permiso: 'ajustes' },
++  'perfiles:delete': { api: 'perfiles.delete', permiso: 'ajustes' },
++  /* ── caja ── */
++  'caja:estado': { api: 'caja.estado' },
++  'caja:abrir': { api: 'caja.abrir', permiso: 'cierre' },
++  'caja:cerrar': { api: 'caja.cerrar', permiso: 'cierre' },
++  'caja:movimiento': { api: 'caja.movimiento', usuario: 3 },
++  'caja:cajon': { api: 'caja.cajon', permiso: 'cajon' },
++  'caja:cajonAbrir': { api: 'caja.cajonAbrir', permiso: 'cajon', pin: true },
++  'caja:cajonRegistro': { api: 'caja.cajonRegistro' },
++  'caja:cajonProbar': { api: 'caja.cajonProbar', permiso: 'cajon' },
++  'caja:cierres': { api: 'caja.cierres' },
++  'caja:cierreDetalle': { api: 'caja.cierreDetalle' },
++  /* ── agenda ── */
++  'agenda:dia': { api: 'agenda.dia' },
++  'agenda:crear': { api: 'agenda.crear' },
++  'agenda:mover': { api: 'agenda.mover' },
++  'agenda:estado': { api: 'agenda.estado' },
++  'agenda:cobrada': { api: 'agenda.cobrada' },
++  'agenda:recordatorio': { api: 'agenda.recordatorio' },
++  'agenda:buscarTel': { api: 'agenda.buscarTel' },
++  'agenda:ficha': { api: 'agenda.ficha' },
++  'agenda:fichaGuardar': { api: 'agenda.fichaGuardar' },
++  'agenda:recursos': { api: 'agenda.recursos' },
++  'agenda:aceptaOnline': { api: 'agenda.aceptaOnline' },
++  'agenda:recursosDia': { api: 'agenda.recursosDia' },
++  'agenda:horarios': { api: 'agenda.horarios' },
++  'agenda:semanaSet': { api: 'agenda.semanaSet' },
++  'agenda:vacaciones': { api: 'agenda.vacaciones' },
++  'agenda:excBorrar': { api: 'agenda.excBorrar' },
++  /* ── reserva ── */
++  'reserva:sync': { api: 'reserva.sync' },
++  'reserva:estado': { api: 'reserva.estado' },
++  /* ── espera ── */
++  'espera:alta': { api: 'espera.alta' },
++  'espera:activas': { api: 'espera.activas' },
++  'espera:paraFecha': { api: 'espera.paraFecha' },
++  'espera:avisada': { api: 'espera.avisada' },
++  'espera:borrar': { api: 'espera.borrar' },
++  /* ── tickets ── */
++  'tickets:ultimo': { api: 'tickets.ultimo' },
++  'tickets:crear': { api: 'tickets.crear' },
++  'tickets:anular': { api: 'tickets.anular', permiso: 'anular', usuario: 1 },
++  'tickets:rectificar-parcial': { api: 'tickets.rectificarParcial', permiso: 'anular' },
++  'tickets:list': { api: 'tickets.list' },
++  'tickets:get': { api: 'tickets.get' },
++  /* ── gastos ── */
++  'gastos:add': { api: 'gastos.add', permiso: 'compras' },
++  'gastos:list': { api: 'gastos.list' },
++  'gastos:delete': { api: 'gastos.delete', permiso: 'compras' },
++  /* ── informes ── */
++  'informes:resumen': { api: 'informes.resumen' },
++  'informes:barberia': { api: 'informes.barberia', permiso: 'informes' },
++  'informes:dashboard': { api: 'informes.dashboard', permiso: 'informes' },
++  'informes:mensual': { api: 'informes.mensual', permiso: 'informes' },
++  /* ── print ── */
++  'print:html': { api: 'print.html' },
++  'print:printers': { api: 'print.printers' },
++  'print:pdf': { api: 'print.pdf', red: 'local' },
++  /* ── backup ── */
++  'backup:ahora': { api: 'backup.ahora', permiso: 'ajustes' },
++  'backup:estado': { api: 'backup.estado' },
++  'backup:listar': { api: 'backup.listar' },
++  'backup:verificar': { api: 'backup.verificar', permiso: 'ajustes' },
++  'backup:clave-estado': { api: 'backup.claveEstado', permiso: 'ajustes' },
++  'backup:clave-set': { api: 'backup.claveSet', permiso: 'ajustes' },
++  /* ── licencia ── */
++  'licencia:estado': { api: 'licencia.estado' },
++  'licencia:activar': { api: 'licencia.activar', permiso: 'ajustes' },
++  /* ── productos ── */
++  'productos:compartir-set': { api: 'productos.compartirSet', permiso: 'inventario' },
++  'productos:compartir-filtro': { api: 'productos.compartirFiltro', permiso: 'inventario' },
++  'productos:compartir-resumen': { api: 'productos.compartirResumen' },
++  'productos:exportar-preview': { api: 'productos.exportarPreview' },
++  'productos:exportar': { api: 'productos.exportar', permiso: 'inventario', red: 'local' },
++  'productos:enviar-crm': { api: 'productos.enviarCrm', permiso: 'inventario' },
++  /* ── jc ── */
++  'jc:estado': { api: 'jc.estado', red: 'local' },
++  'jc:abrir': { api: 'jc.abrir', red: 'local' },
++  'jc:elegir': { api: 'jc.elegir', permiso: 'ajustes', red: 'local' },
++  'jc:guardar': { api: 'jc.guardar', permiso: 'ajustes', red: 'local' },
++  'jc:bluetooth': { api: 'jc.bluetooth', red: 'local' },
++  'jc:guia': { api: 'jc.guia' },
++  /* ── fiscal ── */
++  'fiscal:qr': { api: 'fiscal.qr', permiso: 'informes' },
++  'fiscal:estado': { api: 'fiscal.estado', permiso: 'informes' },
++  'fiscal:export': { api: 'fiscal.exportar', permiso: 'informes' },
++  /* ── fichaje ── */
++  'fichaje:login': { api: 'fichaje.login', pin: true },
++  'fichaje:fichar': { api: 'fichaje.fichar' },
++  'fichaje:estado': { api: 'fichaje.estado' },
++  'fichaje:hoy': { api: 'fichaje.hoy' },
++  'fichaje:mes': { api: 'fichaje.mes' },
++  'fichaje:resumen': { api: 'fichaje.resumen' },
++  'fichaje:empleados': { api: 'fichaje.empleados' },
++  'fichaje:empleado-guardar': { api: 'fichaje.guardarEmpleado', permiso: 'ajustes' },
++  'fichaje:verificar': { api: 'fichaje.verificar' },
++  'fichaje:admin': { api: 'fichaje.admin', pin: true },
++  'fichaje:admin-set': { api: 'fichaje.adminSet', permiso: 'ajustes' },
++  'fichaje:export': { api: 'fichaje.exportar', permiso: 'ajustes' },
++  'fichaje:aviso-entrada': { api: 'fichaje.avisoEntrada' },
++  'fichaje:horario-get': { api: 'fichaje.horarioGet' },
++  'fichaje:horario-set': { api: 'fichaje.horarioSet', permiso: 'ajustes' },
++  'fichaje:tramos-hoy': { api: 'fichaje.tramosHoy' },
++  'fichaje:fin-horario': { api: 'fichaje.finHorario' },
++  'fichaje:turnos': { api: 'fichaje.turnos' },
++  'fichaje:turno-guardar': { api: 'fichaje.turnoGuardar', permiso: 'ajustes' },
++  'fichaje:turno-borrar': { api: 'fichaje.turnoBorrar', permiso: 'ajustes' },
++  'fichaje:plan-semana': { api: 'fichaje.planSemana' },
++  'fichaje:plan-mes-vista': { api: 'fichaje.planMesVista' },
++  'fichaje:plan-mes-empleado': { api: 'fichaje.planMesEmpleado' },
++  'fichaje:plan-asignar': { api: 'fichaje.planAsignar', permiso: 'ajustes' },
++  'fichaje:plan-semana-set': { api: 'fichaje.planSemanaSet', permiso: 'ajustes' },
++  'fichaje:plan-mes': { api: 'fichaje.planMes' },
++  /* ── dev ── */
++  'dev:acceso': { api: 'dev.acceso', permiso: 'ajustes', red: 'local' },
++  'dev:info': { api: 'dev.info', permiso: 'ajustes', red: 'local' },
++  'dev:renovar': { api: 'dev.renovar', permiso: 'ajustes', red: 'local' },
++  'dev:desactivar': { api: 'dev.desactivar', permiso: 'ajustes', red: 'local' },
++  'dev:ocr': { api: 'dev.ocr', permiso: 'ajustes', red: 'local' },
++  'dev:pdf-texto': { api: 'dev.pdfTexto', permiso: 'ajustes', red: 'local' },
++  'dev:reset-carta': { api: 'dev.resetCarta', permiso: 'ajustes', red: 'local' },
++  'dev:reset-operativa': { api: 'dev.resetOperativa', permiso: 'ajustes', red: 'local' },
++  'dev:restaurar': { api: 'dev.restaurar', permiso: 'ajustes', red: 'local' },
++  'dev:reloj-estado': { api: 'dev.relojEstado', permiso: 'ajustes', red: 'local' },
++  'dev:reloj-reset': { api: 'dev.relojReset', permiso: 'ajustes', red: 'local' },
++  'dev:unidades': { api: 'dev.unidades', permiso: 'ajustes', red: 'local' },
++  'dev:leer-archivo-carta': { api: 'dev.leerArchivoCarta', permiso: 'ajustes', red: 'local' },
++  'dev:exportar-carta': { api: 'dev.exportarCarta', permiso: 'ajustes', red: 'local' },
++  'dev:plantilla-carta': { api: 'dev.plantillaCarta', permiso: 'ajustes', red: 'local' },
++  'dev:agente': { api: 'dev.agente', permiso: 'ajustes', red: 'local' },
++  'dev:elegir-imagenes': { api: 'dev.elegirImagenes', permiso: 'ajustes', red: 'local' },
++  'dev:guardar-todo': { api: 'dev.guardarTodo', permiso: 'ajustes', red: 'local' },
++  'dev:restaurar-todo': { api: 'dev.restaurarTodo', permiso: 'ajustes', red: 'local' },
++  'dev:seed-pruebas': { api: 'dev.seedPruebas', permiso: 'ajustes', red: 'local' },
++  /* ── sistema ── */
++  'sistema:puesta-en-marcha': { api: 'sistema.puestaEnMarcha', permiso: 'ajustes' },
++  'sistema:puesta-en-marcha-ok': { api: 'sistema.puestaEnMarchaOk', permiso: 'ajustes' },
++  'sistema:autostart': { api: 'sistema.autostart', permiso: 'ajustes' },
++  'sistema:abrir-url': { api: 'sistema.abrirUrl', permiso: 'ajustes' },
++  'sistema:teclado-tactil': { api: 'sistema.tecladoTactil', permiso: 'ajustes' },
++  'sistema:teclado-tactil-configurar': { api: 'sistema.tecladoConfigurar', permiso: 'ajustes' },
++  /* ── app ── */
++  'app:salir': { api: 'app.salir', pin: true },
++  'app:estado-salida': { api: 'app.estadoSalida' },
++  /* ── (internos: sin método en window.doel) ── */
++  'dev:cerrar': { api: null, permiso: 'ajustes', red: 'local' },
++};
++
++/* Avisos del escritorio hacia la pantalla (ipcRenderer.on). En el puesto en red no existen: el puente
++   remoto los deja como método que no hace nada pero RESPONDE (si faltaran, la pantalla se cae).
++   forma: 'dato' → (cb) => ipcRenderer.on(canal, (_e, n) => cb(n)) · 'cb' → (cb) => ipcRenderer.on(canal, cb) */
++const EVENTOS = {
++  'reserva:nuevas': { api: 'reserva.onNuevas', forma: 'dato' },
++  'app:cierre-solicitado': { api: 'app.onCierreSolicitado', forma: 'cb' },
++};
++
++const PERMISOS_VALIDOS = new Set(['ajustes', 'inventario', 'stock', 'cierre', 'cajon', 'anular', 'compras', 'crm', 'outlet', 'informes']);
++
++function permisoDeCanal(canal) { const d = CANALES[String(canal || '')]; return d && d.permiso ? d.permiso : null; }
++const prohibido = (canal) => !!(CANALES[canal] && CANALES[canal].red === 'local');
++const mideElMostrador = (canal) => !!(CANALES[canal] && CANALES[canal].red === 'mide');
++/* ¿Lo sirve /rpc? Solo lo declarado, con método en el puente y sin marca `red`. */
++const enRed = (canal) => { const d = CANALES[canal]; return !!(d && d.api && !d.red); };
++const PIN = new Set(Object.keys(CANALES).filter((c) => CANALES[c].pin));
++const POS_USUARIO = Object.fromEntries(Object.keys(CANALES).filter((c) => CANALES[c].usuario != null).map((c) => [c, CANALES[c].usuario]));
++const MIDEN_ESTE_PC = Object.keys(CANALES).filter((c) => CANALES[c].red === 'mide');
++const LOCALES = Object.keys(CANALES).filter((c) => CANALES[c].red === 'local');
++
++/* El puente en la forma que consumen shim() del puesto en red y las baterías:
++   grupo → método → { canal } | { canal, params, expr } | { evento: true, canal } */
++function puente() {
++  const out = {};
++  for (const canal of Object.keys(CANALES)) {
++    const d = CANALES[canal]; if (!d.api) continue;
++    const [g, m] = d.api.split('.'); out[g] = out[g] || {};
++    out[g][m] = d.firma ? { canal, params: d.firma.join(', '), expr: '{ ' + d.firma.join(', ') + ' }' } : { canal };
++  }
++  for (const canal of Object.keys(EVENTOS)) { const [g, m] = EVENTOS[canal].api.split('.'); out[g] = out[g] || {}; out[g][m] = { evento: true, canal }; }
++  return out;
++}
++
++/* Comprobación de forma de la propia tabla (la ejecuta la batería y check-puente): devuelve la lista de errores. */
++function validar() {
++  const err = [];
++  const apis = new Map();
++  for (const canal of Object.keys(CANALES)) {
++    const d = CANALES[canal];
++    if (!/^[a-z0-9]+:[A-Za-z0-9-]+$/.test(canal)) err.push('canal con nombre raro: ' + canal);
++    if (d.api !== null && !/^[a-z0-9]+\.[A-Za-z0-9]+$/.test(String(d.api))) err.push(canal + ': api inválida ' + d.api);
++    if (d.api) { if (apis.has(d.api)) err.push('método repetido ' + d.api + ' (' + apis.get(d.api) + ' y ' + canal + ')'); apis.set(d.api, canal); }
++    if (d.permiso && !PERMISOS_VALIDOS.has(d.permiso)) err.push(canal + ': permiso desconocido ' + d.permiso);
++    if (d.red && d.red !== 'local' && d.red !== 'mide') err.push(canal + ': red debe ser local|mide');
++    if (!d.api && !d.red) err.push(canal + ': un handler interno (api null) debe llevar red: local');
++    if (d.firma && (!Array.isArray(d.firma) || !d.firma.length || d.firma.some((p) => !/^[a-z][A-Za-z0-9]*$/.test(p)))) err.push(canal + ': firma inválida');
++    if (d.usuario != null && (!Number.isInteger(d.usuario) || d.usuario < 0)) err.push(canal + ': usuario debe ser una posición');
++    for (const k of Object.keys(d)) if (!['api', 'firma', 'permiso', 'red', 'pin', 'usuario'].includes(k)) err.push(canal + ': clave desconocida ' + k);
++  }
++  for (const canal of Object.keys(EVENTOS)) {
++    const d = EVENTOS[canal];
++    if (!/^[a-z0-9]+\.[A-Za-z0-9]+$/.test(String(d.api))) err.push('evento ' + canal + ': api inválida');
++    if (apis.has(d.api)) err.push('evento ' + canal + ' pisa el método ' + d.api);
++    if (d.forma !== 'dato' && d.forma !== 'cb') err.push('evento ' + canal + ': forma debe ser dato|cb');
++  }
++  return err;
++}
++
++module.exports = { CANALES, EVENTOS, PERMISOS_VALIDOS, permisoDeCanal, prohibido, mideElMostrador, enRed, PIN, POS_USUARIO, MIDEN_ESTE_PC, LOCALES, puente, validar };
+diff --git a/electron/permisos-canal.cjs b/electron/permisos-canal.cjs
+index 6081da2..23cf67e 100644
+--- a/electron/permisos-canal.cjs
++++ b/electron/permisos-canal.cjs
+@@ -9,52 +9,13 @@
+    sesión—; lo que se cierra es escribir, borrar y configurar. Se resuelve por lista exacta y
+    después por prefijo; lo que no case no exige nada. */
+ 
+-const EXACTOS = {
+-  /* ⚙️ Ajustes: configuración, usuarios, licencia, copias, catálogo entero */
+-  'config:set': 'ajustes', 'empresa:save': 'ajustes',
+-  'usuarios:save': 'ajustes', 'usuarios:baja': 'ajustes', 'usuarios:profesional': 'ajustes',
+-  'perfiles:save': 'ajustes', 'perfiles:delete': 'ajustes',
+-  'licencia:activar': 'ajustes', 'lan:aplicar': 'ajustes', 'puesto:aplicar': 'ajustes', 'puesto:acceso-directo': 'ajustes',
+-  'sistema:autostart': 'ajustes', 'sistema:teclado-tactil-configurar': 'ajustes', 'sistema:puesta-en-marcha-ok': 'ajustes',
+-  'backup:ahora': 'ajustes', 'backup:verificar': 'ajustes', 'backup:clave-set': 'ajustes', 'backup:clave-estado': 'ajustes', // v0.1.65
+-  'catalogo:vaciar': 'ajustes', 'catalogo:cat-borrar-con-articulos': 'ajustes', 'carta:precios-masivos': 'ajustes',
+-  'taller:seed-familias': 'ajustes', 'taller:seed-servicios': 'ajustes', 'taller:presupuesto-ajustes-set': 'ajustes',
+-  'taller:portal-clave': 'ajustes', 'taller:portal-clave-ver': 'ajustes', 'taller:tiempos-guardar': 'ajustes', 'taller:tiempos-tipicos': 'ajustes',
+-  'fichaje:admin-set': 'ajustes', 'fichaje:empleado-guardar': 'ajustes', 'fichaje:horario-set': 'ajustes',
+-  'fichaje:turno-guardar': 'ajustes', 'fichaje:turno-borrar': 'ajustes', 'fichaje:plan-semana-set': 'ajustes', 'fichaje:plan-asignar': 'ajustes',
+-  'jc:elegir': 'ajustes', 'jc:guardar': 'ajustes', // v0.1.52
+-  'hotel:nube-clave': 'ajustes', 'stock:distribuidor-clave': 'ajustes', 'crm26:asignar': 'ajustes', 'mt:sync': 'ajustes',
+-  /* 📦 Inventario: escribir artículos, familias y kits */
+-  'catalogo:saveProducto': 'inventario', 'catalogo:deleteProducto': 'inventario', 'catalogo:saveCategoria': 'inventario',
+-  'catalogo:catBorrar': 'inventario', 'catalogo:cat-ordenar': 'inventario', 'catalogo:destino-familia': 'inventario',
+-  'catalogo:importar-articulos': 'inventario', 'catalogo:articulos-mover': 'inventario',
+-  'catalogo:exportar-csv': 'inventario', 'catalogo:exportar-archivo': 'inventario',
+-  'catalogo:saveSubfamilia': 'inventario', 'catalogo:deleteSubfamilia': 'inventario', 'catalogo:producto-imagen': 'inventario',
+-  'kits:guardar': 'inventario', 'kits:baja': 'inventario', 'kits:items-set': 'inventario',
+-  'productos:compartir-set': 'inventario', 'productos:compartir-filtro': 'inventario', 'productos:exportar': 'inventario', 'productos:enviar-crm': 'inventario', // v0.1.62-63
+-  /* 📦 Almacenes */
+-  'stock:alta': 'stock', 'stock:inventario': 'stock', 'stock:distribuidor-guardar': 'stock', 'stock:distribuidor-borrar': 'stock', 'stock:prod-distribuidor': 'stock',
+-  /* 💶 Caja y tickets */
+-  'caja:abrir': 'cierre', 'caja:cerrar': 'cierre', 'caja:cajon': 'cajon', 'caja:cajonAbrir': 'cajon',
+-  /* v0.1.73 · SEC-19 · otras puertas del cajón y del mostrador que no figuraban */
+-  'caja:cajonProbar': 'cajon', 'sat:cajon-raw': 'cajon', 'taller:tpv-impresora-test': 'cajon',
+-  'salud:mantenimiento': 'ajustes', 'docs:borrar': 'ajustes', 'fichaje:export': 'ajustes',
+-  'tickets:anular': 'anular', 'tickets:rectificar-parcial': 'anular',
+-  /* 🛒 Compras */
+-  'compras:subir': 'compras', 'compras:aplicar': 'compras', 'compras:borrar': 'compras',
+-  'gastos:add': 'compras', 'gastos:delete': 'compras', 'articulo:compra-add': 'compras',
+-  /* 👥 CRM */
+-  'clientes:save': 'crm', 'clientes:baja': 'crm', 'fid:acumular': 'crm', 'fid:canjear': 'crm',
+-  /* 🏷 Outlet */
+-  'outlet:borrar': 'outlet', 'outlet:publicar': 'outlet', 'outlet:retirar': 'outlet', 'outlet:vender': 'outlet',
+-  'outlet:familia-guardar': 'outlet', 'outlet:familia-borrar': 'outlet',
+-};
+-
+-/* Prefijos: lo que no está arriba. Solo los grupos que son una pantalla con permiso propio. */
+-const PREFIJOS = [
+-  ['informes:', 'informes'], ['central:', 'informes'], ['fiscal:', 'informes'],
+-  ['dev:', 'ajustes'], ['sistema:', 'ajustes'], ['sat:', 'ajustes'], // v0.1.73 · SEC-19 · Kit SAT lanza instaladores y pnputil elevado ['backup:', 'ajustes'], ['perfiles:', 'ajustes'], ['puesto:', 'ajustes'], ['lan:', 'ajustes'],
+-];
++/* v0.1.77 · punto 4 · la tabla canal → permiso vive en electron/canales.cjs (una fila por canal, junto al
++   método del puente y las marcas del puesto en red). Aquí queda la REGLA (autorizado) y las vistas que
++   documentan y comprueban las baterías: EXACTOS (lo que exige permiso) y LIBRES (lecturas que nunca lo exigen).
++   Ya no hay regla por prefijo: cada canal dice el suyo. */
++const canales = require('./canales.cjs');
++const EXACTOS = Object.fromEntries(Object.keys(canales.CANALES).filter((c) => canales.CANALES[c].permiso).map((c) => [c, canales.CANALES[c].permiso]));
++const PREFIJOS = []; // v0.1.77 · vacío a propósito: se conserva el nombre para quien lo importe
+ 
+ /* Lecturas del catálogo que necesita el mostrador y el taller: nunca exigen permiso, aunque el
+    prefijo `catalogo:` suene a inventario. Están aquí para que la batería lo documente. */
+@@ -62,13 +23,7 @@ const LIBRES = new Set(['catalogo:categorias', 'catalogo:subfamilias', 'catalogo
+   'stock:listado', 'stock:lotes', 'stock:distribuidores', 'stock:caducidades', 'config:all', 'empresa:get', 'licencia:estado', 'backup:estado', 'backup:listar',
+   'usuarios:list', 'perfiles:list', 'informes:resumen', 'auth:login']);
+ 
+-function permisoDeCanal(canal) {
+-  const c = String(canal || '');
+-  if (LIBRES.has(c)) return null;
+-  if (EXACTOS[c]) return EXACTOS[c];
+-  const p = PREFIJOS.find(([pre]) => c.startsWith(pre));
+-  return p ? p[1] : null;
+-}
++const permisoDeCanal = canales.permisoDeCanal;
+ 
+ /* ¿Puede este usuario llamar a este canal? Misma regla que la barra: clave ausente = sí. */
+ function autorizado(usuario, canal) {
+diff --git a/electron/preload.cjs b/electron/preload.cjs
+index e49729b..bb46313 100644
+--- a/electron/preload.cjs
++++ b/electron/preload.cjs
+@@ -1,151 +1,147 @@
++/* GENERADO por `node tools/puente-generar.cjs` desde electron/canales.cjs · NO EDITAR A MANO (v0.1.77).
++   Para añadir un canal: su fila en canales.cjs, su handle() en main, y volver a generar. check-puente
++   falla si este fichero no coincide con la tabla. */
+ const { contextBridge, ipcRenderer } = require('electron');
+ 
+ const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
+ 
+ contextBridge.exposeInMainWorld('doel', {
+-  auth: { login: call('auth:login'), logout: call('auth:logout') }, // v0.1.73 · SEC-16
+-  catalogo: { catBorrar: call('catalogo:catBorrar'), catBorrarConArticulos: call('catalogo:cat-borrar-con-articulos'), exportarCsv: call('catalogo:exportar-csv'), exportarArchivo: call('catalogo:exportar-archivo'), vaciar: call('catalogo:vaciar'), importarArticulos: call('catalogo:importar-articulos'), catOrdenar: call('catalogo:cat-ordenar'), articulosMover: call('catalogo:articulos-mover'),
+-    categorias: call('catalogo:categorias'),
+-    productos: call('catalogo:productos'),
+-    saveProducto: call('catalogo:saveProducto'),
+-    destinoFamilia: call('catalogo:destino-familia'),
+-    deleteProducto: call('catalogo:deleteProducto'),
+-    saveCategoria: call('catalogo:saveCategoria'),
+-    subfamilias: call('catalogo:subfamilias'),
+-    saveSubfamilia: call('catalogo:saveSubfamilia'),
+-    deleteSubfamilia: call('catalogo:deleteSubfamilia'), frecuentes: call('catalogo:frecuentes'), productoImagen: call('catalogo:producto-imagen') },
++  auth: { login: call('auth:login'), logout: call('auth:logout') },
++  catalogo: { catBorrar: call('catalogo:catBorrar'), catBorrarConArticulos: call('catalogo:cat-borrar-con-articulos'),
++    exportarCsv: call('catalogo:exportar-csv'), exportarArchivo: call('catalogo:exportar-archivo'), vaciar: call('catalogo:vaciar'),
++    importarArticulos: call('catalogo:importar-articulos'), catOrdenar: call('catalogo:cat-ordenar'), articulosMover: call('catalogo:articulos-mover'),
++    categorias: call('catalogo:categorias'), productos: call('catalogo:productos'), saveProducto: call('catalogo:saveProducto'),
++    destinoFamilia: call('catalogo:destino-familia'), deleteProducto: call('catalogo:deleteProducto'), saveCategoria: call('catalogo:saveCategoria'),
++    subfamilias: call('catalogo:subfamilias'), saveSubfamilia: call('catalogo:saveSubfamilia'), deleteSubfamilia: call('catalogo:deleteSubfamilia'),
++    frecuentes: call('catalogo:frecuentes'), productoImagen: call('catalogo:producto-imagen') },
+   config: { all: call('config:all'), set: call('config:set') },
+   empresa: { get: call('empresa:get'), save: call('empresa:save') },
+-  stock: { listado: call('stock:listado'), alta: call('stock:alta'), caducidades: call('stock:caducidades'), lotes: call('stock:lotes'), distribuidores: call('stock:distribuidores'), distribuidorGuardar: call('stock:distribuidor-guardar'), distribuidorBorrar: call('stock:distribuidor-borrar'), prodDistribuidor: call('stock:prod-distribuidor'), pedidoHoy: call('stock:pedido-hoy'), compras: call('articulo:compras'), compraAdd: call('articulo:compra-add'), inventario: call('stock:inventario'), distribuidorFicha: call('stock:distribuidor-ficha'), distribuidorClave: call('stock:distribuidor-clave') },
++  stock: { listado: call('stock:listado'), alta: call('stock:alta'), caducidades: call('stock:caducidades'), lotes: call('stock:lotes'),
++    distribuidores: call('stock:distribuidores'), distribuidorGuardar: call('stock:distribuidor-guardar'),
++    distribuidorBorrar: call('stock:distribuidor-borrar'), prodDistribuidor: call('stock:prod-distribuidor'), pedidoHoy: call('stock:pedido-hoy'),
++    compras: call('articulo:compras'), compraAdd: call('articulo:compra-add'), inventario: call('stock:inventario'),
++    distribuidorFicha: call('stock:distribuidor-ficha'), distribuidorClave: call('stock:distribuidor-clave') },
+   clientes: { list: call('clientes:list'), save: call('clientes:save'), baja: call('clientes:baja'), facturaBuscar: call('clientes:factura-buscar'),
+-    buscarRapido: call('clientes:buscar-rapido'), altaRapida: call('clientes:alta-rapida') }, // recepción de taller: alta en dos campos
++    buscarRapido: call('clientes:buscar-rapido'), altaRapida: call('clientes:alta-rapida') },
+   fid: { acumular: call('fid:acumular'), canjear: call('fid:canjear'), movimientos: call('fid:movimientos') },
+-  barra: { aparcadas: call('barra:aparcadas'), aparcar: call('barra:aparcar'), recuperar: call('barra:recuperar') }, // ventas aparcadas del mostrador
++  barra: { aparcadas: call('barra:aparcadas'), aparcar: call('barra:aparcar'), recuperar: call('barra:recuperar') },
+   lan: { estado: call('lan:estado'), aplicar: call('lan:aplicar') },
+   puesto: { estado: call('puesto:estado'), aplicar: call('puesto:aplicar'), accesoDirecto: call('puesto:acceso-directo') },
+-  ventana: { herramienta: call('ventana:herramienta'), contexto: call('ventana:contexto') }, // v0.0.98 · herramienta en ventana aparte
+-  sat: { carpetaEstado: call('sat:carpeta-estado'), inventario: call('sat:inventario'), preparar: call('sat:preparar'),
+-    guia: call('sat:guia'), carpetaAbrir: call('sat:carpeta-abrir'), copiarDesde: call('sat:copiar-desde'),
+-    instalar: call('sat:instalar'), cajonRaw: call('sat:cajon-raw'),
++  ventana: { herramienta: call('ventana:herramienta'), contexto: call('ventana:contexto') },
++  sat: { carpetaEstado: call('sat:carpeta-estado'), inventario: call('sat:inventario'), preparar: call('sat:preparar'), guia: call('sat:guia'),
++    carpetaAbrir: call('sat:carpeta-abrir'), copiarDesde: call('sat:copiar-desde'), instalar: call('sat:instalar'), cajonRaw: call('sat:cajon-raw'),
+     exportar: call('sat:exportar'), restaurar: call('sat:restaurar') },
+-  // v0.0.87 · 💾 agente portable: Python en el PC del CLIENTE, no en el del taller
+-  py: { disponible: call('py:disponible'), ejecutar: call('py:ejecutar'), cancelar: call('py:cancelar'),
+-    agenteExportar: call('py:agente-exportar'), agenteImportar: call('py:agente-importar'),
+-    tmAbrir: call('py:tm-abrir'), tmExportar: call('py:tm-exportar') /* v0.1.21 */, tmSetupEstado: call('py:tm-setup-estado'), tmInstalar: call('py:tm-instalar'), tmSetupCopiar: call('py:tm-setup-copiar') /* v0.1.40 */ },
++  py: { disponible: call('py:disponible'), ejecutar: call('py:ejecutar'), cancelar: call('py:cancelar'), agenteExportar: call('py:agente-exportar'),
++    agenteImportar: call('py:agente-importar'), tmAbrir: call('py:tm-abrir'), tmExportar: call('py:tm-exportar'), tmSetupEstado: call('py:tm-setup-estado'),
++    tmInstalar: call('py:tm-instalar'), tmSetupCopiar: call('py:tm-setup-copiar') },
+   hdmi: { leerEdid: call('hdmi:leer-edid') },
+-  // v0.0.93 · 🏨 modo hotel: teles editables con notas y fotos
+-  hotel: { tvLista: call('hotel:tv-lista'), tvGuardar: call('hotel:tv-guardar'), tvBorrar: call('hotel:tv-borrar'),
+-    fotoAdd: call('hotel:foto-add'), fotoVer: call('hotel:foto-ver'), fotoBorrar: call('hotel:foto-borrar'),
+-    nubeSubir: call('hotel:nube-subir'), nubeClave: call('hotel:nube-clave') }, // v0.0.95 · a la web /* 🔌 Banco HDMI / Yuvod */ // servidor local que sirve el diagnóstico por móvil
+-  compras: { cola: call('compras:cola'), subir: call('compras:subir'), revision: call('compras:revision'),
+-    aplicar: call('compras:aplicar'), borrar: call('compras:borrar') }, // agente de compras
+-  kits: { list: call('kits:list'), get: call('kits:get'), guardar: call('kits:guardar'),
+-    baja: call('kits:baja'), itemsSet: call('kits:items-set'), lineas: call('kits:lineas') },
++  hotel: { tvLista: call('hotel:tv-lista'), tvGuardar: call('hotel:tv-guardar'), tvBorrar: call('hotel:tv-borrar'), fotoAdd: call('hotel:foto-add'),
++    fotoVer: call('hotel:foto-ver'), fotoBorrar: call('hotel:foto-borrar'), nubeSubir: call('hotel:nube-subir'), nubeClave: call('hotel:nube-clave') },
++  compras: { cola: call('compras:cola'), subir: call('compras:subir'), revision: call('compras:revision'), aplicar: call('compras:aplicar'),
++    borrar: call('compras:borrar') },
++  kits: { list: call('kits:list'), get: call('kits:get'), guardar: call('kits:guardar'), baja: call('kits:baja'), itemsSet: call('kits:items-set'),
++    lineas: call('kits:lineas') },
+   pago: { qr: call('pago:qr') },
+   util: { qr: call('util:qr') },
+-  outlet: { list: call('outlet:list'), get: call('outlet:get'), guardar: call('outlet:guardar'),
+-    desdeOrden: call('outlet:desde-orden'), cesion: call('outlet:cesion'), borradoDatos: call('outlet:borrado-datos'),
+-    checklist: call('outlet:checklist'), publicar: call('outlet:publicar'), retirar: call('outlet:retirar'),
+-    borrador: call('outlet:borrador'), costes: call('outlet:costes'), pvpSugerido: call('outlet:pvp-sugerido'),
+-    resumen: call('outlet:resumen'), sync: call('outlet:sync'),
+-    reservas: call('outlet:reservas'), reservaCrear: call('outlet:reserva-crear'),
+-    reservaSenal: call('outlet:reserva-senal'), reservaAnular: call('outlet:reserva-anular'),
+-    reservaCobro: call('outlet:reserva-cobro'), reservaEntregar: call('outlet:reserva-entregar'),
+-    senalesPendientes: call('outlet:senales-pendientes'), vender: call('outlet:vender'),
+-    borrar: call('outlet:borrar'), familias: call('outlet:familias'), familiaGuardar: call('outlet:familia-guardar'), familiaBorrar: call('outlet:familia-borrar'), fotoAdd: call('outlet:foto-add'), fotoVer: call('outlet:foto-ver'),
+-    fotoBorrar: call('outlet:foto-borrar') }, /* v0.0.70 · 🏷 Outlet */
+-  pasarela: { crear: call('pasarela:crear'), sondear: call('pasarela:sondear'),
+-    anular: call('pasarela:anular'), porCuenta: call('pasarela:por-cuenta') },
+-  taller: {
+-    metricas: call('taller:metricas'), avisoTexto: call('taller:aviso-texto'), presupuestoTexto: call('taller:presupuesto-texto'), tablero: call('taller:tablero'), ordenCrear: call('taller:orden-crear'),
+-    ordenGet: call('taller:orden-get'), ordenEstado: call('taller:orden-estado'),
+-    equipoBuscar: call('taller:equipo-buscar'), equipoGuardar: call('taller:equipo-guardar'),
+-    marcas: call('taller:marcas'), modelos: call('taller:modelos'),
+-    cp: call('taller:cp'), clienteFiscal: call('taller:cliente-fiscal'), passVer: call('taller:pass-ver'),
+-    parteSet: call('taller:parte-set'), /* v0.1.71 */ lineaAdd: call('taller:linea-add'), lineaDel: call('taller:linea-del'), lineaSet: call('taller:linea-set'), kitAdd: call('taller:kit-add'), lineasOrdenar: call('taller:lineas-ordenar'), textoSet: call('taller:texto-set'), presupuestoEmitir: call('taller:presupuesto-emitir'), presupuestos: call('taller:presupuestos'), presupuestoGet: call('taller:presupuesto-get'), presupuestoEstado: call('taller:presupuesto-estado'), presupuestoCargar: call('taller:presupuesto-cargar'), presupuestoActualizar: call('taller:presupuesto-actualizar'), presupuestoBorrar: call('taller:presupuesto-borrar'), presupuestoAjustes: call('taller:presupuesto-ajustes'), presupuestoAjustesSet: call('taller:presupuesto-ajustes-set'),
+-    anticipoAdd: call('taller:anticipo-add'), avisoAdd: call('taller:aviso-add'), aCuenta: call('taller:a-cuenta'), seed: call('dev:seed-taller'),
+-    portalClave: call('taller:portal-clave'), qr: call('taller:qr'), /* v5.0.9 Fase A */
+-    ubicaciones: call('taller:ubicaciones'), ubicacionGuardar: call('taller:ubicacion-guardar'),
+-    itemMover: call('taller:item-mover'), ordenUbicaciones: call('taller:orden-ubicaciones'),
+-    ubicacionContenido: call('taller:ubicacion-contenido'), repuestoMover: call('taller:repuesto-mover'),
+-    repuestoUbicaciones: call('taller:repuesto-ubicaciones'), movimientos: call('taller:movimientos'), /* v5.0.10 Fase B */
+-    kbGuardar: call('taller:kb-guardar'), kbBuscar: call('taller:kb-buscar'), kbDesdeOrden: call('taller:kb-desde-orden'), /* v5.0.11 Fase C */
+-    tiempos: call('taller:tiempos'), tiemposGuardar: call('taller:tiempos-guardar'), tiemposTipicos: call('taller:tiempos-tipicos'), /* v0.1.72 */ retrasados: call('taller:retrasados'), almacenajeCobrar: call('taller:almacenaje-cobrar'), /* v5.0.16 */
+-    bateriaInforme: call('taller:bateria-informe'), discoSalud: call('taller:disco-salud'), /* v5.0.33 · HW del PC */
+-    impresoras3dListar: call('taller:impresoras3d-listar'), impresoras3dResumen: call('taller:impresoras3d-resumen'), impresoras3dAmortizacion: call('taller:impresoras3d-amortizacion'), /* v5.0.33 */
+-    tpvImpresoraEstado: (ip, puerto) => call('taller:tpv-impresora-estado')({ ip, puerto }), tpvImpresoraTest: (ip, puerto, cajon) => call('taller:tpv-impresora-test')({ ip, puerto, cajon }), /* v5.0.36 */
+-    mandoSerieUsb: call('taller:mando-serie'), dispositivos: call('taller:dispositivos'), /* v0.1.16 */ historialSerie: call('taller:historial-serie'), /* v0.1.29 */ usbPuertosListar: call('taller:usb-listar'), usbDiscos: call('taller:usb-discos'), usbVelocidad: (letra, mb) => call('taller:usb-velocidad')({ letra, mb }), /* v5.0.38 */
+-    usbHistorialNativo: call('taller:usb-historial'), /* v5.0.44 */
+-    diskspdDisponible: call('taller:diskspd-disponible'), diskspdBenchmark: (letra, duracion) => call('taller:diskspd-benchmark')({ letra, duracion }), /* v5.0.47 */
+-    discoVelocidadNativa: (ruta, mb) => call('taller:disco-velocidad-nativa')({ ruta, mb }), /* v5.0.52 */
+-    accesoMovil: (minutos) => call('taller:acceso-movil')({ minutos }), /* v5.0.72 */
+-    diagGuardar: call('taller:diag-guardar'), diagLista: call('taller:diag-lista'), diagPanel: call('taller:diag-panel'), energiaInforme: call('taller:energia-informe'), cpuTemperatura: call('taller:cpu-temperatura'), diagKbPropuesta: call('taller:diag-kb-propuesta'), /* v5.0.29 · 🔬 v0.0.84 */ msjAdd: call('taller:msj-add'), msjLeidos: call('taller:msj-leidos'), checklistAprender: call('taller:checklist-aprender'), checklistQuitar: call('taller:checklist-quitar'), portalSync: call('taller:portal-sync'), fotoAdd: call('taller:foto-add'), fotoVer: call('taller:foto-ver'), fotoBorrar: call('taller:foto-borrar'), firmaGuardar: call('taller:firma-guardar'), firmaPng: call('taller:firma-png'), firmaAnular: call('taller:firma-anular'), firmasPng: call('taller:firmas-png'), iaSugerir: call('taller:ia-sugerir'), informeCrear: call('taller:informe-crear'), rmaCrear: call('taller:rma-crear'), rmaEstado: call('taller:rma-estado'), rmaVivos: call('taller:rma-vivos'), cierreDia: call('taller:cierre-dia'), buscar: call('taller:buscar'), seedFamilias: call('taller:seed-familias'), seedServicios: call('taller:seed-servicios'), servicios: call('taller:servicios'), tarifasHora: call('taller:tarifas-hora') /* v0.1.43 */, compromisoSet: call('taller:compromiso-set'), portalClaveVer: call('taller:portal-clave-ver'), contactoSet: call('taller:contacto-set') },
+-  docs: { importar: call('docs:importar'), buscar: call('docs:buscar'), ficha: call('docs:ficha'),
+-    ver: call('docs:ver'), guardarFicha: call('docs:guardar-ficha'), borrar: call('docs:borrar'),
+-    notaAdd: call('docs:nota-add'), notaDel: call('docs:nota-del'), resumen: call('docs:resumen'),
+-    abrir: call('docs:abrir'), carpeta: call('docs:carpeta'), carpetaEstado: call('docs:carpeta-estado') } /* v5.0.82 · 📐 Biblioteca de diagramas */,
+-  mt: { sync: call('mt:sync') } /* v4.0.46 · Multitienda M0 */,
+-  ci: { crear: call('ci:crear'), listar: call('ci:listar') } /* v4.0.49 · 🏠 consumo interno */,
+-  central: { refrescar: call('central:refrescar'), tarjetas: call('central:tarjetas'), historial: call('central:historial'), rango: call('central:rango'), exportarCsv: call('central:exportar-csv'), mesGestoria: call('central:mes-gestoria'), alertas: call('central:alertas') } /* v5.0.0 · 🏢 Edición Central */,
++  outlet: { list: call('outlet:list'), get: call('outlet:get'), guardar: call('outlet:guardar'), desdeOrden: call('outlet:desde-orden'),
++    cesion: call('outlet:cesion'), borradoDatos: call('outlet:borrado-datos'), checklist: call('outlet:checklist'), publicar: call('outlet:publicar'),
++    retirar: call('outlet:retirar'), borrador: call('outlet:borrador'), costes: call('outlet:costes'), pvpSugerido: call('outlet:pvp-sugerido'),
++    resumen: call('outlet:resumen'), sync: call('outlet:sync'), reservas: call('outlet:reservas'), reservaCrear: call('outlet:reserva-crear'),
++    reservaSenal: call('outlet:reserva-senal'), reservaAnular: call('outlet:reserva-anular'), reservaCobro: call('outlet:reserva-cobro'),
++    reservaEntregar: call('outlet:reserva-entregar'), senalesPendientes: call('outlet:senales-pendientes'), vender: call('outlet:vender'),
++    borrar: call('outlet:borrar'), familias: call('outlet:familias'), familiaGuardar: call('outlet:familia-guardar'),
++    familiaBorrar: call('outlet:familia-borrar'), fotoAdd: call('outlet:foto-add'), fotoVer: call('outlet:foto-ver'), fotoBorrar: call('outlet:foto-borrar') },
++  pasarela: { crear: call('pasarela:crear'), sondear: call('pasarela:sondear'), anular: call('pasarela:anular'), porCuenta: call('pasarela:por-cuenta') },
++  taller: { metricas: call('taller:metricas'), avisoTexto: call('taller:aviso-texto'), presupuestoTexto: call('taller:presupuesto-texto'),
++    tablero: call('taller:tablero'), ordenCrear: call('taller:orden-crear'), ordenGet: call('taller:orden-get'), ordenEstado: call('taller:orden-estado'),
++    equipoBuscar: call('taller:equipo-buscar'), equipoGuardar: call('taller:equipo-guardar'), marcas: call('taller:marcas'), modelos: call('taller:modelos'),
++    cp: call('taller:cp'), clienteFiscal: call('taller:cliente-fiscal'), passVer: call('taller:pass-ver'), parteSet: call('taller:parte-set'),
++    lineaAdd: call('taller:linea-add'), lineaDel: call('taller:linea-del'), lineaSet: call('taller:linea-set'), kitAdd: call('taller:kit-add'),
++    lineasOrdenar: call('taller:lineas-ordenar'), textoSet: call('taller:texto-set'), presupuestoEmitir: call('taller:presupuesto-emitir'),
++    presupuestos: call('taller:presupuestos'), presupuestoGet: call('taller:presupuesto-get'), presupuestoEstado: call('taller:presupuesto-estado'),
++    presupuestoCargar: call('taller:presupuesto-cargar'), presupuestoActualizar: call('taller:presupuesto-actualizar'),
++    presupuestoBorrar: call('taller:presupuesto-borrar'), presupuestoAjustes: call('taller:presupuesto-ajustes'),
++    presupuestoAjustesSet: call('taller:presupuesto-ajustes-set'), anticipoAdd: call('taller:anticipo-add'), avisoAdd: call('taller:aviso-add'),
++    aCuenta: call('taller:a-cuenta'), seed: call('dev:seed-taller'), portalClave: call('taller:portal-clave'), qr: call('taller:qr'),
++    ubicaciones: call('taller:ubicaciones'), ubicacionGuardar: call('taller:ubicacion-guardar'), itemMover: call('taller:item-mover'),
++    ordenUbicaciones: call('taller:orden-ubicaciones'), ubicacionContenido: call('taller:ubicacion-contenido'), repuestoMover: call('taller:repuesto-mover'),
++    repuestoUbicaciones: call('taller:repuesto-ubicaciones'), movimientos: call('taller:movimientos'), kbGuardar: call('taller:kb-guardar'),
++    kbBuscar: call('taller:kb-buscar'), kbDesdeOrden: call('taller:kb-desde-orden'), tiempos: call('taller:tiempos'),
++    tiemposGuardar: call('taller:tiempos-guardar'), tiemposTipicos: call('taller:tiempos-tipicos'), retrasados: call('taller:retrasados'),
++    almacenajeCobrar: call('taller:almacenaje-cobrar'), bateriaInforme: call('taller:bateria-informe'), discoSalud: call('taller:disco-salud'),
++    impresoras3dListar: call('taller:impresoras3d-listar'), impresoras3dResumen: call('taller:impresoras3d-resumen'),
++    impresoras3dAmortizacion: call('taller:impresoras3d-amortizacion'),
++    tpvImpresoraEstado: (ip, puerto) => call('taller:tpv-impresora-estado')({ ip, puerto }),
++    tpvImpresoraTest: (ip, puerto, cajon) => call('taller:tpv-impresora-test')({ ip, puerto, cajon }), mandoSerieUsb: call('taller:mando-serie'),
++    dispositivos: call('taller:dispositivos'), historialSerie: call('taller:historial-serie'), usbPuertosListar: call('taller:usb-listar'),
++    usbDiscos: call('taller:usb-discos'), usbVelocidad: (letra, mb) => call('taller:usb-velocidad')({ letra, mb }),
++    usbHistorialNativo: call('taller:usb-historial'), diskspdDisponible: call('taller:diskspd-disponible'),
++    diskspdBenchmark: (letra, duracion) => call('taller:diskspd-benchmark')({ letra, duracion }),
++    discoVelocidadNativa: (ruta, mb) => call('taller:disco-velocidad-nativa')({ ruta, mb }),
++    accesoMovil: (minutos) => call('taller:acceso-movil')({ minutos }), diagGuardar: call('taller:diag-guardar'), diagLista: call('taller:diag-lista'),
++    diagPanel: call('taller:diag-panel'), energiaInforme: call('taller:energia-informe'), cpuTemperatura: call('taller:cpu-temperatura'),
++    diagKbPropuesta: call('taller:diag-kb-propuesta'), msjAdd: call('taller:msj-add'), msjLeidos: call('taller:msj-leidos'),
++    checklistAprender: call('taller:checklist-aprender'), checklistQuitar: call('taller:checklist-quitar'), portalSync: call('taller:portal-sync'),
++    fotoAdd: call('taller:foto-add'), fotoVer: call('taller:foto-ver'), fotoBorrar: call('taller:foto-borrar'), firmaGuardar: call('taller:firma-guardar'),
++    firmaPng: call('taller:firma-png'), firmaAnular: call('taller:firma-anular'), firmasPng: call('taller:firmas-png'), iaSugerir: call('taller:ia-sugerir'),
++    informeCrear: call('taller:informe-crear'), rmaCrear: call('taller:rma-crear'), rmaEstado: call('taller:rma-estado'), rmaVivos: call('taller:rma-vivos'),
++    cierreDia: call('taller:cierre-dia'), buscar: call('taller:buscar'), seedFamilias: call('taller:seed-familias'),
++    seedServicios: call('taller:seed-servicios'), servicios: call('taller:servicios'), tarifasHora: call('taller:tarifas-hora'),
++    compromisoSet: call('taller:compromiso-set'), portalClaveVer: call('taller:portal-clave-ver'), contactoSet: call('taller:contacto-set') },
++  docs: { importar: call('docs:importar'), buscar: call('docs:buscar'), ficha: call('docs:ficha'), ver: call('docs:ver'),
++    guardarFicha: call('docs:guardar-ficha'), borrar: call('docs:borrar'), notaAdd: call('docs:nota-add'), notaDel: call('docs:nota-del'),
++    resumen: call('docs:resumen'), abrir: call('docs:abrir'), carpeta: call('docs:carpeta'), carpetaEstado: call('docs:carpeta-estado') },
++  mt: { sync: call('mt:sync') },
++  ci: { crear: call('ci:crear'), listar: call('ci:listar') },
++  central: { refrescar: call('central:refrescar'), tarjetas: call('central:tarjetas'), historial: call('central:historial'), rango: call('central:rango'),
++    exportarCsv: call('central:exportar-csv'), mesGestoria: call('central:mes-gestoria'), alertas: call('central:alertas') },
+   carta: { preciosMasivos: call('carta:precios-masivos') },
+   crm: { clientes: call('crm:clientes'), cliente: call('crm:cliente'), proveedores: call('crm:proveedores') },
+-  crm26: { estado: call('crm26:estado'), clientes: call('crm26:clientes'), asignar: call('crm26:asignar'),
+-    sync: call('crm26:sync'), pendientes: call('crm26:pendientes'), probar: call('crm26:probar') }, // enlace con el CRM
++  crm26: { estado: call('crm26:estado'), clientes: call('crm26:clientes'), asignar: call('crm26:asignar'), sync: call('crm26:sync'),
++    pendientes: call('crm26:pendientes'), probar: call('crm26:probar') },
+   salud: { estado: call('salud:estado'), completa: call('salud:completa'), mantenimiento: call('salud:mantenimiento') },
+   usuarios: { list: call('usuarios:list'), save: call('usuarios:save'), baja: call('usuarios:baja'), profesional: call('usuarios:profesional') },
+   perfiles: { list: call('perfiles:list'), save: call('perfiles:save'), delete: call('perfiles:delete') },
+-  caja: {
+-    estado: call('caja:estado'),
+-    abrir: call('caja:abrir'),
+-    cerrar: call('caja:cerrar'),
+-    movimiento: call('caja:movimiento'),
+-    cajon: call('caja:cajon'),
+-    cajonAbrir: call('caja:cajonAbrir'), cajonRegistro: call('caja:cajonRegistro'), cajonProbar: call('caja:cajonProbar'),
+-    cierres: call('caja:cierres'),
+-    cierreDetalle: call('caja:cierreDetalle')
+-  },
+-  agenda: {
+-    dia: call('agenda:dia'), crear: call('agenda:crear'), mover: call('agenda:mover'),
+-    estado: call('agenda:estado'), cobrada: call('agenda:cobrada'), recordatorio: call('agenda:recordatorio'),
+-    buscarTel: call('agenda:buscarTel'), ficha: call('agenda:ficha'), fichaGuardar: call('agenda:fichaGuardar'),
+-    recursos: call('agenda:recursos'), aceptaOnline: call('agenda:aceptaOnline'),
+-    recursosDia: call('agenda:recursosDia'), horarios: call('agenda:horarios'),
+-    semanaSet: call('agenda:semanaSet'), vacaciones: call('agenda:vacaciones'), excBorrar: call('agenda:excBorrar')
+-  },
+-  reserva: { sync: call('reserva:sync'), estado: call('reserva:estado'),
+-    onNuevas: (cb) => ipcRenderer.on('reserva:nuevas', (_e, n) => cb(n)) },
+-  espera: { alta: call('espera:alta'), activas: call('espera:activas'), paraFecha: call('espera:paraFecha'),
+-    avisada: call('espera:avisada'), borrar: call('espera:borrar') },
+-  tickets: {
+-    ultimo: call('tickets:ultimo'),
+-    crear: call('tickets:crear'),
+-    anular: call('tickets:anular'), rectificarParcial: call('tickets:rectificar-parcial'),
+-    list: call('tickets:list'),
+-    get: call('tickets:get')
+-  },
++  caja: { estado: call('caja:estado'), abrir: call('caja:abrir'), cerrar: call('caja:cerrar'), movimiento: call('caja:movimiento'), cajon: call('caja:cajon'),
++    cajonAbrir: call('caja:cajonAbrir'), cajonRegistro: call('caja:cajonRegistro'), cajonProbar: call('caja:cajonProbar'), cierres: call('caja:cierres'),
++    cierreDetalle: call('caja:cierreDetalle') },
++  agenda: { dia: call('agenda:dia'), crear: call('agenda:crear'), mover: call('agenda:mover'), estado: call('agenda:estado'), cobrada: call('agenda:cobrada'),
++    recordatorio: call('agenda:recordatorio'), buscarTel: call('agenda:buscarTel'), ficha: call('agenda:ficha'), fichaGuardar: call('agenda:fichaGuardar'),
++    recursos: call('agenda:recursos'), aceptaOnline: call('agenda:aceptaOnline'), recursosDia: call('agenda:recursosDia'), horarios: call('agenda:horarios'),
++    semanaSet: call('agenda:semanaSet'), vacaciones: call('agenda:vacaciones'), excBorrar: call('agenda:excBorrar') },
++  reserva: { sync: call('reserva:sync'), estado: call('reserva:estado'), onNuevas: (cb) => ipcRenderer.on('reserva:nuevas', (_e, n) => cb(n)) },
++  espera: { alta: call('espera:alta'), activas: call('espera:activas'), paraFecha: call('espera:paraFecha'), avisada: call('espera:avisada'),
++    borrar: call('espera:borrar') },
++  tickets: { ultimo: call('tickets:ultimo'), crear: call('tickets:crear'), anular: call('tickets:anular'),
++    rectificarParcial: call('tickets:rectificar-parcial'), list: call('tickets:list'), get: call('tickets:get') },
+   gastos: { add: call('gastos:add'), list: call('gastos:list'), delete: call('gastos:delete') },
+-  informes: { resumen: call('informes:resumen'), barberia: call('informes:barberia'), dashboard: call('informes:dashboard'), mensual: call('informes:mensual') },
++  informes: { resumen: call('informes:resumen'), barberia: call('informes:barberia'), dashboard: call('informes:dashboard'),
++    mensual: call('informes:mensual') },
+   print: { html: call('print:html'), printers: call('print:printers'), pdf: call('print:pdf') },
+-  backup: { ahora: call('backup:ahora'), estado: call('backup:estado'),
+-    listar: call('backup:listar'), verificar: call('backup:verificar'), // v0.0.91 · restauración en seco
+-    claveEstado: call('backup:clave-estado'), claveSet: call('backup:clave-set') }, // v0.1.65 · clave propia
++  backup: { ahora: call('backup:ahora'), estado: call('backup:estado'), listar: call('backup:listar'), verificar: call('backup:verificar'),
++    claveEstado: call('backup:clave-estado'), claveSet: call('backup:clave-set') },
+   licencia: { estado: call('licencia:estado'), activar: call('licencia:activar') },
+-  productos: { compartirSet: call('productos:compartir-set'), compartirFiltro: call('productos:compartir-filtro'), compartirResumen: call('productos:compartir-resumen'), exportarPreview: call('productos:exportar-preview'), exportar: call('productos:exportar'), enviarCrm: call('productos:enviar-crm') }, // v0.1.62 · compartir con TPV/CRM
+-  jc: { estado: call('jc:estado'), abrir: call('jc:abrir'), elegir: call('jc:elegir'), guardar: call('jc:guardar'), bluetooth: call('jc:bluetooth'), guia: call('jc:guia') }, // v0.1.52 · Joy-Con Toolkit
++  productos: { compartirSet: call('productos:compartir-set'), compartirFiltro: call('productos:compartir-filtro'),
++    compartirResumen: call('productos:compartir-resumen'), exportarPreview: call('productos:exportar-preview'), exportar: call('productos:exportar'),
++    enviarCrm: call('productos:enviar-crm') },
++  jc: { estado: call('jc:estado'), abrir: call('jc:abrir'), elegir: call('jc:elegir'), guardar: call('jc:guardar'), bluetooth: call('jc:bluetooth'),
++    guia: call('jc:guia') },
+   fiscal: { qr: call('fiscal:qr'), estado: call('fiscal:estado'), exportar: call('fiscal:export') },
+-  fichaje: {
+-    login: call('fichaje:login'), fichar: call('fichaje:fichar'), estado: call('fichaje:estado'),
+-    hoy: call('fichaje:hoy'), mes: call('fichaje:mes'), resumen: call('fichaje:resumen'),
+-    empleados: call('fichaje:empleados'), guardarEmpleado: call('fichaje:empleado-guardar'),
+-    verificar: call('fichaje:verificar'), admin: call('fichaje:admin'), adminSet: call('fichaje:admin-set'),
+-    exportar: call('fichaje:export'), avisoEntrada: call('fichaje:aviso-entrada'), horarioGet: call('fichaje:horario-get'), horarioSet: call('fichaje:horario-set'), tramosHoy: call('fichaje:tramos-hoy'), finHorario: call('fichaje:fin-horario'), turnos: call('fichaje:turnos'), turnoGuardar: call('fichaje:turno-guardar'), turnoBorrar: call('fichaje:turno-borrar'), planSemana: call('fichaje:plan-semana'), planMesVista: call('fichaje:plan-mes-vista'), planMesEmpleado: call('fichaje:plan-mes-empleado'), planAsignar: call('fichaje:plan-asignar'), planSemanaSet: call('fichaje:plan-semana-set'), planMes: call('fichaje:plan-mes')
+-  },
+-  dev: { acceso: call('dev:acceso'), info: call('dev:info'), renovar: call('dev:renovar'), desactivar: call('dev:desactivar'), ocr: call('dev:ocr'), pdfTexto: call('dev:pdf-texto'), resetCarta: call('dev:reset-carta'), resetOperativa: call('dev:reset-operativa'), restaurar: call('dev:restaurar'), relojEstado: call('dev:reloj-estado'), relojReset: call('dev:reloj-reset'), unidades: call('dev:unidades'), leerArchivoCarta: call('dev:leer-archivo-carta'), exportarCarta: call('dev:exportar-carta'), plantillaCarta: call('dev:plantilla-carta'), agente: call('dev:agente'), elegirImagenes: call('dev:elegir-imagenes'), guardarTodo: call('dev:guardar-todo'), restaurarTodo: call('dev:restaurar-todo'), seedPruebas: call('dev:seed-pruebas') },
+-  sistema: { puestaEnMarcha: call('sistema:puesta-en-marcha'), puestaEnMarchaOk: call('sistema:puesta-en-marcha-ok'), autostart: call('sistema:autostart'), abrirUrl: call('sistema:abrir-url'),
+-    tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar') }, /* v5.0.5 · ⌨ */
+-  app: {
+-    salir: call('app:salir'),
+-    estadoSalida: call('app:estado-salida'),
+-    onCierreSolicitado: (cb) => ipcRenderer.on('app:cierre-solicitado', cb)
+-  }
++  fichaje: { login: call('fichaje:login'), fichar: call('fichaje:fichar'), estado: call('fichaje:estado'), hoy: call('fichaje:hoy'), mes: call('fichaje:mes'),
++    resumen: call('fichaje:resumen'), empleados: call('fichaje:empleados'), guardarEmpleado: call('fichaje:empleado-guardar'),
++    verificar: call('fichaje:verificar'), admin: call('fichaje:admin'), adminSet: call('fichaje:admin-set'), exportar: call('fichaje:export'),
++    avisoEntrada: call('fichaje:aviso-entrada'), horarioGet: call('fichaje:horario-get'), horarioSet: call('fichaje:horario-set'),
++    tramosHoy: call('fichaje:tramos-hoy'), finHorario: call('fichaje:fin-horario'), turnos: call('fichaje:turnos'),
++    turnoGuardar: call('fichaje:turno-guardar'), turnoBorrar: call('fichaje:turno-borrar'), planSemana: call('fichaje:plan-semana'),
++    planMesVista: call('fichaje:plan-mes-vista'), planMesEmpleado: call('fichaje:plan-mes-empleado'), planAsignar: call('fichaje:plan-asignar'),
++    planSemanaSet: call('fichaje:plan-semana-set'), planMes: call('fichaje:plan-mes') },
++  dev: { acceso: call('dev:acceso'), info: call('dev:info'), renovar: call('dev:renovar'), desactivar: call('dev:desactivar'), ocr: call('dev:ocr'),
++    pdfTexto: call('dev:pdf-texto'), resetCarta: call('dev:reset-carta'), resetOperativa: call('dev:reset-operativa'), restaurar: call('dev:restaurar'),
++    relojEstado: call('dev:reloj-estado'), relojReset: call('dev:reloj-reset'), unidades: call('dev:unidades'),
++    leerArchivoCarta: call('dev:leer-archivo-carta'), exportarCarta: call('dev:exportar-carta'), plantillaCarta: call('dev:plantilla-carta'),
++    agente: call('dev:agente'), elegirImagenes: call('dev:elegir-imagenes'), guardarTodo: call('dev:guardar-todo'), restaurarTodo: call('dev:restaurar-todo'),
++    seedPruebas: call('dev:seed-pruebas') },
++  sistema: { puestaEnMarcha: call('sistema:puesta-en-marcha'), puestaEnMarchaOk: call('sistema:puesta-en-marcha-ok'), autostart: call('sistema:autostart'),
++    abrirUrl: call('sistema:abrir-url'), tecladoTactil: call('sistema:teclado-tactil'), tecladoConfigurar: call('sistema:teclado-tactil-configurar') },
++  app: { salir: call('app:salir'), estadoSalida: call('app:estado-salida'), onCierreSolicitado: (cb) => ipcRenderer.on('app:cierre-solicitado', cb) },
+ });
+diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
+index ece8210..12aabf6 100644
+--- a/electron/puesto-red.cjs
++++ b/electron/puesto-red.cjs
+@@ -27,7 +27,8 @@ const fs = require('fs');
+ const path = require('path');
+ const os = require('os');
+ const seg = require('./seguridad-lan.cjs'); // v0.0.85 · freno de PIN, tope de cuerpo, cabeceras
+-const permisos = require('./permisos-canal.cjs'); // v0.1.50 · AUD-01 · permiso por canal en el servidor
++const permisos = require('./permisos-canal.cjs');
++const canales = require('./canales.cjs'); // v0.1.77 · punto 4 · la tabla única de canales // v0.1.50 · AUD-01 · permiso por canal en el servidor
+ 
+ let servidor = null;
+ let servidorHttps = null;     // v0.1.18 · el mismo programa por https, para WebHID desde otro PC
+@@ -41,11 +42,10 @@ const VIDA_MAX_MS = 24 * 3600000; // v0.1.73 · SEC-16 · tope absoluto: por muc
+ const freno = seg.crearFreno();
+ /* v0.1.73 · SEC-10 · canales que validan un PIN además de auth:login: pasan por el mismo freno.
+    Sin esto, fichaje:login por /rpc permitía probar los 10 000 PIN de todos los usuarios. */
+-const CANALES_PIN = new Set(['fichaje:login', 'fichaje:admin', 'app:salir', 'caja:cajonAbrir']);
++const CANALES_PIN = canales.PIN; // v0.1.77 · `pin: true` en canales.cjs
+ /* v0.1.73 · SEC-11 · el usuario que firma el rastro (log de la orden, caja, anulaciones) es el de
+    la sesión del puesto, no el que mande el cliente: posición del argumento por canal. */
+-const POS_USUARIO = { 'taller:pass-ver': 1, 'taller:orden-estado': 2, 'taller:linea-set': 2,
+-  'caja:movimiento': 3, 'tickets:anular': 1, 'fid:canjear': 2 };
++const POS_USUARIO = canales.POS_USUARIO; // v0.1.77 · `usuario: n` en canales.cjs
+ /* v0.1.73 · SEC-12 · claves de config que no salen por la red a quien no tenga «ajustes» */
+ const SECRETAS = /(_token|_clave|_key|_hash|_pin|_hmac|_sello)$/;
+ /* v0.1.73 · SEC-13 · el Host de la petición debe ser el mostrador (DNS rebinding) */
+@@ -57,115 +57,18 @@ function hostPermitido(host) {
+   return ipsLocales().includes(nombre);
+ }
+ 
+-/* Canales prohibidos en remoto: abren diálogos del sistema en el PC del mostrador.
+-   El aviso dice DÓNDE hacerlo, que es lo que el usuario necesita saber. */
+-const PROHIBIDOS = [
+-  (c) => c.startsWith('dev:'),
+-  (c) => c === 'docs:importar',
+-  (c) => c === 'central:exportar-csv',
+-  (c) => c === 'print:pdf',
+-  /* v0.0.87 · el agente portable elige carpeta y archivo con el explorador de
+-     Windows, y ese explorador se abriría en el PC del mostrador, donde no hay
+-     nadie mirando: desde el puesto en red te quedarías esperando para siempre.
+-     Y además el pendrive está enchufado allí, no aquí. */
+-  (c) => c === 'py:agente-exportar',
+-  (c) => c === 'py:agente-importar',
+-  /* v0.1.21 · la TM Utility abre una ventana Tkinter y un «elegir carpeta»: las dos cosas en el mostrador */
+-  (c) => c === 'py:tm-abrir',
+-  (c) => c === 'py:tm-exportar',
+-  (c) => c === 'py:tm-instalar',      // v0.1.40 · el Setup se abre en el PC donde corre el programa
+-  (c) => c === 'py:tm-setup-copiar',  // y el «Guardar como», igual
+-  (c) => c.startsWith('jc:') && c !== 'jc:guia', // v0.1.52 · Joy-Con Toolkit se abre en el PC donde está el mando: el mostrador
+-  (c) => c === 'productos:exportar',          // v0.1.62 · «Guardar como» del paquete de productos, en el mostrador
+-  (c) => c === 'catalogo:exportar-archivo', // v0.1.48 · «Guardar como» en el mostrador; el puesto usa catalogo:exportar-csv y descarga desde el navegador
+-  /* v0.0.98 · abrir una ventana de Electron la abriría en el mostrador; el puesto en red
+-     abre una pestaña del navegador (la pantalla lo sabe por window.doelPuestoRed). */
+-  (c) => c.startsWith('ventana:'),
+-  /* v0.1.12 · «Guardar como» del ZIP de acceso directo: desde el puesto en red se baja de /acceso-directo.zip */
+-  (c) => c === 'puesto:acceso-directo',
+-];
++/* v0.1.77 · punto 4 · Los canales PROHIBIDOS en remoto (abren diálogos o ventanas en el PC del mostrador:
++   `red: 'local'`) y los que MIDEN EL PC DONDE CORRE DOEL TALLER (batería, disco, USB, temperatura…:
++   `red: 'mide'`) se marcan fila a fila en canales.cjs. El aviso al usuario dice DÓNDE hacerlo, que es lo
++   que necesita saber; el de medir dice qué medir y con qué (agente portable). */
++const MIDEN_ESTE_PC = canales.MIDEN_ESTE_PC;
++const mideElMostrador = canales.mideElMostrador;
++const prohibido = canales.prohibido;
+ 
+-/* v0.0.88 · Canales que MIDEN EL PC DONDE CORRE DOEL TALLER: batería, disco, USB,
+-   temperatura, RAM, sensores. Desde el puesto en red, hasta ahora, «Batería y
+-   disco» devolvía la batería del PC del mostrador y la enseñaba como si fuera la de
+-   este — sin decir nada. Doce canales dando un dato verdadero del equipo equivocado,
+-   que es peor que un error: un error se ve. El aviso dice qué medir y con qué. */
+-const MIDEN_ESTE_PC = [
+-  'taller:bateria-informe', 'taller:energia-informe', 'taller:disco-salud',
+-  'taller:disco-velocidad-nativa', 'taller:diskspd-disponible', 'taller:diskspd-benchmark',
+-  'taller:usb-listar', 'taller:usb-discos', 'taller:usb-velocidad', 'taller:usb-historial',
+-  'taller:mando-serie', 'taller:cpu-temperatura', 'taller:dispositivos',
+-  'py:ejecutar',
+-];
+-const mideElMostrador = (canal) => MIDEN_ESTE_PC.includes(canal);
+-
+-const prohibido = (canal) => PROHIBIDOS.some((f) => f(canal));
+-
+-/* ── El puente, leído de preload.cjs ──────────────────────────────────────────
+-   Se recorre el objeto que preload expone como `doel` contando llaves: a nivel 1
+-   están los grupos (auth, clientes, outlet…), y dentro, los pares método → canal. */
+-function leerPuente() {
+-  const txt = fs.readFileSync(path.join(__dirname, 'preload.cjs'), 'utf8');
+-  const arranque = txt.indexOf("exposeInMainWorld('doel'");
+-  if (arranque < 0) throw new Error('preload.cjs no expone el puente esperado');
+-  /* Se delimita cada grupo contando llaves, y dentro de su trozo se buscan los
+-     métodos. Hay dos formas en preload:
+-       simple:    nombre: call('canal')
+-       envuelta:  nombre: (a, b) => call('canal')({ a, b })
+-     La segunda reordena los argumentos, así que se copia su firma tal cual; si se
+-     ignorara, el método llegaría al mostrador con los parámetros cambiados. */
+-  const reGrupo = /([A-Za-z_$][\w$]*)\s*:\s*$/;
+-  const grupos = [];
+-  let n = 0;
+-  const desde0 = txt.indexOf('{', arranque);
+-  for (let j = desde0; j < txt.length; j++) {
+-    if (txt[j] === '{') {
+-      n++;
+-      if (n === 2) {
+-        const m = reGrupo.exec(txt.slice(Math.max(0, j - 60), j).replace(/\s+$/, ''));
+-        grupos.push({ grupo: m ? m[1] : null, desde: j, hasta: null });
+-      }
+-    } else if (txt[j] === '}') {
+-      if (n === 2 && grupos.length) grupos[grupos.length - 1].hasta = j;
+-      n--;
+-      if (n === 0) break;
+-    }
+-  }
+-
+-  const out = {};
+-  for (const G of grupos) {
+-    if (!G.grupo || G.hasta == null) continue;
+-    const trozo = txt.slice(G.desde, G.hasta);
+-    out[G.grupo] = out[G.grupo] || {};
+-
+-    const reEnvuelta = /([A-Za-z_$][\w$]*)\s*:\s*\(([^)]*)\)\s*=>\s*call\(\s*'([^']+)'\s*\)\s*\(/g;
+-    const envueltas = new Set();
+-    let m;
+-    while ((m = reEnvuelta.exec(trozo))) {
+-      const abre = reEnvuelta.lastIndex - 1;
+-      let prof = 0, k = abre;
+-      for (; k < trozo.length; k++) {
+-        if (trozo[k] === '(') prof++;
+-        else if (trozo[k] === ')') { prof--; if (!prof) break; }
+-      }
+-      out[G.grupo][m[1]] = { canal: m[3], params: m[2].trim(), expr: trozo.slice(abre + 1, k).trim() };
+-      envueltas.add(m[1]);
+-    }
+-
+-    /* Avisos que el escritorio manda hacia la pantalla (cierre de la aplicación,
+-       reservas nuevas). En el navegador no existen: se dejan como método que no hace
+-       nada pero RESPONDE. Si no estuvieran, la pantalla que los llama se cae —y se
+-       cayó: `app.onCierreSolicitado is not a function` en el puesto en red. */
+-    const reEvento = /([A-Za-z_$][\w$]*)\s*:\s*\([^)]*\)\s*=>\s*ipcRenderer\.on\(/g;
+-    while ((m = reEvento.exec(trozo))) out[G.grupo][m[1]] = { evento: true };
+-
+-    const reSimple = /([A-Za-z_$][\w$]*)\s*:\s*call\(\s*'([^']+)'\s*\)/g;
+-    while ((m = reSimple.exec(trozo))) {
+-      if (!envueltas.has(m[1]) && !out[G.grupo][m[1]]) out[G.grupo][m[1]] = { canal: m[2] };
+-    }
+-  }
+-  return out;
+-}
++/* ── El puente ─────────────────────────────────────────────────────────────────
++   v0.1.77 · ya no se parsea el texto de preload.cjs: la tabla canales.cjs es la fuente (el preload se
++   genera de ella). grupo → método → { canal } | { canal, params, expr } | { evento: true }. */
++function leerPuente() { return canales.puente(); }
+ 
+ const ipLocal = () => {
+   for (const ifz of Object.values(os.networkInterfaces())) {
+@@ -400,6 +303,9 @@ async function iniciar({ db, logEvento, handlers, dirDatos = null }) { // v0.1.7
+           return json(200, { ok: false, error: 'Esta prueba mide el PC donde corre Doel Taller, no este. '
+             + 'Para diagnosticar ESTE equipo, usa el agente portable (pendrive) o abre la prueba en el mostrador.' });
+         }
++        /* v0.1.77 · punto 4 · deny-by-default (SEC-19): /rpc solo sirve lo declarado en canales.cjs con método en
++           el puente y sin marca `red`. Un handler interno del mostrador o un canal fuera de la tabla no existe aquí. */
++        if (!canales.enRed(canal)) return json(403, { ok: false, error: '«' + canal + '» no está disponible desde el puesto en red' });
+         const fn = HANDLERS.get(canal);
+         if (!fn) return json(200, { ok: false, error: 'El mostrador no conoce «' + canal + '»' });
+ 
+diff --git a/package.json b/package.json
+index 866485a..89dd3e2 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.76",
++  "version": "0.1.77",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/tools/check-puente.cjs b/tools/check-puente.cjs
+index 9e0bf5f..922c910 100644
+--- a/tools/check-puente.cjs
++++ b/tools/check-puente.cjs
+@@ -67,6 +67,14 @@ console.log('Puente preload → main:');
+ const canales = new Set([...preload.matchAll(/call\('([^']+)'\)/g)].map((m) => m[1]));
+ const atendidos = new Set([...main.matchAll(/handle\('([^']+)'/g)].map((m) => m[1]));
+ for (const c of [...canales].sort()) if (!atendidos.has(c)) mal(`canal '${c}' declarado en el preload sin handle en main.cjs`);
++/* v0.1.77 · punto 4 · el preload se GENERA de electron/canales.cjs: si alguien lo editó a mano, o añadió una fila
++   sin regenerar, aquí se nota. Y cada handle() del proceso principal tiene su fila (deny-by-default en /rpc:
++   lo que no está en la tabla el puesto en red lo niega, así que no puede quedar nada sin declarar). */
++const tabla = require('../electron/canales.cjs');
++for (const e of tabla.validar()) mal('canales.cjs: ' + e);
++if (require('./puente-generar.cjs').texto() !== preload) mal('electron/preload.cjs no coincide con canales.cjs → node tools/puente-generar.cjs');
++for (const c of Object.keys(tabla.CANALES).sort()) if (!atendidos.has(c)) mal(`canal '${c}' en canales.cjs sin handle() en main`);
++for (const c of [...atendidos].sort()) if (!tabla.CANALES[c]) mal(`handle('${c}') sin fila en canales.cjs (el puesto en red lo negará; decláralo, con api: null si es interno)`);
+ /* v0.1.35 · un canal con `ipcMain.handle` a pelo funciona en el mostrador pero NO en el puesto en
+    red (solo `handle()` lo mete en HANDLERS): «El mostrador no conoce print:html». Solo se admite
+    para canales prohibidos en remoto (abren diálogos allí), que se listan en puesto-red.cjs. */
+@@ -146,10 +154,10 @@ try {
+ } catch (e) { mal('no se pudo verificar: ' + e.message); }
+ if (fallos === antes7) console.log('  firmados');
+ 
+-/* ── 8 · handlers que ya no invoca nadie (aviso, no error) ── */
++/* ── 8 · handlers internos: con fila en canales.cjs (api: null) pero sin método en el puente (aviso, no error) ── */
+ const huerfanos = [...atendidos].filter((c) => !canales.has(c)).sort();
+ if (huerfanos.length) {
+-  console.log('Handlers sin canal en el preload (' + huerfanos.length + ', solo aviso):');
++  console.log('Handlers internos sin método en el puente (' + huerfanos.length + ', solo aviso):');
+   console.log('  ' + huerfanos.join(' '));
+ }
+ 
+diff --git a/tools/puente-generar.cjs b/tools/puente-generar.cjs
+new file mode 100644
+index 0000000..a7f2366
+--- /dev/null
++++ b/tools/puente-generar.cjs
+@@ -0,0 +1,59 @@
++#!/usr/bin/env node
++/* v0.1.77 · Genera electron/preload.cjs desde electron/canales.cjs (punto 4). El preload corre en el renderer
++   con sandbox, donde `require` solo da 'electron': no puede leer la tabla en caliente, así que se escribe
++   en frío y check-puente comprueba que coincide.  Uso: node tools/puente-generar.cjs [--comprobar] */
++const fs = require('fs');
++const path = require('path');
++const RAIZ = path.resolve(__dirname, '..');
++const canales = require(path.join(RAIZ, 'electron', 'canales.cjs'));
++
++function texto() {
++  const grupos = new Map(); // nombre → [items en orden]
++  for (const canal of Object.keys(canales.CANALES)) {
++    const d = canales.CANALES[canal]; if (!d.api) continue;
++    const [g, m] = d.api.split('.');
++    if (!grupos.has(g)) grupos.set(g, []);
++    grupos.get(g).push(d.firma ? `${m}: (${d.firma.join(', ')}) => call('${canal}')({ ${d.firma.join(', ')} })` : `${m}: call('${canal}')`);
++  }
++  for (const canal of Object.keys(canales.EVENTOS)) {
++    const d = canales.EVENTOS[canal]; const [g, m] = d.api.split('.');
++    if (!grupos.has(g)) grupos.set(g, []);
++    grupos.get(g).push(d.forma === 'dato' ? `${m}: (cb) => ipcRenderer.on('${canal}', (_e, n) => cb(n))` : `${m}: (cb) => ipcRenderer.on('${canal}', cb)`);
++  }
++  const lineas = [];
++  for (const [g, items] of grupos) {
++    let linea = `  ${g}: { `;
++    const salida = [];
++    items.forEach((it, i) => {
++      const pieza = it + (i < items.length - 1 ? ', ' : ' },');
++      if (linea.length + pieza.length > 160 && linea.trim().length > `${g}: {`.length) { salida.push(linea.replace(/\s+$/, '')); linea = '    ' + pieza; }
++      else linea += pieza;
++    });
++    salida.push(linea.replace(/\s+$/, ''));
++    lineas.push(salida.join('\n'));
++  }
++  return `/* GENERADO por \`node tools/puente-generar.cjs\` desde electron/canales.cjs · NO EDITAR A MANO (v0.1.77).
++   Para añadir un canal: su fila en canales.cjs, su handle() en main, y volver a generar. check-puente
++   falla si este fichero no coincide con la tabla. */
++const { contextBridge, ipcRenderer } = require('electron');
++
++const call = (canal) => (...args) => ipcRenderer.invoke(canal, ...args);
++
++contextBridge.exposeInMainWorld('doel', {
++${lineas.join('\n')}
++});
++`;
++}
++
++const destino = path.join(RAIZ, 'electron', 'preload.cjs');
++if (require.main === module) {
++  const nuevo = texto();
++  const actual = fs.existsSync(destino) ? fs.readFileSync(destino, 'utf8') : '';
++  if (process.argv.includes('--comprobar')) {
++    if (actual === nuevo) { console.log('preload.cjs coincide con canales.cjs'); process.exit(0); }
++    console.error('preload.cjs NO coincide con canales.cjs → node tools/puente-generar.cjs'); process.exit(1);
++  }
++  fs.writeFileSync(destino, nuevo);
++  console.log(actual === nuevo ? 'preload.cjs ya estaba al día' : 'preload.cjs regenerado desde canales.cjs');
++}
++module.exports = { texto, destino };
+diff --git a/tools/test-agente-portable.cjs b/tools/test-agente-portable.cjs
+index 0b35c40..b308260 100644
+--- a/tools/test-agente-portable.cjs
++++ b/tools/test-agente-portable.cjs
+@@ -209,7 +209,7 @@ console.log('\n6 · Solo se ejecuta lo que está en el catálogo');
+   t('8e. sin orden, se ve pero no se guarda (para mirarlo antes de decidir)', /if \(!o\.ordenId\) return \{ vista: val \}/.test(main));
+   t('8f. el puente expone el grupo py', /py: \{ disponible: call\('py:disponible'\)/.test(pre));
+   t('8g. 🔴 desde el puesto en red NO se puede: el explorador se abriría en el mostrador',
+-    /c === 'py:agente-exportar'/.test(pst) && /c === 'py:agente-importar'/.test(pst));
++    require('../electron/canales.cjs').prohibido('py:agente-exportar') && require('../electron/canales.cjs').prohibido('py:agente-importar')); // v0.1.77 · red: local en canales.cjs
+   t('8h. el botón de importar está en el panel 🔬 de la orden',
+     /Importar JSON del agente/.test(panel) && /api\.py\.agenteImportar/.test(panel));
+   t('8i. y se recarga el panel al importar, para ver el resultado sin recargar la ficha',
+diff --git a/tools/test-canales.cjs b/tools/test-canales.cjs
+new file mode 100644
+index 0000000..02f51bc
+--- /dev/null
++++ b/tools/test-canales.cjs
+@@ -0,0 +1,96 @@
++/* v0.1.77 · punto 4 del plan · electron/canales.cjs es la ÚNICA lista de canales: el preload se genera de ella,
++   permisos-canal.cjs y puesto-red.cjs la leen, y /rpc niega todo lo que no esté declarado (deny-by-default).
++   1 · forma de la tabla y cobertura (tabla ↔ handle() ↔ preload)   2 · lo que decía cada lista antigua sigue dicho
++   3 · el puente remoto se fabrica de la tabla   4 · el servidor de verdad niega lo no declarado */
++const fs = require('fs'); const os = require('os'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const C = require('../electron/canales.cjs');
++const P = require('../electron/permisos-canal.cjs');
++const main = require('./_main-fuente.cjs')();
++const preload = fs.readFileSync('electron/preload.cjs', 'utf8');
++const atendidos = new Set([...main.matchAll(/handle\('([^']+)'/g)].map((m) => m[1]));
++const filas = Object.keys(C.CANALES);
++
++console.log('1 · La tabla');
++const errores = C.validar();
++t('1a. validar() no encuentra nada raro', errores.length === 0, errores.join(' | '));
++const sinHandle = filas.filter((c) => !atendidos.has(c));
++t('1b. cada fila tiene su handle() en el proceso principal', sinHandle.length === 0, sinHandle.join(', '));
++const sinFila = [...atendidos].filter((c) => !C.CANALES[c]);
++t('1c. cada handle() tiene su fila (sin esto el puesto en red lo negaría sin que nadie lo supiera)', sinFila.length === 0, sinFila.join(', '));
++t('1d. el preload es exactamente lo que genera tools/puente-generar.cjs', require('./puente-generar.cjs').texto() === preload);
++const enPreload = new Set([...preload.matchAll(/call\('([^']+)'\)/g)].map((m) => m[1]));
++const conApi = filas.filter((c) => C.CANALES[c].api);
++t('1e. el preload lleva todos los canales con método y ninguno más', conApi.every((c) => enPreload.has(c)) && [...enPreload].every((c) => C.CANALES[c] && C.CANALES[c].api), String(enPreload.size) + ' vs ' + conApi.length);
++const avisos = [...preload.matchAll(/ipcRenderer\.on\('([^']+)'/g)].map((m) => m[1]);
++t('1f. los avisos del escritorio (ipcRenderer.on) salen de EVENTOS', avisos.length === Object.keys(C.EVENTOS).length && avisos.every((c) => C.EVENTOS[c]), avisos.join(', '));
++const internos = filas.filter((c) => !C.CANALES[c].api);
++t('1g. los handlers internos (api: null) van marcados red: local y no llegan ni a /rpc ni a window.doel', internos.length >= 1 && internos.every((c) => C.CANALES[c].red === 'local' && !C.enRed(c)), internos.join(', '));
++t('1h. check-puente exige las tres cosas: tabla válida, preload generado y cada handle() con fila', (() => { const cp = fs.readFileSync('tools/check-puente.cjs', 'utf8'); return /tabla\.validar\(\)/.test(cp) && /puente-generar\.cjs'\)\.texto\(\) !== preload/.test(cp) && /sin fila en canales\.cjs/.test(cp); })());
++
++console.log('\n2 · Lo que decían las listas antiguas lo dice la tabla');
++const locales = ['dev:restaurar', 'dev:seed-taller', 'docs:importar', 'central:exportar-csv', 'print:pdf', 'py:agente-exportar', 'py:agente-importar', 'py:tm-abrir', 'py:tm-exportar', 'py:tm-instalar', 'py:tm-setup-copiar', 'jc:estado', 'jc:abrir', 'jc:elegir', 'jc:guardar', 'jc:bluetooth', 'productos:exportar', 'catalogo:exportar-archivo', 'ventana:herramienta', 'ventana:contexto', 'puesto:acceso-directo'];
++t('2a. prohibidos en remoto (abren diálogos o ventanas en el mostrador)', locales.every(C.prohibido) && !['jc:guia', 'py:tm-setup-estado', 'py:disponible', 'outlet:vender', 'taller:tablero', 'config:all'].some(C.prohibido), locales.filter((c) => !C.prohibido(c)).join(', '));
++t('2b. todos los dev:* son locales y exigen «ajustes»', filas.filter((c) => c.startsWith('dev:')).every((c) => C.prohibido(c) && C.permisoDeCanal(c) === 'ajustes'));
++const miden = ['taller:bateria-informe', 'taller:energia-informe', 'taller:disco-salud', 'taller:disco-velocidad-nativa', 'taller:diskspd-disponible', 'taller:diskspd-benchmark', 'taller:usb-listar', 'taller:usb-discos', 'taller:usb-velocidad', 'taller:usb-historial', 'taller:mando-serie', 'taller:cpu-temperatura', 'taller:dispositivos', 'py:ejecutar'];
++t('2c. los catorce que miden el PC del mostrador, ni uno más', miden.every(C.mideElMostrador) && C.MIDEN_ESTE_PC.length === miden.length && !C.mideElMostrador('taller:diag-guardar'));
++t('2d. canales con PIN (freno por IP) y posición del usuario de la sesión', [...C.PIN].sort().join() === 'app:salir,caja:cajonAbrir,fichaje:admin,fichaje:login' && Object.keys(C.POS_USUARIO).sort().map((c) => c + '=' + C.POS_USUARIO[c]).join() === 'caja:movimiento=3,fid:canjear=2,taller:linea-set=2,taller:orden-estado=2,taller:pass-ver=1,tickets:anular=1', JSON.stringify(C.POS_USUARIO));
++t('2e. permisos: configuración «ajustes», artículos «inventario», caja «cierre»/«cajon», anular, compras, crm, outlet, informes',
++  ['config:set', 'usuarios:save', 'licencia:activar', 'catalogo:vaciar', 'backup:ahora', 'sistema:autostart', 'sat:instalar', 'jc:elegir'].every((c) => C.permisoDeCanal(c) === 'ajustes')
++  && ['catalogo:saveProducto', 'kits:guardar', 'productos:exportar'].every((c) => C.permisoDeCanal(c) === 'inventario') && C.permisoDeCanal('stock:alta') === 'stock'
++  && C.permisoDeCanal('caja:abrir') === 'cierre' && C.permisoDeCanal('caja:cajonAbrir') === 'cajon' && C.permisoDeCanal('tickets:anular') === 'anular' && C.permisoDeCanal('compras:aplicar') === 'compras'
++  && C.permisoDeCanal('clientes:save') === 'crm' && C.permisoDeCanal('outlet:vender') === 'outlet' && ['informes:mensual', 'central:tarjetas', 'fiscal:export'].every((c) => C.permisoDeCanal(c) === 'informes'));
++const libresConPermiso = [...P.LIBRES].filter((c) => C.permisoDeCanal(c));
++t('2f. las lecturas libres siguen libres y permisos-canal.cjs responde con la tabla', libresConPermiso.length === 0 && P.permisoDeCanal === C.permisoDeCanal && Object.keys(P.EXACTOS).length === filas.filter((c) => C.CANALES[c].permiso).length && P.PREFIJOS.length === 0, libresConPermiso.join(', '));
++t('2g. lo que escribe sin permiso es trabajo de mostrador: órdenes, tickets, agenda, fichar', ['taller:orden-crear', 'tickets:crear', 'agenda:crear', 'fichaje:fichar', 'caja:movimiento', 'clientes:alta-rapida'].every((c) => C.permisoDeCanal(c) === null && C.enRed(c)));
++t('2h. puesto-red.cjs ya no tiene listas propias: PIN, posición de usuario, prohibidos, miden y puente salen de la tabla', (() => { const pr = fs.readFileSync('electron/puesto-red.cjs', 'utf8'); return /const CANALES_PIN = canales\.PIN/.test(pr) && /const POS_USUARIO = canales\.POS_USUARIO/.test(pr) && /const prohibido = canales\.prohibido/.test(pr) && /const mideElMostrador = canales\.mideElMostrador/.test(pr) && /function leerPuente\(\) \{ return canales\.puente\(\); \}/.test(pr) && !/const PROHIBIDOS = \[/.test(pr) && /if \(!canales\.enRed\(canal\)\) return json\(403/.test(pr); })());
++
++console.log('\n3 · El puente remoto sale de la tabla');
++const puente = C.puente();
++const gruposPreload = [...preload.matchAll(/^ {2}([a-zA-Z_$][\w$]*):\s*\{/gm)].map((m) => m[1]);
++t('3a. mismos grupos y en el mismo orden que el preload', Object.keys(puente).join() === gruposPreload.join(), Object.keys(puente).length + ' vs ' + gruposPreload.length);
++t('3b. los métodos con firma conservan sus parámetros', puente.taller.tpvImpresoraEstado.params === 'ip, puerto' && puente.taller.tpvImpresoraEstado.expr === '{ ip, puerto }' && puente.taller.usbVelocidad.params === 'letra, mb' && puente.taller.accesoMovil.params === 'minutos');
++t('3c. los avisos están como evento', puente.reserva.onNuevas.evento === true && puente.app.onCierreSolicitado.evento === true);
++const puesto = require('../electron/puesto-red.cjs');
++const js = puesto.shim(puesto.leerPuente());
++const caja = { window: {}, sessionStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }, fetch: async () => ({ headers: { get: () => null }, status: 200, json: async () => ({ ok: true }) }) };
++require('vm').createContext(caja); require('vm').runInContext(js, caja);
++t('3d. el shim compila y monta window.doel con todos los grupos y las firmas envueltas', Object.keys(caja.window.doel).length === gruposPreload.length && typeof caja.window.doel.taller.tpvImpresoraEstado === 'function' && caja.window.doel.taller.tpvImpresoraEstado.length === 2 && typeof caja.window.doel.app.onCierreSolicitado === 'function');
++
++console.log('\n4 · El servidor de verdad niega lo que no está declarado');
++const dir = path.join(os.tmpdir(), 'doel-test-canales'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
++const db = require('../electron/db.cjs'); db.init(dir);
++const HANDLERS = new Map(); const llamados = [];
++const handle = (c, fn) => HANDLERS.set(c, async (...a) => { llamados.push(c); try { return { ok: true, data: await fn(...a) }; } catch (e) { return { ok: false, error: e.message }; } });
++handle('auth:login', (pin) => db.login(pin)); handle('catalogo:categorias', () => db.listCategorias());
++handle('interno:secreto', () => 'nunca'); handle('dev:cerrar', () => 'nunca'); handle('print:pdf', () => 'nunca'); handle('taller:usb-listar', () => 'nunca');
++const admin = db.listPerfiles().find((p) => p.nombre === 'Administrador');
++db.saveUsuario({ nombre: 'Edmundo', pin: '8888', perfil_id: admin.id });
++db.configSet('puesto_red_activo', '1'); db.configSet('puesto_red_puerto', '18993');
++const arranque = puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dir });
++(async () => {
++  await arranque;
++  const base = 'http://127.0.0.1:18993';
++  const rpc = async (canal, args, tk) => { const r = await fetch(base + '/rpc', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': tk || '' }, body: JSON.stringify({ canal, args }) }); let j = null; try { j = await r.json(); } catch (e) { j = null; } return { r, j }; };
++  const la = await rpc('auth:login', ['8888']); const tk = la.r.headers.get('x-token');
++  t('4a. el administrador entra', la.j && la.j.ok && !!tk);
++  const cats = await rpc('catalogo:categorias', [], tk);
++  t('4b. un canal declarado funciona', cats.r.status === 200 && cats.j.ok && Array.isArray(cats.j.data));
++  const sec = await rpc('interno:secreto', [], tk);
++  t('4c. un handler que existe en el mostrador pero NO está en la tabla → 403 y no se ejecuta (antes se servía)', sec.r.status === 403 && sec.j && sec.j.ok === false && /no está disponible desde el puesto en red/.test(sec.j.error) && !llamados.includes('interno:secreto'), sec.r.status + ' ' + JSON.stringify(sec.j));
++  const nada = await rpc('nada:nada', [], tk);
++  t('4d. un canal que no existe en ningún sitio → 403, sin revelar si el mostrador lo conoce', nada.r.status === 403 && !/no conoce/.test(nada.j.error));
++  const dc = await rpc('dev:cerrar', [], tk);
++  t('4e. un handler interno (api: null) → prohibido en remoto y sin ejecutar', dc.j && dc.j.ok === false && /hazlo allí/.test(dc.j.error) && !llamados.includes('dev:cerrar'));
++  const pdf = await rpc('print:pdf', [], tk); const usb = await rpc('taller:usb-listar', [], tk);
++  t('4f. prohibidos y «miden el mostrador» conservan su aviso de siempre', /hazlo allí/.test(pdf.j.error) && /agente portable/.test(usb.j.error) && !llamados.includes('print:pdf') && !llamados.includes('taller:usb-listar'));
++  const sin = await rpc('catalogo:categorias', [], ''); const sinNada = await rpc('interno:secreto', [], '');
++  t('4g. sin sesión: lo declarado pide PIN (401) y lo no declarado es 403 igual, con o sin sesión', sin.r.status === 401 && sinNada.r.status === 403);
++  const decl = await rpc('clientes:list', [], tk);
++  t('4h. declarado pero sin handler en este proceso → el aviso de versión de siempre («El mostrador no conoce»)', decl.r.status === 200 && /no conoce/.test(decl.j.error));
++  puesto.detener();
++  console.log(`\n${ko === 0 ? '✅' : '❌'}  Canales únicos y deny-by-default: ${ok} OK · ${ko} fallos`);
++  process.exit(ko === 0 ? 0 : 1);
++})().catch((e) => { process.stdout.write('  ✗ batería rota: ' + (e && e.stack) + '\n'); try { puesto.detener(); } catch (x) {} process.exit(1); });
+diff --git a/tools/test-catalogo-exportar.cjs b/tools/test-catalogo-exportar.cjs
+index 1210563..827f6f0 100644
+--- a/tools/test-catalogo-exportar.cjs
++++ b/tools/test-catalogo-exportar.cjs
+@@ -66,7 +66,7 @@ try { db.catBorrarConArticulos(fMandos); t('14. repetirlo sobre una familia que
+ /* cableado */
+ const main = fs.readFileSync('electron/main.cjs', 'utf8'), pre = fs.readFileSync('electron/preload.cjs', 'utf8'), puesto = fs.readFileSync('electron/puesto-red.cjs', 'utf8'), cat = fs.readFileSync('src/components/ajustes/catalogo.jsx', 'utf8');
+ t('15. canales: exportar-csv (texto), exportar-archivo (Guardar como) y cat-borrar-con-articulos, por el puente', /handle\('catalogo:exportar-csv'/.test(main) && /handle\('catalogo:exportar-archivo'/.test(main) && /handle\('catalogo:cat-borrar-con-articulos'/.test(main) && /exportarCsv: call\('catalogo:exportar-csv'\)/.test(pre) && /exportarArchivo: call\('catalogo:exportar-archivo'\)/.test(pre) && /catBorrarConArticulos: call/.test(pre));
+-t('16. el «Guardar como» está prohibido en el puesto en red; allí el CSV se descarga desde el navegador (Blob)', /c === 'catalogo:exportar-archivo'/.test(puesto) && /window\.doelPuestoRed/.test(cat) && /new Blob\(\['\\ufeff' \+ r\.csv\]/.test(cat) && /a\.download = nombre/.test(cat));
++t('16. el «Guardar como» está prohibido en el puesto en red; allí el CSV se descarga desde el navegador (Blob)', require('../electron/canales.cjs').prohibido('catalogo:exportar-archivo') /* v0.1.77 · red: local en canales.cjs */ && /window\.doelPuestoRed/.test(cat) && /new Blob\(\['\\ufeff' \+ r\.csv\]/.test(cat) && /a\.download = nombre/.test(cat));
+ t('17. botón ⬆ Exportar en Artículos que exporta lo filtrado (todos / familia / subfamilia)', /⬆ Exportar ' \+ \(subsubActiva \|\| subActiva \? 'subfamilia' : famActiva \? 'familia' : 'todos'\)/.test(cat));
+ t('18. en la familia elegida: ⬆ Exportar familia y la eliminación con sus artículos en dos pasos (aviso con cifras → teclear el nombre)', /⬆ Exportar familia/.test(cat) && /Sí, eliminar con sus artículos \(1\/2\)/.test(cat) && /Eliminar definitivamente \(2\/2\)/.test(cat) && /borrarTodo\.texto\.trim\(\)\.toLowerCase\(\) !== fam\.nombre\.trim\(\)\.toLowerCase\(\)/.test(cat));
+ t('19. desde el aviso de «tiene N artículos: muévelos» se puede saltar a eliminarla con ellos', /O eliminarla con sus \{moverDe\.n\} artículo\(s\)/.test(cat));
+diff --git a/tools/test-compartir-productos.cjs b/tools/test-compartir-productos.cjs
+index 39de968..ecdf9a5 100644
+--- a/tools/test-compartir-productos.cjs
++++ b/tools/test-compartir-productos.cjs
+@@ -71,7 +71,7 @@ t('3g. 🔴 el mismo traspaso dos veces se rechaza (no se duplica stock)', r3.ok
+ /* ── 4 · cableado ── */
+ const main = fs.readFileSync('electron/main.cjs', 'utf8'), pre = fs.readFileSync('electron/preload.cjs', 'utf8'), cat = fs.readFileSync('src/components/ajustes/catalogo.jsx', 'utf8');
+ const P = require('../electron/permisos-canal.cjs');
+-t('4a. canales productos:* (compartir-set/filtro/resumen, exportar-preview, exportar) por el puente; exportar prohibido en el puesto y con permiso inventario', ['productos:compartir-set', 'productos:compartir-filtro', 'productos:compartir-resumen', 'productos:exportar-preview', 'productos:exportar'].every((c) => main.includes("handle('" + c + "'")) && /productos: \{ compartirSet: call/.test(pre) && /c === 'productos:exportar'/.test(fs.readFileSync('electron/puesto-red.cjs', 'utf8')) && P.permisoDeCanal('productos:exportar') === 'inventario');
++t('4a. canales productos:* (compartir-set/filtro/resumen, exportar-preview, exportar) por el puente; exportar prohibido en el puesto y con permiso inventario', ['productos:compartir-set', 'productos:compartir-filtro', 'productos:compartir-resumen', 'productos:exportar-preview', 'productos:exportar'].every((c) => main.includes("handle('" + c + "'")) && /productos: \{ compartirSet: call/.test(pre) && require('../electron/canales.cjs').prohibido('productos:exportar') /* v0.1.77 */ && P.permisoDeCanal('productos:exportar') === 'inventario');
+ t('4b. el exportador redimensiona la foto a 800 px JPEG 80 con nativeImage, nombra productos-AAAAMMDD-HHMM.doelprod.json, apunta el paquete y avisa si pasa de 25 MB', /img\.resize\(width >= height \? \{ width: 800 \} : \{ height: 800 \}\)/.test(main) && /toJPEG\(80\)/.test(main) && /\.doelprod\.json/.test(main) && /compartirPaqueteApuntar/.test(main) && /Pasaba de 25 MB con fotos/.test(main));
+ t('4c. v0.1.63 · el modo traspaso ya entra (spec §6, paso 4) y resta con compartirTraspasar', /compartirTraspasar/.test(main) && !/modo traspaso llega en una versión posterior/.test(main));
+ t('4d. Inventario → Productos: casilla «📤 Compartir con TPV / CRM» en la ficha, 📤 en la lista, y el panel con marcar/desmarcar en bloque, destino, modo, «Qué iría» y Exportar', /Compartir con TPV \/ CRM/.test(cat) && /function CompartirProductos/.test(cat) && /Marcar \{alcance\}/.test(cat) && /Qué iría/.test(cat) && /Exportar productos \(\.doelprod\.json\)/.test(cat) && /Traspaso de stock \(Taller resta, el destino suma\)/.test(cat));
+diff --git a/tools/test-dispositivos.cjs b/tools/test-dispositivos.cjs
+index d8d3695..689b39e 100644
+--- a/tools/test-dispositivos.cjs
++++ b/tools/test-dispositivos.cjs
+@@ -62,7 +62,7 @@ t('4c. un disco de Get-Disk sin fila USBSTOR sale igualmente', db.dispositivosDe
+ /* ── 5 · el puente y el hub ── */
+ const pre = fs.readFileSync('electron/preload.cjs', 'utf8'), main = fs.readFileSync('electron/main.cjs', 'utf8'), red = fs.readFileSync('electron/puesto-red.cjs', 'utf8');
+ t('5a. preload expone api.taller.dispositivos → taller:dispositivos → db.dispositivosConectados', /dispositivos: call\('taller:dispositivos'\)/.test(pre) && /handle\('taller:dispositivos', \(\) => db\.dispositivosConectados\(\)\)/.test(main));
+-t('5b. el puesto en red sabe que mide el PC del mostrador (no el del puesto)', /'taller:dispositivos'/.test(red));
++t('5b. el puesto en red sabe que mide el PC del mostrador (no el del puesto)', require('../electron/canales.cjs').mideElMostrador('taller:dispositivos')); // v0.1.77 · red: mide en canales.cjs
+ const hub = fs.readFileSync('src/components/Herramientas.jsx', 'utf8');
+ t('5c. el hub tiene 🔌 Dispositivos conectados en Componentes', /id: 'dispositivos'/.test(hub) && /DispositivosConectados/.test(hub));
+ const comp = fs.readFileSync('src/components/DispositivosConectados.jsx', 'utf8');
+diff --git a/tools/test-jc-toolkit.cjs b/tools/test-jc-toolkit.cjs
+index 827bce6..899cc4c 100644
+--- a/tools/test-jc-toolkit.cjs
++++ b/tools/test-jc-toolkit.cjs
+@@ -56,7 +56,7 @@ const JC = require('../electron/jc-toolkit.cjs');
+   const herr = fs.readFileSync('src/components/Herramientas.jsx', 'utf8'), usuarios = fs.readFileSync('src/components/ajustes/usuarios.jsx', 'utf8'), pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+   t('14. canales jc:estado/abrir/elegir/guardar/bluetooth/guia por el puente', ['jc:estado', 'jc:abrir', 'jc:elegir', 'jc:guardar', 'jc:bluetooth', 'jc:guia'].every((c) => main.includes("handle('" + c + "'")) && /jc: \{ estado: call\('jc:estado'\)/.test(pre));
+   const P = require('../electron/permisos-canal.cjs');
+-  t('15. puesto en red: todo jc:* prohibido menos la guía; elegir/guardar exigen «ajustes»', /c\.startsWith\('jc:'\) && c !== 'jc:guia'/.test(puesto) && P.permisoDeCanal('jc:elegir') === 'ajustes' && P.permisoDeCanal('jc:guardar') === 'ajustes' && P.permisoDeCanal('jc:guia') === null);
++  t('15. puesto en red: todo jc:* prohibido menos la guía; elegir/guardar exigen «ajustes»', ['jc:estado', 'jc:abrir', 'jc:elegir', 'jc:guardar', 'jc:bluetooth'].every(require('../electron/canales.cjs').prohibido) && !require('../electron/canales.cjs').prohibido('jc:guia') /* v0.1.77 */ && P.permisoDeCanal('jc:elegir') === 'ajustes' && P.permisoDeCanal('jc:guardar') === 'ajustes' && P.permisoDeCanal('jc:guia') === null);
+   const ms = fs.readFileSync('src/components/MandoSwitch.jsx', 'utf8'), hp = fs.readFileSync('src/components/HerramientasParte.jsx', 'utf8');
+   t('16. v0.1.59 · un solo producto «Mando Nintendo Switch» con dos pestañas (test + Joy-Con Toolkit) en el hub, la orden y Ajustes → Orden; jctoolkit ya no es herramienta suelta', /<MandoSwitch \{\.\.\.libre\} \/>/.test(herr) && !/id: 'jctoolkit'/.test(herr) && !/jctoolkit/.test(usuarios) && /Comp: MandoSwitch/.test(hp) && /<TestMandoSwitch \{\.\.\.props\} \/>/.test(ms) && /<JoyConToolkit \{\.\.\.props\} \/>/.test(ms) && /jc_toolkit: 'Joy-Con Toolkit'/.test(fs.readFileSync('src/print.js', 'utf8')));
+   t('16b. el toolkit se guarda como jc_toolkit aunque viva dentro de Mando Switch: el JSON lleva el tipo y hub y orden lo respetan', /\(json && json\.tipo\) \|\| TIPO_PRUEBA\[id\]/.test(herr) && /json\.tipo && typeof json\.tipo === 'string'\) \? json\.tipo : tipoHerr/.test(hp));
+diff --git a/tools/test-puesto-catalogo.cjs b/tools/test-puesto-catalogo.cjs
+index f1e9e4b..469e28a 100644
+--- a/tools/test-puesto-catalogo.cjs
++++ b/tools/test-puesto-catalogo.cjs
+@@ -43,7 +43,7 @@ const arranque = puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, d
+   const enorme = await fetch(base + '/rpc', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': tk }, body: JSON.stringify({ canal: 'catalogo:productos', args: [Buffer.alloc(17 * 1024 * 1024, 65).toString()] }) });
+   t('7. el tope sigue existiendo: 17 MB → 413', enorme.status === 413);
+   const desconocido = await rpc('catalogo:no-existe', [], tk);
+-  t('8. un canal desconocido contesta ok:false con «El mostrador no conoce» (lo que la tira roja enseña)', desconocido.j && desconocido.j.ok === false && /no conoce/.test(desconocido.j.error));
++  t('8. un canal desconocido contesta ok:false con un motivo legible (v0.1.77: 403 «no está disponible desde el puesto en red», deny-by-default; lo que la tira roja enseña)', desconocido.j && desconocido.j.ok === false && desconocido.r.status === 403 && /no está disponible desde el puesto en red/.test(desconocido.j.error));
+   /* la tira roja y el aviso del catálogo */
+   const shim = puesto.shim(puesto.leerPuente());
+   t('9. el puente remoto avisa a la aplicación de cada error (evento doel:rpc-error con canal y motivo)', /doel:rpc-error/.test(shim) && /detail: \{ canal: canal, error/.test(shim));
+diff --git a/tools/test-tm-utility.cjs b/tools/test-tm-utility.cjs
+index 00a1791..8aa0de4 100644
+--- a/tools/test-tm-utility.cjs
++++ b/tools/test-tm-utility.cjs
+@@ -62,7 +62,7 @@ const t = (n, c, extra = '') => { if (c) { ok++; console.log('  OK  ' + n); } el
+   /* ── 5 · puente, puesto en red y pantalla ── */
+   const pre = fs.readFileSync('electron/preload.cjs', 'utf8'), main = require('./_main-fuente.cjs')(), red = fs.readFileSync('electron/puesto-red.cjs', 'utf8');
+   t('5a. api.py.tmAbrir / tmExportar → py:tm-abrir / py:tm-exportar → abrirTmUtility / exportarTmUtility', /tmAbrir: call\('py:tm-abrir'\)/.test(pre) && /tmExportar: call\('py:tm-exportar'\)/.test(pre) && /tallerPython\.abrirTmUtility\(\)/.test(main) && /tallerPython\.exportarTmUtility\(/.test(main));
+-  t('5b. los dos canales están prohibidos desde el puesto en red (ventana y «elegir carpeta» saldrían en el mostrador)', /'py:tm-abrir'/.test(red) && /'py:tm-exportar'/.test(red));
++  t('5b. los dos canales están prohibidos desde el puesto en red (ventana y «elegir carpeta» saldrían en el mostrador)', require('../electron/canales.cjs').prohibido('py:tm-abrir') && require('../electron/canales.cjs').prohibido('py:tm-exportar') /* v0.1.77 */);
+   const kit = fs.readFileSync('src/components/KitSatEpson.jsx', 'utf8');
+   t('5c. Kit SAT Epson tiene la pestaña 🛠 TM Utility con «Instalar en este PC», «Guardar instalador», «Abrir sin instalar» y «Copiar la carpeta»', /\['tm', '🛠 TM Utility'\]/.test(kit) && /function TmUtility/.test(kit) && /Instalar en este PC/.test(kit) && /Guardar instalador/.test(kit) && /Abrir sin instalar/.test(kit) && /Copiar la carpeta al pendrive/.test(kit));
+ 

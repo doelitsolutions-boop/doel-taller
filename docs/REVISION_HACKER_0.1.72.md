@@ -58,7 +58,7 @@ Además del PC del mostrador hay tres clientes más: el **puesto en red** (el pr
 
 | Frontera | Quién está al otro lado | Qué le damos hoy |
 |---|---|---|
-| Renderer → main (IPC) | Cualquiera delante del mostrador (técnico, cliente curioso, DevTools) | Hasta la 0.1.72: todo, sin sesión. Con el lote 0.1.73: DevTools cerradas; la autorización por canal en IPC sigue pendiente. |
+| Renderer → main (IPC) | Cualquiera delante del mostrador (técnico, cliente curioso, DevTools) | Hasta la 0.1.72: todo, sin sesión. 0.1.73: DevTools cerradas. **0.1.78**: sesión local en main (`auth:login`/`auth:logout`) y permiso por canal en cada llamada IPC, misma tabla que `/rpc`. Preguntas: canales que escriben sin permiso declarado; caminos para abrir sesión sin PIN; `auth:verificar` no debe cambiar de usuario. |
 | LAN → `/rpc` del puesto en red | Cualquier dispositivo en la Wi‑Fi; técnico con PIN | Login con PIN de 4 cifras, token de 32 bytes, permiso por canal (tabla `permisos-canal.cjs`), freno 5 fallos/5 min por IP. |
 | LAN → comandero | Cualquier dispositivo en la Wi‑Fi | PIN de técnico para `/api/*`; `/movil` (diagnóstico del móvil del cliente) sin login. |
 | Internet → funciones Netlify | Cualquiera | Escrituras del TPV con Bearer por slug (o global de comodín); portal con teléfono + clave de 8 dígitos; reservas y solicitudes de outlet sin autenticación. |
@@ -75,7 +75,7 @@ Además del PC del mostrador hay tres clientes más: el **puesto en red** (el pr
 - Preguntas: ¿se puede activar una licencia permanente y todos los módulos sin Doel? ¿Abrir un `.doelbak` de otro taller? ¿Descifrar `ordenes.password_cifrada` de una BD robada? ¿Generar el código del Panel de Desarrollador? (Sabemos que sí a todo: §6 SEC‑01. Queremos la PoC y cualquier derivada que no hayamos visto.)
 
 ### ★ 4.2 Puesto en red (`electron/puesto-red.cjs`, `permisos-canal.cjs`, `seguridad-lan.cjs`)
-- `POST /rpc {canal, args}` con cabecera `x-token`. Lista de canales: `grep -o "handle('[^']*'" electron/main.cjs electron/main/*.cjs`.
+- `POST /rpc {canal, args}` con cabecera `x-token`. Lista de canales: `electron/canales.cjs` (una fila por canal con permiso y marca de red; 0.1.77).
 - Preguntas: canales alcanzables sin el permiso que deberían exigir; argumentos que llegan a `child_process` o a rutas de fichero; escalada técnico → admin; DoS del mostrador; evasión del freno; fijación o robo de sesión; DNS rebinding desde una web; traversal en los estáticos; qué se filtra en errores.
 - Lo que ya está cerrado en el lote 0.1.73 (verificar que lo está): freno en `fichaje:login/admin`, `app:salir`, `caja:cajonAbrir`; sesión antes de leer el cuerpo; `Host` validado; `uid` del rastro desde la sesión; `config:all` sin secretos para perfiles sin «Ajustes»; `sat:*` y cajón con permiso.
 
@@ -136,7 +136,7 @@ El detalle, con fichero y línea, está en `docs/AUDITORIA_0.1.72.md`. Aquí el 
 | SEC‑04 | Claves de portal y contraseñas de equipos por `clientes:list`/`orden-get`/`pass-ver` | Mitigado (`uid` de sesión) | Verificar la exposición de columnas; `SELECT *` hacia la red. |
 | SEC‑05 | Certificado CA en Root de los PCs técnicos | Mitigado (certificado de hoja) | Verificar el nuevo certificado; MITM durante la descarga del ZIP por HTTP. |
 | SEC‑06 | 16 MB antes de sesión → DoS | Parcheado | Verificar; probar slowloris y conexiones concurrentes. |
-| SEC‑07 | DevTools en producción; IPC sin sesión | Mitigado (DevTools cerradas) | Otros caminos al puente sin PIN (arrastrar enlace, `?herramienta=`, ventanas de herramienta). |
+| SEC‑07 | DevTools en producción; IPC sin sesión | Parcheado (0.1.78: sesión local + permiso por canal en IPC) | Otros caminos al puente sin PIN (arrastrar enlace, `?herramienta=`, ventanas de herramienta); canales con permiso `null` que escriban algo sensible. |
 | SEC‑08 | `window.open` hereda el preload | Parcheado | Verificar con una página que llame a `window.doel`. |
 | SEC‑09 | Inyección `cmd /c copy` por nombre de impresora | Parcheado | Otros `exec`/`cmd` con datos (COM, IP:puerto, rutas del kit SAT). |
 | SEC‑10 | PIN 4 cifras, SHA‑256 sal fija, defaults de fábrica, sin freno local | **Abierto** | Verificar; tiempo real de romper la tabla `usuarios`. |
@@ -144,7 +144,7 @@ El detalle, con fichero y línea, está en `docs/AUDITORIA_0.1.72.md`. Aquí el 
 | SEC‑12 | `config:set` re‑sella la licencia; `dev:*` sin puerta | **Abierto** | Verificar; desde LAN con «Ajustes». |
 | SEC‑13 | XSS reflejado en `index.html` pública; sin cabeceras | Parcheado (sin CSP aún) | Buscar más XSS en `public/*.html` (sobre todo `grupo.html`) y en `demos/`. |
 | SEC‑14 | Clave HMAC de códigos de diagnóstico publicada | **Abierto** | Verificar; valorar si hay impacto más allá de saltarse el código. |
-| SEC‑15 | Canales sensibles sin permiso en `/rpc` | Mitigado (lista ampliada) | **Enumerar** todos los canales y clasificar los que falten. |
+| SEC‑15 | Canales sensibles sin permiso en `/rpc` | Parcheado (0.1.77: `canales.cjs` único + deny‑by‑default) | Revisar fila a fila `electron/canales.cjs`: canales sin `permiso` que escriban o lancen procesos; `red: 'local'` que falte. |
 | SEC‑16 | Sin logout; permisos congelados en sesión | **Abierto** | Verificar. |
 | SEC‑17 | Freno solo por IP | Mitigado (`esLocal` en comandero) | IP alias / DHCP; tiempo real para 10⁴ PIN. |
 | SEC‑18 | DNS rebinding | Mitigado (`Host` en `/rpc`) | Comandero sigue sin validar `Host`. |
@@ -177,7 +177,7 @@ Adaptada de OWASP ASVS 4.0 nivel 2 y de la guía de seguridad de Electron. Marca
 - [ ] PIN de fábrica forzado a cambiar (pendiente).
 
 **Autorización**
-- [ ] Permiso por canal en `/rpc` con deny‑by‑default para escrituras (pendiente SEC‑15).
+- [x] Permiso por canal en `/rpc` con deny‑by‑default (0.1.77) y también en IPC (0.1.78): revisar la clasificación de `electron/canales.cjs`.
 - [ ] El usuario del rastro lo pone el servidor (lote).
 - [ ] Lecturas con proyección de columnas, nunca `SELECT *` hacia la red (pendiente SEC‑04).
 

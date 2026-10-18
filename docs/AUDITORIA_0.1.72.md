@@ -104,7 +104,7 @@ El tarball `doel-taller-v0.1.73.tar.gz` y el parche acumulado `docs/parches/0.1.
 | SEC-04 | ✅ | `clientes:list`/`ficha` sin `portal_pass_*`; `ordenGet` sin `password_cifrada` (`tiene_password`); `taller:pass-ver` lee la columna aparte; `uid` del rastro = usuario de la sesión. |
 | SEC-05 | ◐ | Certificado de hoja, 825 días, formato 3. Pendiente: huella visible antes de instalar; retirar raíces antiguas. |
 | SEC-06 | ✅ | Sesión antes del cuerpo; 256 KB sin sesión. |
-| SEC-07 | ◐ | DevTools cerradas en producción. Pendiente: autorización por canal también en IPC. |
+| SEC-07 | ✅ 0.1.78 | DevTools cerradas en producción (0.1.73). **0.1.78**: `auth:login` abre una sesión local en el proceso principal y `handle()` aplica `permisos.autorizado` en cada llamada IPC con la misma tabla que `/rpc` (`electron/sesion-local.cjs`, batería `test-permisos-ipc.cjs`). Nuevo `auth:verificar` para «quién abre la caja» sin cambiar de usuario (antes, por `auth:login`, en el puesto en red cambiaba la sesión al encargado). |
 | SEC-08 | ✅ | `endurecerVentana()` en todas las ventanas (`electron/seguridad-app.cjs`). |
 | SEC-09 | ✅ | Nombre de impresora validado antes del respaldo `cmd /c copy`; `caja:cajonProbar` con permiso. |
 | SEC-10 | ✅ | scrypt + sal por usuario (`s1$sal$hash`) en `usuarios`, `fichaje_empleados` y admin de fichaje, migración perezosa al primer login; freno local 5/5 min (solo intentos del mostrador); PIN de 4 a 8 dígitos admitido por la capa de datos (el teclado de Login sigue enviando al 4.º: cambiarlo es UX). Los PIN de fábrica siguen existiendo; la puesta en marcha obliga a cambiar el del admin. |
@@ -112,7 +112,7 @@ El tarball `doel-taller-v0.1.73.tar.gz` y el parche acumulado `docs/parches/0.1.
 | SEC-12 | ✅ | Puerta del Panel Dev en main (`devAbrir` 30 min tras TOTP), `DEV_PUERTA` para renovar/desactivar/reset/restaurar/guardar‑todo/reloj, `config:set` rechaza `licencia_*`, `modulo_*`, `activacion_*`, `primer_arranque`, `reloj_*`, `backup_clave`, `fichaje_admin_*` con la puerta cerrada. |
 | SEC-13 | ◐ | Token escapado y validado; cabeceras X‑Frame‑Options/nosniff/Referrer/HSTS/Permissions. Pendiente: CSP. |
 | SEC-14 | ✅ | `/api/diag-validar` (Netlify) y `/api/movil-validar` (comandero, con freno) validan el código; la clave ya no va en `movil.html`, `taller.html` ni `diagnostico-movil.html`. |
-| SEC-15 | ◐ | `sat:*`, cajón de prueba, `tpv-impresora-test`, `salud:mantenimiento`, `docs:borrar`, `fichaje:export` con permiso; ventanas de impresión en sandbox. Pendiente: deny‑by‑default con batería. |
+| SEC-15 | ✅ 0.1.77 | `sat:*`, cajón de prueba, `tpv-impresora-test`, `salud:mantenimiento`, `docs:borrar`, `fichaje:export` con permiso; ventanas de impresión en sandbox (0.1.73). **0.1.77**: `electron/canales.cjs` es la única lista (404 filas: método, permiso, `red`, PIN, usuario); el preload se genera de ella; `/rpc` **deny‑by‑default**: lo que no está declarado con método y sin marca devuelve 403 sin ejecutarse; `check-puente` falla si un `handle()` no tiene fila; batería `test-canales.cjs` (28). |
 | SEC-16 | ✅ | `auth:logout` (servidor y botón «Cerrar sesión»), permisos releídos en cada llamada (`usuarioVivo`), caducidad absoluta 24 h. |
 | SEC-17 | ✅ | Freno global (6× el de IP) en `crearFreno`; comandero solo IP privadas. |
 | SEC-18 | ✅ | `Host` en `/rpc` y en `/api/*` del comandero; `Content-Type: application/json` obligatorio en `/rpc`. |
