@@ -1,0 +1,378 @@
+diff --git a/ESTADO.md b/ESTADO.md
+index 534808f..2c3c3b1 100644
+--- a/ESTADO.md
++++ b/ESTADO.md
+@@ -1,6 +1,6 @@
+ # Doel Taller · Estado del proyecto y pasos siguientes
+ 
+-**Versión actual:** 0.1.79 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.80 · **Fecha:** 18 de octubre de 2026
+ **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
+ 
+ ---
+@@ -101,7 +101,7 @@ Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, s
+ 1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
+ (sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
+ `/rpc` ✅ 0.1.77 (el preload se genera de la tabla: `node tools/puente-generar.cjs`) · 5 permisos por canal también en IPC ✅ 0.1.78 (sesión local en main, `auth:verificar` para el TPV) · 6 límite de error por vista y registro de errores de pantalla ✅ 0.1.79 (la ventana se recarga sola si muere) · 7 esquema (FK, índices,
+-numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
++numeración por contador, `nif_emisor`) ✅ 0.1.80 · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
+ 10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
+ 
+ ### Herramientas de verificación (el «ritual de entrega»)
+diff --git a/VERSION.md b/VERSION.md
+index bfbc14c..3ad0b42 100644
+--- a/VERSION.md
++++ b/VERSION.md
+@@ -160,6 +160,7 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+ | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
+ | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
+ | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.80 | 🗄️ **Esquema que dice la verdad (punto 7 del plan · CAL‑03).** Nueva tabla `contadores` y **número de orden por contador atómico** (`OT-AAAA-NNNN`): el `COUNT(*)+1` de antes repetía número en cuanto se borraba una orden del año (y dos puestos a la vez podían sacar el mismo); ahora además es **único** (`ux_ordenes_numero`; si una instalación trae repetidos heredados no se crea el índice, se apunta en config y Salud lo enseña en rojo). **FK declaradas** donde faltaban (`ordenes.tecnico_id/recibido_por/reparado_por → usuarios`, `ticket_id → tickets`, `orden_origen_id → ordenes`, `ordenes_lineas.producto_id → productos` y `tecnico_id → usuarios`, `ordenes_firmas.usuario_id/anulada_por → usuarios`), todas `ON DELETE SET NULL`: dar de baja un producto o un usuario no se bloquea, y un id inventado ya no entra (`foreign_keys` estaba en ON desde siempre); la migración reconstruye la tabla copiando también las columnas que esa instalación tenga de más. **Diez índices** nuevos (hijas de la orden por `orden_id`, `ordenes(cliente_id/equipo_id)`, `tickets(fecha_hora)`, `ticket_lineas(ticket_id)`). **`tickets.nif_emisor`**: el hash de la cadena usaba el NIF leído en vivo, así que corregir una letra del NIF en Ajustes invalidaba todos los tickets; ahora cada ticket guarda con qué NIF se emitió y se verifica con él (los anteriores se rellenan con el actual). Salud: nueva fila «Numeración de órdenes». El reset operativo pone el contador a cero. Nueva batería `test-esquema.cjs` (26: instalación nueva, numeración, migración desde una base vieja fabricada a propósito, Salud). |
+ | 0.1.79 | 🧱 **Robustez del quiosco (punto 6 del plan).** Cada vista va dentro de un **límite de error propio** (`src/components/LimiteVista.jsx`, montado en `App.jsx` con `key={vista}`): un `.map` sobre undefined en Informes ya no tira la barra lateral, el TPV ni la orden a medio escribir; la pantalla enseña «Esta pantalla ha fallado» con el mensaje y tres salidas (↻ Reintentar, 🏠 Volver al inicio, Reiniciar). El fallo, con vista, mensaje, pila y componente, se apunta en el **registro de eventos del mostrador** (tipo «pantalla», canal nuevo `sistema:error-pantalla`, `electron/robustez.cjs`: sin repetidos en un minuto y con tope de 40 por diez minutos). `src/errores.js` engancha `window.onerror` y las promesas sin `catch` (lo que no pasa por ningún límite: manejadores de botones, `setTimeout`) al mismo registro, una vez por fallo y minuto y 30 por sesión de pantalla; el límite raíz de `main.jsx` también informa. En el proceso principal, si la ventana **muere** (`render-process-gone`: GPU, memoria, driver) se apunta y se recarga sola; tres caídas en cinco minutos → se deja de recargar y se avisa; `unresponsive`/`responsive` quedan en el registro. Nueva batería `test-robustez.cjs` (26: monta el límite con jsdom, pulsa los botones, fuerza caídas con una ventana falsa). |
+ | 0.1.78 | 🔐 **Permiso por canal también en el mostrador (punto 5 del plan).** Nuevo `electron/sesion-local.cjs`: `auth:login` desde la pantalla de Electron abre una **sesión local** en el proceso principal (quién entró con PIN) y `auth:logout` la cierra; `handle()` pregunta en **cada llamada IPC** si el perfil de esa sesión puede con el canal, con la misma tabla (`canales.cjs`) y la misma regla (`permisos-canal.autorizado`) que el puesto en red. Lo que no exige permiso pasa siempre (lo que la pantalla lee antes de entrar); lo que lo exige, sin nadie dentro, no (salvo `licencia:activar`, que se hace con la app bloqueada); el perfil se relee de la base en cada llamada (baja o cambio de permisos → efecto inmediato). Las negativas quedan en el registro (`Denegado canal a usuario: motivo`) y llegan a la pantalla como error legible. Hasta ahora lo tapaba solo la barra: cualquier cosa que hablara con el puente podía llamar a `config:set` o `usuarios:save` con un técnico dentro. Nuevo canal **`auth:verificar`** (comprueba un PIN sin cambiar de usuario) para «quién abre la caja» en el TPV: antes pasaba por `auth:login` y **en el puesto en red cambiaba la sesión al encargado para el resto del día**. Nueva batería `test-permisos-ipc.cjs` (19). `@babel/parser`, `eslint`, `jsdom`, `esbuild` y `@netlify/blobs` pasan a `devDependencies`: las baterías y `limpiar-muertos` los necesitan y un `npm install` los borraba (Vite 8 ya no arrastra el parser). Los arneses de `test-permisos-canal` y `test-puesto-catalogo` solo evalúan la primera función de cada `handle()` (la variante IPC usa la sesión local). |
+ | 0.1.77 | 🧭 **Una sola lista de canales (punto 4 del plan).** Nuevo `electron/canales.cjs`: 404 filas, una por canal, con el método de `window.doel`, la firma de los que reordenan argumentos, el permiso que exige, la marca del puesto en red (`local` = solo en el mostrador, `mide` = mide el PC del mostrador), si valida PIN y la posición del usuario de la sesión. `preload.cjs` se **genera** de ahí (`node tools/puente-generar.cjs`; `check-puente` falla si no coincide, si una fila no tiene `handle()` o si un `handle()` no tiene fila); `permisos-canal.cjs` y `puesto-red.cjs` la leen: fuera las cuatro listas que había que tocar a la vez (`PROHIBIDOS`, `MIDEN_ESTE_PC`, `CANALES_PIN`, `POS_USUARIO`) y el parseo del texto del preload en `leerPuente()`. **`/rpc` deny-by-default (SEC‑19)**: el puesto en red solo sirve lo declarado con método y sin marca; un handler interno (`dev:cerrar`) o un canal fuera de la tabla devuelve 403 «no está disponible desde el puesto en red» sin ejecutarse, con o sin sesión. Nueva batería `test-canales.cjs` (28). Seis baterías que leían las listas en el texto de `puesto-red.cjs` pasan a preguntar a la tabla. Para la pantalla no cambia nada: el preload generado es equivalente canal a canal y firma a firma al que había. |
+diff --git a/electron/db/_nucleo.cjs b/electron/db/_nucleo.cjs
+index 43bf229..eb2d093 100644
+--- a/electron/db/_nucleo.cjs
++++ b/electron/db/_nucleo.cjs
+@@ -96,6 +96,17 @@ function logEvento(tipo, detalle, usuarioId = null) {
+ N.logEvento = logEvento;
+ N.API.logEvento = logEvento;
+ 
++/* v0.1.80 · punto 7 · contador atómico en la tabla `contadores` (clave → valor). La primera vez arranca en semilla()
++   (el máximo que ya exista en la tabla de destino), así una instalación viva sigue donde iba. UPDATE … RETURNING es
++   una sola sentencia: dos puestos pidiendo número a la vez no se pisan. */
++function contadorSiguiente(clave, semilla = () => 0) {
++  if (!N.db.prepare('SELECT 1 FROM contadores WHERE clave = ?').get(clave)) {
++    N.db.prepare('INSERT OR IGNORE INTO contadores (clave, valor) VALUES (?, ?)').run(clave, Math.max(0, Number(semilla()) || 0));
++  }
++  return N.db.prepare('UPDATE contadores SET valor = valor + 1 WHERE clave = ? RETURNING valor').get(clave).valor;
++}
++N.contadorSiguiente = contadorSiguiente;
++
+ /* Constantes compartidas por varios módulos */
+ // fs y path para lo que escribe en disco: fotos de órdenes, diagramas y copias de seguridad
+ const fsF = require('fs');
+diff --git a/electron/db/esquema.cjs b/electron/db/esquema.cjs
+index 5e1fb55..72b0707 100644
+--- a/electron/db/esquema.cjs
++++ b/electron/db/esquema.cjs
+@@ -27,6 +27,31 @@ const ubicaciones = (...a) => N.API.ubicaciones(...a);
+ /* Instalación nueva → doel-taller.db. Instalación heredada del TPV → se sigue usando
+    doel-tpv-bar.db tal cual: renombrar el fichero de un taller en marcha es la clase de
+    cosa que sale mal a las 9 de la mañana con un cliente delante. */
++/* v0.1.80 · punto 7 · SQLite no añade REFERENCES con ALTER TABLE: se crea la tabla nueva con las columnas canónicas (ya
++   con sus FK), se le suman tal cual las columnas que esa instalación tenga de más, se copian los datos, se renombra y se
++   vuelven a crear sus índices. Solo actúa si la DDL actual no lleva ya la referencia (`senal`). Va con foreign_keys en
++   OFF durante la copia (como las migraciones de productos y tickets) y lo deja como estaba. */
++function reconstruirConFK(tabla, canon, senal) {
++  const fila = N.db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(tabla);
++  if (!fila || !fila.sql || senal.test(fila.sql)) return false;
++  const cols = N.db.prepare(`PRAGMA table_info(${tabla})`).all();
++  const defs = cols.map((c) => canon[c.name] || (c.name + ' ' + (c.type || 'TEXT') + (c.notnull ? ' NOT NULL' : '') + (c.dflt_value != null ? ' DEFAULT ' + c.dflt_value : '')));
++  const lista = cols.map((c) => c.name).join(', ');
++  const indices = N.db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL").all(tabla).map((i) => i.sql);
++  const fkAntes = N.db.pragma('foreign_keys', { simple: true });
++  N.db.pragma('foreign_keys = OFF');
++  try {
++    N.db.transaction(() => {
++      N.db.exec(`CREATE TABLE ${tabla}_mig (${defs.join(', ')})`);
++      N.db.exec(`INSERT INTO ${tabla}_mig (${lista}) SELECT ${lista} FROM ${tabla}`);
++      N.db.exec(`DROP TABLE ${tabla}`);
++      N.db.exec(`ALTER TABLE ${tabla}_mig RENAME TO ${tabla}`);
++      for (const s of indices) N.db.exec(s.replace(/^CREATE (UNIQUE )?INDEX (IF NOT EXISTS )?/i, (m, u) => 'CREATE ' + (u || '') + 'INDEX IF NOT EXISTS '));
++    })();
++  } finally { N.db.pragma('foreign_keys = ' + (fkAntes ? 'ON' : 'OFF')); }
++  return true;
++}
++
+ function rutaFicheroBD(userDataPath) {
+   const heredado = path.join(userDataPath, 'doel-tpv-bar.db');
+   return fs.existsSync(heredado) ? heredado : path.join(userDataPath, 'doel-taller.db');
+@@ -417,6 +442,55 @@ function init(userDataPath) {
+     id INTEGER PRIMARY KEY, orden_id INTEGER NOT NULL REFERENCES ordenes(id),
+     importe REAL NOT NULL, via TEXT NOT NULL, referencia TEXT,
+     cobrado_en TEXT DEFAULT (datetime('now','localtime')), ticket_id INTEGER)`);
++  /* ══ v0.1.80 · punto 7 del plan (CAL-03 de la auditoría 0.1.72) · el esquema dice la verdad ══
++     1 · Índices que faltaban en las tablas hijas de la orden (cada ficha hacía un barrido por orden_id) y en tickets.
++     2 · `contadores`: número de orden por contador atómico. El COUNT(*)+1 de antes repetía número en cuanto se borraba
++         una orden del año (y dos puestos a la vez podían sacar el mismo). `ux_ordenes_numero` lo hace ÚNICO; si una
++         instalación trae repetidos heredados no se crea el índice, se apunta en config y Salud lo enseña.
++     3 · FK declaradas donde faltaban, todas ON DELETE SET NULL: dar de baja un producto o un usuario no se bloquea, la
++         línea o la orden se queda sin el enlace (la descripción y el precio van en la propia línea). foreign_keys está
++         en ON desde siempre, así que un tecnico_id o producto_id inventado ya no entra, y foreign_key_check de Salud
++         revisa también estas columnas.
++     4 · `tickets.nif_emisor`: el NIF con el que se emitió. El hash de la cadena lo usaba leído en vivo de la empresa:
++         corregir una letra del NIF en Ajustes invalidaba todos los tickets. Los de antes se rellenan con el NIF actual
++         (es con el que verifican hoy). */
++  {
++    for (const [n, def] of [['ix_ordenes_cliente', 'ordenes(cliente_id)'], ['ix_ordenes_equipo', 'ordenes(equipo_id)'], ['ix_ordlin_orden', 'ordenes_lineas(orden_id)'],
++      ['ix_ordfirmas_orden', 'ordenes_firmas(orden_id)'], ['ix_ordlog_orden', 'ordenes_log(orden_id)'], ['ix_ordfotos_orden', 'ordenes_fotos(orden_id)'],
++      ['ix_ordavisos_orden', 'ordenes_avisos(orden_id)'], ['ix_ordanticipos_orden', 'ordenes_anticipos(orden_id)'], ['ix_tickets_fecha', 'tickets(fecha_hora)'],
++      ['ix_ticket_lineas_ticket', 'ticket_lineas(ticket_id)']]) N.db.exec(`CREATE INDEX IF NOT EXISTS ${n} ON ${def}`);
++    N.db.exec('CREATE TABLE IF NOT EXISTS contadores (clave TEXT PRIMARY KEY, valor INTEGER NOT NULL DEFAULT 0)');
++    reconstruirConFK('ordenes', {
++      id: 'id INTEGER PRIMARY KEY', numero: 'numero TEXT', cliente_id: 'cliente_id INTEGER NOT NULL REFERENCES clientes(id)', equipo_id: 'equipo_id INTEGER NOT NULL REFERENCES equipos(id)',
++      estado: "estado TEXT DEFAULT 'recibido'", tope_autorizado: 'tope_autorizado REAL DEFAULT 0', precio_diagnostico: 'precio_diagnostico REAL DEFAULT 0', diagnostico_descontable: 'diagnostico_descontable INTEGER DEFAULT 1',
++      garantia_meses: 'garantia_meses INTEGER DEFAULT 3', orden_origen_id: 'orden_origen_id INTEGER REFERENCES ordenes(id) ON DELETE SET NULL',
++      tecnico_id: 'tecnico_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL', ticket_id: 'ticket_id INTEGER REFERENCES tickets(id) ON DELETE SET NULL',
++      recibido: "recibido TEXT DEFAULT (datetime('now','localtime'))", recibido_por: 'recibido_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL',
++      reparado_por: 'reparado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL',
++    }, /tecnico_id INTEGER REFERENCES usuarios/);
++    reconstruirConFK('ordenes_lineas', {
++      id: 'id INTEGER PRIMARY KEY', orden_id: 'orden_id INTEGER NOT NULL REFERENCES ordenes(id)', tipo: 'tipo TEXT NOT NULL',
++      producto_id: 'producto_id INTEGER REFERENCES productos(id) ON DELETE SET NULL', descripcion: 'descripcion TEXT NOT NULL', cantidad: 'cantidad REAL DEFAULT 1',
++      precio: 'precio REAL NOT NULL', tecnico_id: 'tecnico_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL',
++    }, /producto_id INTEGER REFERENCES productos/);
++    reconstruirConFK('ordenes_firmas', {
++      id: 'id INTEGER PRIMARY KEY', orden_id: 'orden_id INTEGER NOT NULL REFERENCES ordenes(id)', momento: 'momento TEXT NOT NULL', png: 'png TEXT NOT NULL', hash: 'hash TEXT NOT NULL',
++      usuario_id: 'usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL', creada: "creada TEXT DEFAULT (datetime('now','localtime'))",
++      anulada_por: 'anulada_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL',
++    }, /usuario_id INTEGER REFERENCES usuarios/);
++    N.db.exec('CREATE INDEX IF NOT EXISTS ix_ordenes_estado ON ordenes(estado)'); // por si la reconstrucción los perdió en una instalación rara
++    N.db.exec('CREATE INDEX IF NOT EXISTS ix_ordenes_numero ON ordenes(numero)');
++    const repetidos = N.db.prepare('SELECT numero, COUNT(*) c FROM ordenes WHERE numero IS NOT NULL GROUP BY numero HAVING c > 1').all();
++    if (!repetidos.length) N.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_ordenes_numero ON ordenes(numero)');
++    else N.db.prepare("INSERT OR REPLACE INTO config (clave, valor) VALUES ('ordenes_numero_repetidos', ?)").run(repetidos.map((d) => d.numero + ' ×' + d.c).join(', '));
++    const colsTkN = N.db.prepare('PRAGMA table_info(tickets)').all().map((c) => c.name);
++    if (colsTkN.length && !colsTkN.includes('nif_emisor')) {
++      N.db.exec('ALTER TABLE tickets ADD COLUMN nif_emisor TEXT');
++      let nif = ''; try { nif = String(((N.API.getEmpresa && N.API.getEmpresa()) || {}).nif || '').trim(); } catch (e) { nif = ''; }
++      if (!nif) nif = String((N.db.prepare("SELECT valor FROM config WHERE clave = 'empresa_nif'").get() || {}).valor || '').trim();
++      if (nif) N.db.prepare('UPDATE tickets SET nif_emisor = ? WHERE nif_emisor IS NULL').run(nif);
++    }
++  }
+   N.db.exec(`CREATE TABLE IF NOT EXISTS rma_proveedor (
+     id INTEGER PRIMARY KEY, orden_id INTEGER REFERENCES ordenes(id),
+     distribuidor_id INTEGER, producto_id INTEGER, num_serie TEXT, motivo TEXT,
+@@ -1232,7 +1306,8 @@ function resetOperativa({ incluirEmpleadosFichaje = false } = {}) {
+     DELETE FROM ordenes_lineas;
+     DELETE FROM informes_tecnicos;
+     DELETE FROM rma_proveedor;
+-    DELETE FROM ordenes;                -- la numeración OT-año-N cuenta la tabla: vuelve sola al 1
++    DELETE FROM ordenes;
++    DELETE FROM contadores WHERE clave LIKE 'ordenes:%'; -- v0.1.80 · el contador de OT-año-N vuelve al 1 con la tabla
+     DELETE FROM equipos;                -- marcas/modelos (autocompletado aprendido) se CONSERVAN
+     ${incluirEmpleadosFichaje ? 'DELETE FROM fichaje_horarios; DELETE FROM fichaje_empleados;' : ''}
+     UPDATE series SET ultimo_numero = 0;
+diff --git a/electron/db/schema.sql b/electron/db/schema.sql
+index 7337291..9f1aa5b 100644
+--- a/electron/db/schema.sql
++++ b/electron/db/schema.sql
+@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS tickets (
+   motivo_rect    TEXT,                   -- causa de la rectificación (obligatoria en serie R)
+   pago_efectivo  REAL,                   -- parte en efectivo si forma_pago='mixto'
+   pago_tarjeta   REAL,                   -- parte en tarjeta si forma_pago='mixto'
++  nif_emisor     TEXT,                   -- v0.1.80 · NIF con el que se emitió: el hash se verifica con él aunque luego se corrija el NIF
+   UNIQUE (serie, numero)
+ );
+ 
+diff --git a/electron/db/sistema.cjs b/electron/db/sistema.cjs
+index 39bb3c6..395437f 100644
+--- a/electron/db/sistema.cjs
++++ b/electron/db/sistema.cjs
+@@ -475,7 +475,7 @@ function saludCompleta() {
+ 
+   // Cadena VeriFactu — SE COMPRUEBA, NO SE REPARA
+   try {
+-    const ts = N.db.prepare('SELECT id, serie, numero, fecha_hora, tipo_doc, total, hash, hash_anterior FROM tickets ORDER BY id').all();
++    const ts = N.db.prepare('SELECT id, serie, numero, fecha_hora, tipo_doc, total, hash, hash_anterior, nif_emisor FROM tickets ORDER BY id').all(); // v0.1.80 · nif_emisor
+     let enlacesRotos = 0, hashesMal = 0, primero = null, anterior = '';
+     for (const t of ts) {
+       if ((t.hash_anterior || '') !== anterior) { enlacesRotos++; if (!primero) primero = `${t.serie}-${t.numero}`; }
+@@ -499,6 +499,13 @@ function saludCompleta() {
+         : (series.length ? 'series consecutivas sin huecos' : 'sin tickets todavía'));
+   } catch (e) { add('numeracion', 'Numeración de tickets', 'error', e.message); }
+ 
++  try { // v0.1.80 · punto 7 · número de orden único y por contador
++    const rep = N.db.prepare('SELECT numero, COUNT(*) c FROM ordenes WHERE numero IS NOT NULL GROUP BY numero HAVING c > 1').all();
++    const unico = !!N.db.prepare("SELECT 1 FROM sqlite_master WHERE type='index' AND name='ux_ordenes_numero'").get();
++    add('ordenes_numero', 'Numeración de órdenes (OT-AAAA-NNNN única)', rep.length ? 'error' : (unico ? 'ok' : 'warn'),
++      rep.length ? 'repetidos: ' + rep.map((d) => d.numero + ' ×' + d.c).join(', ') + ' (heredados del contador antiguo: avisa a Doel para renumerar)' : (unico ? 'contador atómico y número único' : 'sin índice único todavía'));
++  } catch (e) { add('ordenes_numero', 'Numeración de órdenes', 'error', e.message); }
++
+   try {
+     const desc = N.db.prepare(`SELECT COUNT(*) c FROM caja_sesiones WHERE estado = 'cerrada' AND ABS(COALESCE(descuadre, 0)) > 0.009`).get().c;
+     const vieja = N.db.prepare(`SELECT COUNT(*) c FROM caja_sesiones WHERE estado = 'abierta' AND date(apertura) < date('now', 'localtime')`).get().c;
+diff --git a/electron/db/taller-ordenes.cjs b/electron/db/taller-ordenes.cjs
+index 0a53be8..7b32cb9 100644
+--- a/electron/db/taller-ordenes.cjs
++++ b/electron/db/taller-ordenes.cjs
+@@ -197,10 +197,15 @@ function ordenLog(ordenId, usuarioId, accion, detalle) {
+ 
+ 
+ // Numeración OT-YYYY-NNNN propia (NO fiscal: la fiscal es la del ticket al cobrar)
++/* v0.1.80 · punto 7 · número por contador atómico (tabla contadores), no por COUNT(*)+1: borrar una orden del año ya no
++   repite número, y dos puestos a la vez no sacan el mismo. El contador arranca en el máximo que haya ese año. */
++const ordenNumeroSiguiente = (anio) => N.contadorSiguiente('ordenes:' + anio, () =>
++  (N.db.prepare('SELECT MAX(CAST(substr(numero, 9) AS INTEGER)) m FROM ordenes WHERE numero LIKE ?').get(`OT-${anio}-%`) || {}).m || 0);
+ function ordenCrear(o) {
+   const anio = new Date().getFullYear();
+-  const n = N.db.prepare("SELECT COUNT(*) c FROM ordenes WHERE numero LIKE ?").get(`OT-${anio}-%`).c + 1;
+-  const numero = `OT-${anio}-${String(n).padStart(4, '0')}`;
++  return N.db.transaction(() => ordenCrearTx(o, `OT-${anio}-${String(ordenNumeroSiguiente(anio)).padStart(4, '0')}`))();
++}
++function ordenCrearTx(o, numero) {
+   const id = N.db.prepare(`INSERT INTO ordenes (numero, cliente_id, equipo_id, averia_declarada, accesorios, croquis,
+     password_cifrada, tope_autorizado, precio_diagnostico, garantia_meses, tecnico_id, recibido_por, token, fecha_compromiso)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, ?)`)
+diff --git a/electron/db/ventas.cjs b/electron/db/ventas.cjs
+index a09cba1..7c04970 100644
+--- a/electron/db/ventas.cjs
++++ b/electron/db/ventas.cjs
+@@ -117,8 +117,8 @@ function desgloseIGIC(lineas) {
+ }
+ 
+ function hashTicket(t, hashAnterior) {
+-  const emp = getEmpresa();
+-  const cadena = [emp.nif, t.serie, t.numero, t.fecha_hora, t.tipo_doc, t.total.toFixed(2), hashAnterior || ''].join('|');
++  const nif = t.nif_emisor || getEmpresa().nif; // v0.1.80 · el NIF con el que se emitió; los tickets de antes de la 0.1.80 sin él, el actual
++  const cadena = [nif, t.serie, t.numero, t.fecha_hora, t.tipo_doc, t.total.toFixed(2), hashAnterior || ''].join('|');
+   return sha256(cadena);
+ }
+ 
+@@ -153,7 +153,8 @@ const _crearTicket = (serie, tipoDoc, lineas, pago, usuarioId, rectificaId = nul
+   const fecha = nowISO();
+   const prev = N.db.prepare('SELECT hash FROM tickets ORDER BY id DESC LIMIT 1').get();
+   const hashAnterior = prev ? prev.hash : null;
+-  const hash = hashTicket({ serie, numero, fecha_hora: fecha, tipo_doc: tipoDoc, total }, hashAnterior);
++  const nifEmisor = String((getEmpresa() || {}).nif || '').trim() || null; // v0.1.80 · se guarda con el ticket
++  const hash = hashTicket({ serie, numero, fecha_hora: fecha, tipo_doc: tipoDoc, total, nif_emisor: nifEmisor }, hashAnterior);
+   const entregado = pago.entregado != null ? r2(pago.entregado) : null;
+   const cambio = entregado != null ? r2(entregado - total) : null;
+   let pagoEf = null, pagoTj = null;
+@@ -175,13 +176,13 @@ const _crearTicket = (serie, tipoDoc, lineas, pago, usuarioId, rectificaId = nul
+   const tid = N.db.prepare(`INSERT INTO tickets
+       (serie, numero, tipo_doc, fecha_hora, usuario_id, caja_sesion_id, subtotal, total_igic, total,
+        forma_pago, entregado, cambio, rectifica_id, hash, hash_anterior, mesa, datafono, motivo_rect,
+-       pago_efectivo, pago_tarjeta, propina, cliente_factura, pago_senal, reserva_id)
+-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
++       pago_efectivo, pago_tarjeta, propina, cliente_factura, pago_senal, reserva_id, nif_emisor)
++      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+     .run(serie, numero, tipoDoc, fecha, usuarioId, sesion.id, subtotal, totalIgic, total,
+          pago.forma, entregado, cambio, rectificaId, hash, hashAnterior, mesa, pago.datafono || null, motivoRect, pagoEf, pagoTj,
+          r2(Math.max(0, Number(pago.propina) || 0)),
+          (pago.clienteFactura && (pago.clienteFactura.nif || pago.clienteFactura.nombre)) ? JSON.stringify(pago.clienteFactura) : null,
+-         pagoSe, pago.reservaId || null).lastInsertRowid;
++         pagoSe, pago.reservaId || null, nifEmisor).lastInsertRowid;
+   const insL = N.db.prepare('INSERT INTO ticket_lineas (ticket_id, producto_id, nombre, cantidad, precio_unit, tipo_igic, total_linea, destino, empleado_id, cita_id, kit_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+   for (const l of lineas) {
+     insL.run(tid, l.producto_id || null, l.nombre, l.cantidad, l.precio_unit, l.tipo_igic, l.total_linea, l.destino || 'barra',
+diff --git a/package.json b/package.json
+index 63d02ca..102ecce 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "doel-taller",
+   "productName": "Doel Taller",
+-  "version": "0.1.79",
++  "version": "0.1.80",
+   "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
+   "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
+   "license": "UNLICENSED",
+diff --git a/tools/test-esquema.cjs b/tools/test-esquema.cjs
+new file mode 100644
+index 0000000..51c8188
+--- /dev/null
++++ b/tools/test-esquema.cjs
+@@ -0,0 +1,99 @@
++/* v0.1.80 · punto 7 del plan (CAL-03) · el esquema dice la verdad.
++   1 · instalación nueva: índices, FK declaradas, contadores, número único, nif_emisor
++   2 · numeración de órdenes por contador: borrar una orden no repite número; repetir a mano no entra
++   3 · instalación vieja: se migra sola (FK añadidas sin perder filas ni columnas de más, contador sembrado, nif_emisor relleno)
++   4 · Salud: huérfanos en las FK nuevas, numeración de órdenes, y la cadena de tickets sobrevive a corregir el NIF */
++const fs = require('fs'); const os = require('os'); const path = require('path');
++process.chdir(path.resolve(__dirname, '..'));
++let ok = 0, ko = 0;
++const t = (n, cond, det) => { if (cond) { ok++; console.log('  OK  ' + n); } else { ko++; console.log('  ✗   ' + n + (det ? '\n        ' + det : '')); } };
++const dir = path.join(os.tmpdir(), 'doel-test-esquema'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
++const db = require('../electron/db.cjs'); db.init(dir);
++const raw = () => require('better-sqlite3')(db.rutaBD());
++const indices = () => new Set(raw().prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map((r) => r.name));
++const fks = (tabla) => raw().prepare(`PRAGMA foreign_key_list(${tabla})`).all().map((f) => f.from + '→' + f.table + (f.on_delete && f.on_delete !== 'NO ACTION' ? ':' + f.on_delete : ''));
++
++console.log('1 · Instalación nueva');
++const ix = indices();
++t('1a. índices en las tablas hijas de la orden y en tickets', ['ix_ordenes_cliente', 'ix_ordenes_equipo', 'ix_ordlin_orden', 'ix_ordfirmas_orden', 'ix_ordlog_orden', 'ix_ordfotos_orden', 'ix_ordavisos_orden', 'ix_ordanticipos_orden', 'ix_tickets_fecha', 'ix_ticket_lineas_ticket', 'ix_ordenes_estado', 'ix_ordenes_numero'].every((n) => ix.has(n)));
++t('1b. ux_ordenes_numero (único) y la tabla contadores', ix.has('ux_ordenes_numero') && !!raw().prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='contadores'").get());
++const fkO = fks('ordenes');
++t('1c. ordenes: tecnico_id, recibido_por, reparado_por → usuarios; ticket_id → tickets; orden_origen_id → ordenes; todas ON DELETE SET NULL', ['tecnico_id→usuarios:SET NULL', 'recibido_por→usuarios:SET NULL', 'reparado_por→usuarios:SET NULL', 'ticket_id→tickets:SET NULL', 'orden_origen_id→ordenes:SET NULL', 'cliente_id→clientes', 'equipo_id→equipos'].every((f) => fkO.includes(f)), fkO.join(' '));
++t('1d. ordenes_lineas.producto_id → productos y tecnico_id → usuarios; ordenes_firmas.usuario_id y anulada_por → usuarios', fks('ordenes_lineas').includes('producto_id→productos:SET NULL') && fks('ordenes_lineas').includes('tecnico_id→usuarios:SET NULL') && fks('ordenes_firmas').includes('usuario_id→usuarios:SET NULL') && fks('ordenes_firmas').includes('anulada_por→usuarios:SET NULL'), fks('ordenes_lineas').join(' ') + ' | ' + fks('ordenes_firmas').join(' '));
++t('1e. tickets.nif_emisor existe y foreign_keys está en ON', raw().prepare('PRAGMA table_info(tickets)').all().some((c) => c.name === 'nif_emisor') && db.saludCompleta().checks.some((c) => c.id === 'fk'));
++
++console.log('\n2 · Numeración de órdenes');
++db.saveEmpresa({ nombre: 'Taller Esquema SL', nif: 'B76222222' });
++const admin = db.login('1234');
++const cid = db.clienteAltaRapida({ nombre: 'Cliente Esquema', telefono: '699333444' }).id;
++const eqId = db.equipoGuardar({ cliente_id: cid, tipo: 'portatil', marca: 'Acer', modelo: 'Aspire', num_serie: 'SN-ESQ-1' });
++const anio = new Date().getFullYear();
++const o1 = db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'uno', tecnico_id: admin.id, recibido_por: admin.id });
++const o2 = db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'dos' });
++const o3 = db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'tres' });
++t('2a. tres órdenes seguidas: 0001, 0002, 0003', o1.numero === `OT-${anio}-0001` && o2.numero === `OT-${anio}-0002` && o3.numero === `OT-${anio}-0003`, [o1.numero, o2.numero, o3.numero].join(' '));
++raw().exec(`DELETE FROM ordenes_log WHERE orden_id = ${o2.id}; DELETE FROM ordenes WHERE id = ${o2.id}`);
++const o4 = db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'cuatro' });
++t('2b. borrada la 0002, la siguiente es la 0004 (con COUNT(*)+1 habría salido otra 0003)', o4.numero === `OT-${anio}-0004`, o4.numero);
++let choque = null; try { raw().prepare('INSERT INTO ordenes (numero, cliente_id, equipo_id) VALUES (?,?,?)').run(o4.numero, cid, eqId); } catch (e) { choque = e.message; }
++t('2c. un número repetido no entra ni a mano (UNIQUE)', /UNIQUE/.test(String(choque)), String(choque));
++let fkMal = null; try { db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'x', tecnico_id: 987654 }); } catch (e) { fkMal = e.message; }
++t('2d. un tecnico_id que no existe tampoco (FOREIGN KEY)', /FOREIGN KEY/.test(String(fkMal)), String(fkMal));
++t('2e. …y el contador no se gasta con el intento fallido: la siguiente sigue siendo la 0005', db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'cinco' }).numero === `OT-${anio}-0005`);
++db.ordenLineaAdd(o1.id, { tipo: 'repuesto', descripcion: 'Pieza X', cantidad: 1, precio: 10, producto_id: db.listProductos()[0].id }, admin.id);
++const pid = db.listProductos()[0].id;
++raw().prepare('DELETE FROM productos WHERE id = ?').run(pid);
++t('2f. borrar un producto usado en una línea no se bloquea: la línea se queda sin enlace (ON DELETE SET NULL) y con su descripción', (() => { const l = raw().prepare('SELECT producto_id, descripcion FROM ordenes_lineas WHERE orden_id = ?').get(o1.id); return l && l.producto_id === null && l.descripcion === 'Pieza X'; })());
++
++console.log('\n3 · Instalación vieja: se migra sola');
++db.cajaAbrir(100, admin.id);
++const prod = db.listProductos()[0];
++const tkR = db.ticketCrear({ lineas: [{ producto_id: prod.id, nombre: prod.nombre, cantidad: 1, precio_unit: 10, tipo_igic: 7, total_linea: 10 }], forma: 'efectivo', entregado: 10, usuarioId: admin.id });
++const tk1 = tkR && tkR.id ? tkR.id : tkR;
++t('3a. un ticket nuevo lleva nif_emisor', raw().prepare('SELECT nif_emisor FROM tickets WHERE id = ?').get(tk1).nif_emisor === 'B76222222');
++db.cerrarBD();
++{ // se fabrica el pasado: ordenes_lineas sin FK y con una columna rara, sin contadores ni índice único, tickets sin nif_emisor
++  const r = require('better-sqlite3')(db.rutaBD());
++  r.pragma('foreign_keys = OFF');
++  const sql = r.prepare("SELECT sql FROM sqlite_master WHERE name='ordenes_lineas'").get().sql.replace(/ REFERENCES productos\(id\) ON DELETE SET NULL/, '').replace(/ REFERENCES usuarios\(id\) ON DELETE SET NULL/, '').replace('ordenes_lineas', 'ordenes_lineas_vieja');
++  r.exec(`${sql}; INSERT INTO ordenes_lineas_vieja SELECT * FROM ordenes_lineas; DROP TABLE ordenes_lineas; ALTER TABLE ordenes_lineas_vieja RENAME TO ordenes_lineas;`);
++  r.exec("ALTER TABLE ordenes_lineas ADD COLUMN rarito TEXT DEFAULT 'heredado'");
++  r.prepare("INSERT INTO ordenes_lineas (orden_id, tipo, producto_id, descripcion, precio, rarito) VALUES (?, 'repuesto', 999999, 'huérfana', 1, 'sí')").run(o1.id);
++  r.exec("DROP INDEX IF EXISTS ux_ordenes_numero; DROP TABLE contadores; ALTER TABLE tickets DROP COLUMN nif_emisor");
++  r.close();
++}
++db.init(dir);
++t('3b. ordenes_lineas vuelve a declarar sus FK', fks('ordenes_lineas').includes('producto_id→productos:SET NULL'));
++const lineas = raw().prepare('SELECT * FROM ordenes_lineas WHERE orden_id = ? ORDER BY id').all(o1.id);
++t('3c. sin perder filas ni la columna de más (rarito = heredado / sí)', lineas.length === 2 && lineas[0].rarito === 'heredado' && lineas[1].rarito === 'sí' && lineas[1].producto_id === 999999, JSON.stringify(lineas.map((l) => [l.descripcion, l.rarito, l.producto_id])));
++t('3d. ux_ordenes_numero y contadores vuelven; el contador arranca en el máximo que había (la siguiente es la 0006)', indices().has('ux_ordenes_numero') && db.ordenCrear({ cliente_id: cid, equipo_id: eqId, averia_declarada: 'seis' }).numero === `OT-${anio}-0006`);
++t('3e. tickets.nif_emisor vuelve y los tickets de antes se rellenan con el NIF de la empresa', raw().prepare('SELECT nif_emisor FROM tickets WHERE id = ?').get(tk1).nif_emisor === 'B76222222');
++
++console.log('\n4 · Salud');
++const s1 = db.saludCompleta().checks;
++const fk = s1.find((c) => c.id === 'fk');
++t('4a. foreign_key_check ve la línea huérfana (producto 999999) gracias a la FK nueva', fk && fk.nivel === 'error' && /ordenes_lineas/.test(fk.detalle), JSON.stringify(fk));
++raw().prepare('DELETE FROM ordenes_lineas WHERE producto_id = 999999').run();
++const s2 = db.saludCompleta().checks;
++t('4b. limpia la huérfana, las referencias están bien y la numeración de órdenes en ok', s2.find((c) => c.id === 'fk').nivel === 'ok' && s2.find((c) => c.id === 'ordenes_numero').nivel === 'ok');
++db.saveEmpresa({ nombre: 'Taller Esquema SL', nif: 'B76222223' }); // corrigen una cifra del NIF
++const vf = db.saludCompleta().checks.find((c) => c.id === 'verifactu');
++t('4c. corregir el NIF en Ajustes ya NO rompe la cadena de tickets (el hash se verifica con nif_emisor)', vf && vf.nivel === 'ok', JSON.stringify(vf));
++raw().prepare('UPDATE tickets SET nif_emisor = NULL WHERE id = ?').run(tk1);
++const vf2 = db.saludCompleta().checks.find((c) => c.id === 'verifactu');
++t('4d. un ticket heredado sin nif_emisor se verifica con el NIF actual (y por eso ahora avisa, como antes)', vf2 && vf2.nivel !== 'ok');
++raw().prepare('INSERT INTO ordenes (numero, cliente_id, equipo_id) VALUES (?,?,?)').run(`OT-1999-0001`, cid, eqId);
++raw().exec('DROP INDEX ux_ordenes_numero'); raw().prepare('INSERT INTO ordenes (numero, cliente_id, equipo_id) VALUES (?,?,?)').run(`OT-1999-0001`, cid, eqId);
++const sn = db.saludCompleta().checks.find((c) => c.id === 'ordenes_numero');
++t('4e. si una instalación trae números repetidos, Salud lo dice en rojo con los números', sn && sn.nivel === 'error' && /OT-1999-0001 ×2/.test(sn.detalle), JSON.stringify(sn));
++db.cerrarBD(); db.init(dir);
++t('4f. …y la migración no crea el índice único mientras haya repetidos: lo apunta en config', !indices().has('ux_ordenes_numero') && /OT-1999-0001/.test(db.configAll().ordenes_numero_repetidos || ''));
++
++console.log('\n5 · El cableado');
++const main = require('./_main-fuente.cjs')();
++t('5a. el reset operativo pone el contador de órdenes a cero con la tabla', /DELETE FROM contadores WHERE clave LIKE 'ordenes:%'/.test(fs.readFileSync('electron/db/esquema.cjs', 'utf8')));
++t('5b. hashTicket usa nif_emisor y _crearTicket lo guarda', /t\.nif_emisor \|\| getEmpresa\(\)\.nif/.test(fs.readFileSync('electron/db/ventas.cjs', 'utf8')) && /reserva_id, nif_emisor\)/.test(fs.readFileSync('electron/db/ventas.cjs', 'utf8')));
++t('5c. schema.sql trae nif_emisor para instalaciones nuevas', /nif_emisor\s+TEXT/.test(fs.readFileSync('electron/db/schema.sql', 'utf8')));
++t('5d. ordenCrear va por N.contadorSiguiente dentro de una transacción', /N\.contadorSiguiente\('ordenes:' \+ anio/.test(fs.readFileSync('electron/db/taller-ordenes.cjs', 'utf8')) && /N\.db\.transaction\(\(\) => ordenCrearTx\(/.test(fs.readFileSync('electron/db/taller-ordenes.cjs', 'utf8')) && main.length > 0);
++console.log(`\n${ko === 0 ? '✅' : '❌'}  Esquema: ${ok} OK · ${ko} fallos`);
++process.exit(ko === 0 ? 0 : 1);
