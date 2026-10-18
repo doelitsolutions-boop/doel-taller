@@ -10,14 +10,14 @@ index adb3b45..d02e571 100644
 +licencia-doel.json
 +*.pem
 diff --git a/ESTADO.md b/ESTADO.md
-index a10ed4f..2b32d10 100644
+index a10ed4f..0bfb00a 100644
 --- a/ESTADO.md
 +++ b/ESTADO.md
 @@ -1,6 +1,6 @@
  # Doel Taller · Estado del proyecto y pasos siguientes
  
 -**Versión actual:** 0.1.72 · **Fecha:** 8 de octubre de 2026
-+**Versión actual:** 0.1.75 · **Fecha:** 18 de octubre de 2026
++**Versión actual:** 0.1.76 · **Fecha:** 18 de octubre de 2026
  **Origen:** extraído de `doel-tpv-bar v5.0.84` (edición Taller/SAT) y hecho aplicación propia.
  
  ---
@@ -54,8 +54,8 @@ index a10ed4f..2b32d10 100644
 +### Plan de mejoras tras la auditoría (0.1.75 → )
 +
 +Diez puntos acordados con Edmundo el 18/10/2026 (programa interno de gestión, sin facturación desde aquí):
-+1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día
-+(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta) · 4 `canales.cjs` único + deny‑by‑default en
++1 licencia v2 ✅ 0.1.74 · 2 copias con fotos dentro y clave de instalación ✅ 0.1.75 · 3 Electron y dependencias al día ✅ 0.1.76
++(sin firma de código: cuesta 200‑400 €/año y para uso interno no hace falta; **probar en Windows** WebHID, PDF, impresión, instalador) · 4 `canales.cjs` único + deny‑by‑default en
 +`/rpc` · 5 permisos por canal también en IPC · 6 boundary por vista y registro de errores · 7 esquema (FK, índices,
 +numeración por contador, `nif_emisor`) · 8 nube (etag en Blobs, borrado completo) · 9 `usb.ids` fuera del bundle ·
 +10 higiene (código muerto, versión en HUELLAS, servidores sin duplicados).
@@ -130,13 +130,14 @@ index 888ccd6..f96482d 100644
  ---
  
 diff --git a/VERSION.md b/VERSION.md
-index 7a2a139..b5c8f3d 100644
+index 7a2a139..04050af 100644
 --- a/VERSION.md
 +++ b/VERSION.md
-@@ -160,6 +160,9 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
+@@ -160,6 +160,10 @@ Se incrementa siempre, aunque el cambio sea de una línea. Sin saltos y sin volv
  | 0.1.43 | ⏱ **Los minutos calculan el precio en el presupuesto** (capturas de Edmundo: «Microsoldadura · 60 min · 60 €», cambia a 30 min y sigue a 60 €: «no calcula los minutos»). Reglas puras en `presupuesto-minutos.js`: un **servicio** del catálogo vale su precio por su duración prevista y, al cambiar los minutos, el precio va en proporción (30 min → 30 €, a céntimos); **mano de obra** estrena desplegable de **tarifas €/h** (los artículos de la familia «Mano de obra», canal `taller:tarifas-hora` → `manoObraTarifas`) y el precio = tarifa × minutos / 60; si el técnico teclea el precio a mano, manda el suyo hasta que vuelva a tocar los minutos (`precioManual`); un servicio sin duración cobra fijo. Un ⏱→€ verde dice cuándo el precio viene de los minutos y el título del campo enseña el €/h implícito. El desplegable de servicios es más ancho (se cortaba «· 60 min»). Batería `test-presupuesto-minutos.cjs` (16). |
  | 0.1.44 | 🖥 **El catálogo desde el puesto en red** (captura de Edmundo: Ajustes → Artículos «(0)», familias «(0)», y no deja dar de alta). Por el RPC de verdad el catálogo se lee y se escribe bien —batería nueva `test-puesto-catalogo.cjs` (10): extrae de `main.cjs` los ~280 `handle()` de una línea que solo tocan `db`, levanta el servidor real sobre una base real, entra con el PIN, lee categorías/subfamilias/productos/config y da de alta un artículo—, así que lo que fallaba no se veía: (1) **la pantalla se tragaba el error** (`Promise.all` sin catch → listas vacías y «(0)» sin decir por qué); ahora Catálogo enseña «No se pudo leer el catálogo del PC principal: …» con reintento, y en el puesto en red **toda respuesta con error del mostrador sale en una tira roja abajo** (canal y motivo, evento `doel:rpc-error` del puente remoto), sea la pantalla que sea. (2) **El tope de 256 KB del cuerpo** tiraba con 413 cualquier alta con foto y cualquier foto de orden hecha desde la tablet (2-6 MB en base64): tope aparte de **16 MB para el RPC** (`CUERPO_MAX_RPC`); el de 256 KB sigue para el comandero. Con la 0.1.44, si vuelve a salir «(0)», la tira roja dice exactamente qué contestó el mostrador. |
  | 0.1.45 | 🔧 **Mano de obra sin minutos y con IGIC** (Edmundo). La línea de mano de obra vuelve a ser descripción, cantidad y precio: fuera el campo de minutos y el desplegable de tarifas €/h de la 0.1.43 (los minutos y la proporción quedan solo para los **servicios** del catálogo). El precio de la mano de obra es **PVP con IGIC incluido**, como todas las líneas —en el ticket va al 7 % y en el presupuesto A4 la base se saca del total—; ahora lo dice el propio campo («€ (IGIC incl.)») y el tipo de línea («Mano obra (IGIC incl.)»). |
++| 0.1.76 | ⬆️ **Dependencias al día (punto 3 del plan).** Electron 33.4 → **44.9** (la 33 llevaba año y medio sin soporte: 40 avisos), electron-builder 25 → 26, Vite 6 → 8 (compila en menos de 1 s), plugin-react 4 → 6, concurrently 9 → 10, better-sqlite3 12 → 13, wait-on 9, cross-env 10 y **selfsigned 2 → 5** (criptografía nativa de Node, fuera node-forge). `npm audit --omit=dev` a **cero**. selfsigned 5 es asíncrono: `certificado()` e `iniciar()` del puesto en red pasan a `async` (main y las tres baterías del puesto lo esperan). **Sin firma de código** a propósito: cuesta 200‑400 €/año y para uso interno no hace falta. **Pendiente de probar en Windows** tras el salto de Electron: WebHID y mando (DualSense/Switch), visor PDF de diagramas, impresión silenciosa, safeStorage, instalador NSIS con electron-builder 26. |
 +| 0.1.75 | 📦 **Copias recuperables de verdad (punto 2 del plan).** Cada `.doelbak` es ahora un **paquete DOELBAK3**: un ZIP cifrado con la base, las fotos de órdenes/outlet/hotel y un manifiesto (antes la base iba cifrada y las fotos EN CLARO en una carpeta al lado del USB). Con frase propia el paquete lleva también la **clave de instalación**: restaurar en otro PC recupera contraseñas de equipos, claves de portal y la semilla de licencia. Restaurar extrae base + fotos (+ clave) y las copias antiguas (DOELBAK1/2 con su espejo) se siguen abriendo. La prueba en seco cuenta las fotos. Una base restaurada en otra instalación ya no sale como «manipulada»: pide volver a pegar el DL2. Las entradas del ZIP se validan (zip‑slip). `test-copias` 55 → 64 comprobaciones; `test-taller` 55 adaptado. Manual y Ajustes al día. |
 +| 0.1.74 | 🔑 **Licencia v2: se cierra SEC‑01.** El instalador ya no lleva ningún secreto con el que fabricar licencias. La licencia es un **código DL2** firmado con Ed25519 (la app solo lleva la clave pública; la privada vive en `~/.doel/licencia-doel.json` del PC de Doel) que se pega una vez e incluye cliente, módulos, modo, caducidad y una **semilla TOTP propia de la instalación**; de ella salen los códigos por teléfono (6 dígitos renovación/Panel Dev, 12 dígitos módulos) y solo valen para ese equipo. Fuera los códigos cortos con máscara oculta (se aceptaban al azar un 2 %), `SECRETO`, `TOTP_SECRET_B32`, `generar-licencia.cjs`, `codigo-instalacion.cjs` y `codigo-renovacion.cjs`; nuevo `tools/licencia-v2.cjs` (claves · emitir · codigo · modulos · qr). Sello de integridad v11 con la clave de instalación. **Lo activado antes sigue activado** («heredada»): se re-sella al arrancar y Ajustes → Licencia pide pegar su DL2 para volver a renovar o cambiar módulos por teléfono. `check-puente` avisa si la compilación sale sin clave pública. La clave de las copias DOELBAK1 queda como constante derivada (solo lectura de lo antiguo). Batería nueva `test-licencia-v2.cjs` (43); `test-taller`, `test-taller-ubicaciones`, `test-multitienda` y `test-diagnostico` adaptadas. Manual al día. |
 +| 0.1.73 | 🔒 **Endurecimiento tras la auditoría 0.1.72** (`docs/AUDITORIA_0.1.72.md`, `docs/REVISION_HACKER_0.1.72.md`). **Mostrador**: PIN con scrypt y sal por usuario (migración perezosa al primer login, SEC‑10), freno local de 5 fallos/5 min, DevTools cerradas en producción, `setWindowOpenHandler`/`will-navigate` en todas las ventanas (SEC‑07/08), puerta del Panel Dev en el proceso principal con freno y `config:set` protegido para licencia/módulos/activación (SEC‑12), freno en `licencia:activar` y `dev:acceso` (SEC‑01 parcial), clave por instalación (DPAPI) para contraseñas de equipos, claves de portal y frase de copias (SEC‑11), restaurar solo desde las carpetas de copias, nombre de impresora del cajón saneado antes de `cmd /c copy` (SEC‑09), `abrir-url` solo `https/http/mailto`, DiskSpd sin shell, iframes de impresión en sandbox y escapes que faltaban en `print.js` (SEC‑21), `python -I` y reverificación de las copias de scripts (SEC‑22). **Puesto en red / comandero**: freno en `fichaje:login/admin`, `app:salir`, `caja:cajonAbrir` (SEC‑02), sesión antes de leer el cuerpo (256 KB sin sesión), `Host` y `Content-Type` validados (SEC‑06/18), `config:all` sin tokens para perfiles sin «Ajustes» (SEC‑03), `uid` del rastro desde la sesión y columnas `portal_pass_*`/`password_cifrada` fuera de lo que viaja (SEC‑04), `auth:logout`, permisos releídos en cada llamada y caducidad absoluta de 24 h (SEC‑16), freno global además del de IP (SEC‑17), certificado de hoja (no CA) de 825 días (SEC‑05), `sat:*` y cajón con permiso, ventanas de impresión en sandbox (SEC‑15), comandero solo IP privadas, errores 500 sin detalle. **Nube**: XSS reflejado de `index.html` cerrado y cabeceras de seguridad (SEC‑13), códigos de diagnóstico validados en servidor (`/api/diag-validar`, `/api/movil-validar`) sin clave en el HTML (SEC‑14), freno por IP en portal/demo/multitienda/hotel, fuera el acceso maestro de demo, sesiones firmadas con caducidad de 12 h, recortes y topes en reservas y outlet, `timingSafeEqual` en tokens, `grupo.html` escapado, `crm-productos` con `uid` y `content-type` validados (SEC‑19). Nuevo `electron/seguridad-app.cjs`. 91 baterías: las de LAN, PIN, taller y actividad del móvil actualizadas al comportamiento nuevo. |
@@ -1561,7 +1562,7 @@ index bfca72e..14e029c 100644
 +  sellar, selloCalcular, SELLO_CLAVES, configurarClavePublica, tieneClavePublica, b32encode, b32decode,
 +};
 diff --git a/electron/main.cjs b/electron/main.cjs
-index eccebb0..e4a9fdf 100644
+index eccebb0..fde4a2e 100644
 --- a/electron/main.cjs
 +++ b/electron/main.cjs
 @@ -1,5 +1,5 @@
@@ -1666,6 +1667,18 @@ index eccebb0..e4a9fdf 100644
        licencia.sellar(db.configAll, db.configSet);
      }
      return r;
+@@ -656,9 +670,9 @@ app.whenReady().then(() => {
+       urlHttps: e.httpsEncendido ? e.urlHttps : null, cert: e.httpsEncendido && e.certificado ? require('fs').readFileSync(require('path').join(e.certificado.ruta, 'cert.pem'), 'utf8') : null }));
+     return { ok: true, ruta: sel.filePath, url: e.url };
+   });
+-  handle('puesto:aplicar', () => {
++  handle('puesto:aplicar', async () => {
+     puestoRed.detener();
+-    puestoRed.iniciar({ db, logEvento: (a, b, c) => db.logEvento(a, b, c), handlers: HANDLERS, dirDatos: app.getPath('userData') });
++    await puestoRed.iniciar({ db, logEvento: (a, b, c) => db.logEvento(a, b, c), handlers: HANDLERS, dirDatos: app.getPath('userData') }); // v0.1.76 · async
+     return puestoRed.estado(db);
+   });
+   handle('outlet:vender', (id, d, usuarioId) => db.outletVenderDirecto(id, d || {}, usuarioId || null));
 @@ -721,8 +735,8 @@ app.whenReady().then(() => {
    handle('taller:ia-sugerir', (ordenId, pregunta) => require('./ia.cjs').texto(db, ordenId, pregunta)); // v4.0.18 · 🤖 externo→reglas
    handle('taller:pass-ver', (ordenId, uid) => {
@@ -1861,7 +1874,7 @@ index 16e6a91..e49729b 100644
      categorias: call('catalogo:categorias'),
      productos: call('catalogo:productos'),
 diff --git a/electron/puesto-red.cjs b/electron/puesto-red.cjs
-index e497d4f..10fa758 100644
+index e497d4f..ece8210 100644
 --- a/electron/puesto-red.cjs
 +++ b/electron/puesto-red.cjs
 @@ -35,9 +35,27 @@ let certActual = null;        // { cert, key, fingerprint, ips, ruta }
@@ -1892,7 +1905,15 @@ index e497d4f..10fa758 100644
  
  /* Canales prohibidos en remoto: abren diálogos del sistema en el PC del mostrador.
     El aviso dice DÓNDE hacerlo, que es lo que el usuario necesita saber. */
-@@ -180,18 +198,20 @@ function certificado(dirDatos) {
+@@ -173,25 +191,27 @@ const ipsLocales = () => {
+    Chrome trata https://IP:8736 como seguro: WebHID, cámara, portapapeles… todo.
+    El certificado lleva en el SAN todas las IP privadas del mostrador (Chrome exige SAN);
+    si la IP cambia, se regenera solo y hay que reinstalarlo en el otro PC. */
+-function certificado(dirDatos) {
++async function certificado(dirDatos) { // v0.1.76 · selfsigned 5 (cripto nativa de Node, sin node-forge) es asíncrono
+   const selfsigned = require('selfsigned');
+   const dir = path.join(dirDatos || os.tmpdir(), 'puesto-red-cert');
+   const ips = ipsLocales();
    const meta = path.join(dir, 'meta.json');
    try {
      const m = JSON.parse(fs.readFileSync(meta, 'utf8'));
@@ -1905,8 +1926,10 @@ index e497d4f..10fa758 100644
 +  const dias = 825; // v0.1.73 · SEC-14 · tope que aceptan Chrome y Apple para certificados de servidor
    /* v0.1.34 · SOLO ASCII en el nombre: node-forge lo codifica como PrintableString, y con el
       «·» (UTF-8 C2 B7) Chrome tiraba el certificado entero: ERR_SSL_SERVER_CERT_BAD_FORMAT. */
-   const p = selfsigned.generate([{ name: 'commonName', value: 'Doel Taller - puesto en red' }, { name: 'organizationName', value: 'Doel IT Solutions' }], {
-     days: dias, keySize: 2048, algorithm: 'sha256',
+-  const p = selfsigned.generate([{ name: 'commonName', value: 'Doel Taller - puesto en red' }, { name: 'organizationName', value: 'Doel IT Solutions' }], {
+-    days: dias, keySize: 2048, algorithm: 'sha256',
++  const p = await selfsigned.generate([{ name: 'commonName', value: 'Doel Taller - puesto en red' }, { name: 'organizationName', value: 'Doel IT Solutions' }], {
++    notAfterDate: new Date(Date.now() + dias * 86400000), keySize: 2048, algorithm: 'sha256',
      extensions: [
 -      { name: 'basicConstraints', cA: true },
 -      { name: 'keyUsage', keyCertSign: true, digitalSignature: true, keyEncipherment: true },
@@ -1946,6 +1969,24 @@ index e497d4f..10fa758 100644
        return { ok: false, error: 'La sesión ha caducado: vuelve a entrar con tu PIN' };
      }
      var j;
+@@ -303,7 +324,7 @@ ${eventos.join('\n')}
+ })();`;
+ }
+ 
+-function iniciar({ db, logEvento, handlers, dirDatos = null }) {
++async function iniciar({ db, logEvento, handlers, dirDatos = null }) { // v0.1.76 · async por el certificado; el servidor http escucha igual al final
+   detener();
+   if (handlers) HANDLERS = handlers;
+   const cfg = db.configAll();
+@@ -317,7 +338,7 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
+   catch (e) { try { logEvento && logEvento('puesto-red', 'No se pudo leer el puente: ' + e.message, null); } catch (x) { /* nada */ } return null; }
+   certActual = null;
+   if (conHttps) {
+-    try { certActual = certificado(dirDatos); }
++    try { certActual = await certificado(dirDatos); }
+     catch (e) { try { logEvento && logEvento('puesto-red', 'No se pudo crear el certificado https: ' + e.message, null); } catch (x) { /* nada */ } }
+   }
+ 
 @@ -352,12 +373,26 @@ function iniciar({ db, logEvento, handlers, dirDatos = null }) {
        }
  
@@ -2183,7 +2224,7 @@ index 604bc55..c2fee03 100644
      if (enCurso.has(id)) return { ok: false, error: 'Ya hay una prueba «' + def.nombre + '» en marcha' };
      return new Promise((resolve) => {
 diff --git a/package.json b/package.json
-index 8df4662..f2a2e39 100644
+index 8df4662..866485a 100644
 --- a/package.json
 +++ b/package.json
 @@ -1,7 +1,7 @@
@@ -2191,10 +2232,43 @@ index 8df4662..f2a2e39 100644
    "name": "doel-taller",
    "productName": "Doel Taller",
 -  "version": "0.1.72",
-+  "version": "0.1.75",
++  "version": "0.1.76",
    "description": "Gestión de taller y SAT — órdenes de trabajo, diagnóstico y mostrador · Doel IT Solutions",
    "author": "Doel IT Solutions <doel.it.solutions@gmail.com>",
    "license": "UNLICENSED",
+@@ -15,23 +15,23 @@
+   },
+   "dependencies": {
+     "adm-zip": "^0.6.0",
+-    "better-sqlite3": "^12.11.1",
++    "better-sqlite3": "^13.0.3",
+     "exceljs": "^4.4.0",
+     "pdf-parse": "^2.4.5",
+     "qrcode": "^1.5.4",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+-    "selfsigned": "^2.4.1",
++    "selfsigned": "^5.5.0",
+     "tesseract.js": "^7.0.0"
+   },
+   "devDependencies": {
+-    "@vitejs/plugin-react": "^4.3.4",
+-    "concurrently": "^9.1.2",
+-    "cross-env": "^7.0.3",
+-    "electron": "^33.4.11",
+-    "electron-builder": "^25.1.8",
+-    "vite": "^6.3.5",
+-    "wait-on": "^8.0.3"
++    "@vitejs/plugin-react": "^6.1.2",
++    "concurrently": "^10.0.6",
++    "cross-env": "^10.1.0",
++    "electron": "^44.9.0",
++    "electron-builder": "^26.15.3",
++    "vite": "^8.3.4",
++    "wait-on": "^9.5.1"
+   },
+   "build": {
+     "appId": "com.doelitsolutions.taller",
 diff --git a/reserva-online/HUELLAS-NUBE.json b/reserva-online/HUELLAS-NUBE.json
 index 675839d..9522454 100644
 --- a/reserva-online/HUELLAS-NUBE.json
@@ -3714,6 +3788,89 @@ index 671ed49..bbf456b 100644
    db.configSet('modulo_multitienda', '0');
    t('editar modulo_multitienda a mano rompe el sello (bit firmado)', lic.selloCalcular(db.configAll()) !== db.configAll().licencia_sello);
    db.configSet('modulo_multitienda', '1'); // restaurado: el sello vuelve a casar
+diff --git a/tools/test-permisos-canal.cjs b/tools/test-permisos-canal.cjs
+index f4fffc6..4e01772 100644
+--- a/tools/test-permisos-canal.cjs
++++ b/tools/test-permisos-canal.cjs
+@@ -52,9 +52,10 @@ db.saveUsuario({ nombre: 'Edmundo', pin: '8888', perfil_id: admin.id });
+ db.configSet('puesto_red_activo', '1'); db.configSet('puesto_red_puerto', '18992');
+ const puesto = require('../electron/puesto-red.cjs');
+ const eventos = [];
+-puesto.iniciar({ db, logEvento: (t, m) => eventos.push(t + ': ' + m), handlers: HANDLERS, dirDatos: dir });
++const arranque = puesto.iniciar({ db, logEvento: (t, m) => eventos.push(t + ': ' + m), handlers: HANDLERS, dirDatos: dir }); // v0.1.76 · async
+ 
+ (async () => {
++  await arranque;
+   const base = 'http://127.0.0.1:18992';
+   const rpc = async (canal, args, tk) => { const r = await fetch(base + '/rpc', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': tk || '' }, body: JSON.stringify({ canal, args }) }); let j = null; try { j = await r.json(); } catch (e) { j = null; } return { r, j }; };
+   const lt = await rpc('auth:login', ['7777']); const tkT = lt.r.headers.get('x-token');
+diff --git a/tools/test-puesto-catalogo.cjs b/tools/test-puesto-catalogo.cjs
+index 42b4ef2..f1e9e4b 100644
+--- a/tools/test-puesto-catalogo.cjs
++++ b/tools/test-puesto-catalogo.cjs
+@@ -21,9 +21,10 @@ for (const m of main.matchAll(/^\s*handle\('([^']+)',\s*(\([^)]*\)\s*=>\s*db\.[a
+ t('1. de main.cjs salen > 200 handlers de una línea (los del catálogo entre ellos)', n > 200 && ['catalogo:productos', 'catalogo:categorias', 'catalogo:subfamilias', 'config:all', 'catalogo:saveProducto', 'catalogo:deleteProducto', 'catalogo:saveCategoria'].every((c) => HANDLERS.has(c)), String(n));
+ db.configSet('puesto_red_activo', '1'); db.configSet('puesto_red_puerto', '18991');
+ const puesto = require('../electron/puesto-red.cjs');
+-puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dir });
++const arranque = puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dir }); // v0.1.76 · async
+ 
+ (async () => {
++  await arranque;
+   const base = 'http://127.0.0.1:18991';
+   const rpc = async (canal, args, tk) => { const r = await fetch(base + '/rpc', { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': tk || '' }, body: JSON.stringify({ canal, args }) }); let j = null; try { j = await r.json(); } catch (e) { j = null; } return { r, j }; };
+   const login = await rpc('auth:login', ['1234']); const tk = login.r.headers.get('x-token');
+diff --git a/tools/test-puesto-red.cjs b/tools/test-puesto-red.cjs
+index 69cf829..d70a659 100644
+--- a/tools/test-puesto-red.cjs
++++ b/tools/test-puesto-red.cjs
+@@ -81,7 +81,7 @@ registrar('auth:login', (pin) => db.login(String(pin || '')));
+ registrar('config:all', () => db.configAll());
+ registrar('outlet:resumen', () => db.outletResumen());
+ registrar('dev:restaurar', () => 'no debería llegar nunca');
+-puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS });
++const arranque = puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS }); // v0.1.76 · async
+ 
+ const base = 'http://127.0.0.1:18935';
+ const rpc = (canal, args, token) => fetch(base + '/rpc', {
+@@ -90,6 +90,7 @@ const rpc = (canal, args, token) => fetch(base + '/rpc', {
+ });
+ 
+ (async () => {
++  await arranque;
+   const r1 = await rpc('config:all', []);
+   t('3a. sin PIN no se lee nada', r1.status === 401);
+ 
+@@ -164,9 +165,9 @@ const rpc = (canal, args, token) => fetch(base + '/rpc', {
+ 
+   /* ── 7 · v0.1.18 · HTTPS para WebHID desde otro PC ── */
+   const dirCert = path.join(dir, 'datos');
+-  const c1 = puesto.certificado(dirCert);
++  const c1 = await puesto.certificado(dirCert);
+   t('7a. se genera un certificado autofirmado con clave, PEM y huella, y se guarda en <datos>/puesto-red-cert', /BEGIN CERTIFICATE/.test(c1.cert) && /PRIVATE KEY/.test(c1.key) && c1.fingerprint && c1.nuevo === true && fs.existsSync(path.join(dirCert, 'puesto-red-cert', 'cert.pem')));
+-  const c2 = puesto.certificado(dirCert);
++  const c2 = await puesto.certificado(dirCert);
+   t('7b. la segunda vez se reutiliza (misma huella, no se regenera)', c2.nuevo === false && c2.fingerprint === c1.fingerprint);
+   t('7c. el certificado lleva las IP privadas del PC en el SAN (Chrome lo exige)', Array.isArray(c1.ips) && c1.ips.every((ip) => /^\d+\.\d+\.\d+\.\d+$/.test(ip)));
+   const x509 = new (require('crypto').X509Certificate)(c1.cert);
+@@ -190,7 +191,7 @@ const rpc = (canal, args, token) => fetch(base + '/rpc', {
+     t('7d2. v0.1.34 · el certificado no lleva bytes no-ASCII en cadenas PrintableString/IA5String (Chrome: CERT_BAD_FORMAT)', malos === 0 && /^[\x20-\x7e\n]*$/.test(x509.subject), 'subject=' + JSON.stringify(x509.subject) + ' malos=' + malos);
+   }
+   db.configSet('puesto_red_https', '1');
+-  puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dirCert });
++  await puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dirCert });
+   await new Promise((r) => setTimeout(r, 300));
+   const e2 = puesto.estado(db);
+   t('7e. con puesto_red_https=1 arranca ADEMÁS un servidor https en el puerto siguiente (18936)', e2.encendido && e2.httpsEncendido && /:18936$/.test(e2.urlHttps) && e2.certificado && e2.certificado.fingerprint === c1.fingerprint);
+@@ -224,7 +225,7 @@ const rpc = (canal, args, token) => fetch(base + '/rpc', {
+   }
+   puesto.detener();
+   db.configSet('puesto_red_https', '0');
+-  puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dirCert });
++  await puesto.iniciar({ db, logEvento: () => {}, handlers: HANDLERS, dirDatos: dirCert });
+   await new Promise((r) => setTimeout(r, 200));
+   const crt2 = await fetch(base + '/certificado.crt');
+   t('7i. sin https activado, /certificado.crt da 404 con explicación y no hay servidor https', crt2.status === 404 && !puesto.estado(db).httpsEncendido);
 diff --git a/tools/test-seguridad-lan.cjs b/tools/test-seguridad-lan.cjs
 index a3d62db..093f510 100644
 --- a/tools/test-seguridad-lan.cjs
