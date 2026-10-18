@@ -1,3 +1,13 @@
+# Parches de endurecimiento
+
+| Fichero | Sobre | Qué lleva |
+|---|---|---|
+| `0.1.73-endurecimiento.patch` | 0.1.72 | 20 de 24 hallazgos de la auditoría (ver abajo) |
+| `0.1.74-licencia-v2.patch` | 0.1.73 | **SEC‑01**: licencia v2 (códigos DL2 firmados + semilla TOTP por instalación), 21 ficheros. Guía: `docs/LICENCIA_V2.md` |
+| `0.1.74-acumulado-sobre-0.1.72.patch` | 0.1.72 | los dos anteriores juntos |
+
+Tras aplicar el de la 0.1.74, **antes de compilar el instalador de un taller**: `node tools/licencia-v2.cjs claves` en el PC de Doel (escribe la clave pública en `electron/licencia.cjs`). Sin ese paso la app arranca y funciona, pero no puede activar códigos DL2 (`check-puente` lo avisa en el paso 9). Validado igual que el anterior: build, cinco comprobadores y 89/91 baterías (las dos de entorno).
+
 # Endurecimiento 0.1.73 (parche acumulado sobre la 0.1.72)
 
 Dos formas de aplicarlo:

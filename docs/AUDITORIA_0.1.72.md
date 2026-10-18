@@ -98,7 +98,7 @@ El tarball `doel-taller-v0.1.73.tar.gz` y el parche acumulado `docs/parches/0.1.
 
 | # | Estado | Qué se hizo |
 |---|---|---|
-| SEC-01 | ◐ **Abierto en lo esencial** | Freno de 5 fallos/5 min en `licencia:activar` y `dev:acceso`; `timingSafeEqual` en la firma. El secreto HMAC y la semilla TOTP **siguen en el `asar`**: pasar a firma asimétrica cambia cómo Doel emite los códigos (nuevo generador, enrolar un autenticador por instalación) y es una decisión de producto. Mientras tanto: rotar el secreto antes de entregar código a terceros y no distribuir `tools/generar-licencia.cjs`. |
+| SEC-01 | ✅ **Cerrado en la 0.1.74** | Licencia v2: códigos DL2 firmados con Ed25519 (la app solo lleva la clave pública) con semilla TOTP por instalación para los códigos por teléfono; sello v11 con la clave de instalación; fuera `SECRETO`, `TOTP_SECRET_B32` y las tres herramientas con el secreto. Lo activado antes sigue activado y pide su DL2 solo para renovar/cambiar módulos por teléfono. Guía: `docs/LICENCIA_V2.md`; parche `docs/parches/0.1.74-licencia-v2.patch`. (La 0.1.73 ya había puesto el freno de 5 fallos en `licencia:activar` y `dev:acceso`.) |
 | SEC-02 | ✅ | `CANALES_PIN` en `/rpc` (`fichaje:login/admin`, `app:salir`, `caja:cajonAbrir`) con el mismo freno que `auth:login`. |
 | SEC-03 | ◐ | `config:all` por `/rpc` sin `*_token/_clave/_key/_hash/_pin/_hmac/_sello` para quien no tenga «Ajustes». Pendiente: `safeStorage` para los tokens. |
 | SEC-04 | ✅ | `clientes:list`/`ficha` sin `portal_pass_*`; `ordenGet` sin `password_cifrada` (`tiene_password`); `taller:pass-ver` lee la columna aparte; `uid` del rastro = usuario de la sesión. |
