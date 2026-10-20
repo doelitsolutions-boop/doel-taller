@@ -1,0 +1,30 @@
+--- a/electron/main.cjs	2026-10-03 08:42:56.000000000 +0000
++++ b/electron/main.cjs	2026-10-20 16:35:35.635073272 +0000
+@@ -67,9 +67,9 @@
+   try {
+     const ses = win.webContents.session;
+     const PERMITIDOS = ['gamepad', 'hid', 'serial', 'media', 'usb']; // herramientas del taller
+-    ses.setPermissionRequestHandler((wc, permiso, cb) => cb(PERMITIDOS.includes(permiso) || true));
+-    ses.setPermissionCheckHandler((wc, permiso) => PERMITIDOS.includes(permiso) || true);
+-    if (ses.setDevicePermissionHandler) ses.setDevicePermissionHandler(() => true);
++    ses.setPermissionRequestHandler((wc, permiso, cb) => cb(PERMITIDOS.includes(permiso)));
++    ses.setPermissionCheckHandler((wc, permiso) => PERMITIDOS.includes(permiso));
++    if (ses.setDevicePermissionHandler) ses.setDevicePermissionHandler((det) => ['hid', 'serial', 'usb'].includes(det && det.deviceType));
+     // v5.0.49 · WebHID (batería del mando): Electron no muestra selector, hay que elegir aquí.
+     ses.on('select-hid-device', (event, details, callback) => {
+       event.preventDefault();
+@@ -104,6 +104,14 @@
+     }
+     if (menu.items.length) menu.popup({ window: win });
+   });
++  // v6.0.29 · S7 endurecimiento: la app solo carga su propio contenido. Ninguna ventana
++  // emergente ni navegación fuera del origen (los enlaces externos pasan por sistema:abrir-url,
++  // que tiene lista blanca). Defensa en profundidad si algún contenido intentara navegar.
++  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
++  win.webContents.on('will-navigate', (e, destino) => {
++    const permitido = destino.startsWith('http://localhost:5173') || destino.startsWith('file://');
++    if (!permitido) e.preventDefault();
++  });
+   if (process.env.VITE_DEV) {
+     win.loadURL('http://localhost:5173');
+   } else {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doel-taller-v1';
+const CACHE_NAME = 'doel-taller-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-512.png'];
 
 self.addEventListener('install', event => {
