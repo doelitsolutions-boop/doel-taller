@@ -31,8 +31,8 @@ no fallos explotables hoy.
 
 | # | Categoría | Descripción | Severidad | Acción |
 |---|-----------|-------------|-----------|--------|
-| 1 | Electron / permisos | Los manejadores de permisos tenían `|| true`, que anulaba la lista blanca: cualquier permiso (geolocalización, notificaciones, media…) y cualquier dispositivo se concedían siempre. | Medio | **Corregido** en el patch |
-| 2 | Electron / navegación | No había `setWindowOpenHandler` ni guarda de `will-navigate`: nada contenía una navegación o ventana emergente si algún contenido la provocara. | Bajo | **Corregido** en el patch |
+| 1 | Electron / permisos | Los manejadores de permisos tenían `|| true`, que anulaba la lista blanca: cualquier permiso (geolocalización, notificaciones, media…) y cualquier dispositivo se concedían siempre. | Medio | **Corregido y publicado** (v6.0.29) |
+| 2 | Electron / navegación | No había `setWindowOpenHandler` ni guarda de `will-navigate`: nada contenía una navegación o ventana emergente si algún contenido la provocara. | Bajo | **Corregido y publicado** (v6.0.29) |
 | 3 | Servidor / auth | Los tokens Bearer compartidos (`DOEL_SYNC_TOKEN`, `DOEL_ADMIN_TOKEN`) se comparan con `!==` (no es tiempo constante), mientras que las contraseñas sí usan `timingSafeEqual`. | Bajo | Recomendado (ver abajo) |
 | 4 | PWA / cabeceras | La PWA Doel Taller no declaraba `Content-Security-Policy`. | Bajo | **Mejorado** (CSP añadida) |
 | 5 | Electron / superficie | `plugins: true` habilita el visor PDF de Chromium (biblioteca de diagramas). Justificado, pero amplía superficie. | Info | Mantener solo si se usa el visor |
@@ -77,20 +77,35 @@ Leyenda: Crítico = bloquea · Medio = degradación/defensa rota · Bajo/Menor =
 
 ### 1 y 2 — Endurecimiento del proceso Electron (`auditoria/tpv-v6.0.28-endurecimiento-electron.patch`)
 
-El patch, listo para aplicar sobre el TPV con `git apply` (o `patch -p1`), hace:
+**Aplicado y publicado el 21-10-2026 como Doel TPV v6.0.29** en el repositorio
+`doelitsolutions-boop/doel-tpv`, rama `release/v6.0.29` (commit `1f9973e`). Ese
+commit trae además la fuente completa 6.0.x al repositorio, que estaba parado en
+la 1.32.2. El patch de esta carpeta es el diff exacto de `electron/main.cjs`.
+
+Qué hace:
 
 - **Permisos reales.** Quita el `|| true` de `setPermissionRequestHandler` y
-  `setPermissionCheckHandler`, de modo que la lista blanca
-  (`gamepad, hid, serial, media, usb`) vuelve a aplicar. `setDevicePermissionHandler`
-  pasa a conceder solo dispositivos `hid`/`serial`/`usb` (las herramientas del
-  taller) en lugar de cualquiera.
-- **Navegación contenida.** Añade `setWindowOpenHandler` que deniega ventanas
-  emergentes y una guarda de `will-navigate` que solo permite el propio origen
-  (`file://` en producción, `localhost:5173` en desarrollo). Los enlaces externos
-  siguen pasando por `sistema:abrir-url`, que ya tiene lista blanca.
+  `setPermissionCheckHandler`, de modo que la lista blanca vuelve a aplicar.
+  La lista se ajustó a lo que la app usa de verdad (verificado en el renderer):
+  `hid`, `serial`, `usb` (herramientas del taller), `media` (cámara/micro),
+  `fullscreen` (patrones de TV y test de pantalla), `clipboard-sanitized-write`
+  (botones «Copiar») y `unknown`, porque `gamepad` y el *wake lock* de pantalla
+  del diagnóstico de mandos no tienen nombre propio en Electron y llegan así.
+  Esto explica el `|| true` original: con la lista antigua el mando no funcionaba.
+  Quedan fuera geolocalización, notificaciones, pointerLock, midi y captura de
+  pantalla. `setDevicePermissionHandler` concede solo `hid`/`serial`/`usb`.
+- **Navegación contenida.** `setWindowOpenHandler` ya no abre ventanas: si la URL
+  está en la lista blanca se abre en el navegador del sistema (es lo que hace el
+  pie del splash con `window.open`), y si no, se bloquea. Una guarda de
+  `will-navigate` solo permite el propio origen (`file://` en producción,
+  `localhost:5173` en desarrollo).
+- **Una sola lista blanca de webs externas.** La función `urlExternaPermitida`
+  la comparten `sistema:abrir-url` y `window.open`; antes vivía solo dentro del
+  manejador IPC.
 
-Ambos archivos resultantes pasan `node --check`. Es un cambio de bajo riesgo: no
-toca la lógica de negocio, solo cierra permisos que hoy estaban abiertos.
+Comprobaciones hechas sobre el árbol v6.0.29: `node --check` en todo `electron/`,
+`tools/` y las funciones de la nube; `check-undef` (ESLint no-undef) limpio;
+`check-hooks-orden` y `check-await-evento` OK. No toca lógica de negocio.
 
 ### 4 — CSP en la PWA Doel Taller (este repositorio)
 
@@ -133,7 +148,13 @@ Resultado: sin hallazgos explotables; los puntos abiertos son los de la tabla.
 
 ## Próximos pasos
 
-1. Aplicar el patch al repositorio del TPV y publicar como v6.0.29.
-2. Decidir sobre la mejora 1 (tokens en tiempo constante) en la nube de Netlify.
-3. Desplegar la PWA con la CSP nueva y verificar en el móvil que todo sigue
+1. **Instalador Windows v6.0.29.** El `.exe` NSIS solo se puede generar en el PC
+   Windows (módulos nativos). Allí: `git checkout release/v6.0.29`, `npm install`,
+   `npm run dist` y `node tools/empaquetar-actualizacion.cjs`; arrastrar el zip
+   resultante al sitio de actualizaciones de Netlify. Los TPV lo bajan solos.
+2. **Fusionar `release/v6.0.29` en `main`** de `doel-tpv` y crear la etiqueta
+   `v6.0.29` (el push de etiquetas está bloqueado desde esta sesión).
+3. Desplegar la carpeta `reserva-online/` para que `version.txt` muestre 6.0.29.
+4. Decidir sobre la mejora 1 (tokens en tiempo constante) en la nube de Netlify.
+5. Desplegar la PWA con la CSP nueva y verificar en el móvil que todo sigue
    funcionando (mando, WebHID de batería).
